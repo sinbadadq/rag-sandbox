@@ -4,7 +4,7 @@ A retrieval-augmented generation (RAG) pipeline over [Fiddler AI's public docume
 
 The system scrapes Fiddler's docs, indexes them with [LlamaIndex](https://www.llamaindex.ai/) using local [HuggingFace embeddings](https://huggingface.co/BAAI/bge-small-en-v1.5) (no external embedding API cost), and answers natural language questions about Fiddler's ML observability platform using [Anthropic Claude](https://www.anthropic.com/) as the LLM.
 
-A suite of three experiments compares chunking strategies, retrieval filters, and LLM-as-judge evaluation — results are persisted in `experiment_results/`.
+A suite of three experiments compares chunking strategies, retrieval filters, and LLM-as-judge evaluation — results are persisted in `experiment_results/`. See [METHODOLOGY.md](METHODOLOGY.md) for a detailed write-up of the experiment design, evaluation approach, and concept explanations.
 
 ## Project Structure
 
