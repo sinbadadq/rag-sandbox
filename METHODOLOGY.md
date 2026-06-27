@@ -266,3 +266,25 @@ After retrieving the top-k chunks, LlamaIndex assembles a final response. With `
 Using one LLM to evaluate the outputs of another (or the same) LLM. The judge is given a rubric, a question, and a response, and asked to score the response according to the rubric. Research has shown that capable LLMs (GPT-4, Claude Opus/Sonnet) correlate well with human expert ratings when the rubric is well-defined — making this a scalable alternative to human evaluation for development-time experimentation. The principal risk is that the judge may share the generator's blind spots, particularly when both are from the same model family.
 
 In this project, Anthropic Claude (`claude-sonnet-4-5`) acts as both generator and judge. The prompt design mitigations — full rubric, chain-of-thought, multi-dimensional scoring — help reduce self-consistency bias.
+
+---
+
+## Final Recommendation
+
+**Recommended strategy: `MarkdownNodeParser` → `SentenceSplitter(256)` fallback (hybrid)**
+
+This hybrid was not directly tested as a standalone configuration, but it is the logical conclusion of what the three experiments together reveal.
+
+The recommended approach:
+1. **First pass — `MarkdownNodeParser`:** split every document at its Markdown heading boundaries. This preserves the semantic coherence of each section, keeping the topic of a heading and its body together in one chunk.
+2. **Second pass — `SentenceSplitter(256)` fallback:** for any section whose content exceeds 256 tokens, subdivide it further using sentence-aware splitting with a 256-token budget.
+
+**Why each experiment points here:**
+
+- **Experiment 1** showed that 256-token chunks produced the highest average composite score (4.73) with no catastrophic retrieval failures — outperforming both 512 and 1024. Smaller chunks improve retrieval precision because each chunk covers fewer topics, making its embedding more specific to a single concept.
+
+- **Experiment 2** showed that metadata filtering improves results when a query maps cleanly to a single section, but can hurt when the answer spans sections. This confirms that chunk *content* matters more than retrieval *scope* — the right content needs to be in the right chunk in the first place.
+
+- **Experiment 3** showed that pure structural chunking (`MarkdownNodeParser`) fixed the data integrity retrieval failure that plagued the 512-token fixed strategy, because it kept each section's content intact. However, pure structural chunking introduced a new failure on the alerts query (composite dropped from 5.0 to 3.67), because "how to configure an alert" and "supported notification channels" lived under separate headings and were split into separate nodes — only one of which was retrieved. A 256-token fallback (instead of the 1024-token fallback tested) would keep both subsections small enough to coexist in adjacent chunks that are both likely to be retrieved within `top_k=5`.
+
+**If committing to a single tested configuration:** use **256-token fixed** (`chunk_size=256, chunk_overlap=51`). It is the empirical winner across all tested configurations and is simpler to reason about. The hybrid is the principled next step, but would require a fourth experiment to confirm.
