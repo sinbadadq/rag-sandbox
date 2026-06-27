@@ -113,6 +113,24 @@ Compares **`MarkdownNodeParser`** (splits on heading boundaries, with a `Sentenc
 
 Key finding: Structural chunking improves specificity on content-dense sections where a single heading covers a coherent concept.  Fixed-token splitting is more robust for long prose sections where heading boundaries are sparse.
 
+## Roadmap
+
+### Documentation Impact Analysis (`src/doc_impact.py`)
+
+A planned inversion of the current RAG flow. Instead of answering questions about existing documentation, the system would take a free-text description of a code change and return:
+
+- Which existing documentation sections need to be updated, and why
+- Whether the change introduces something not covered anywhere in the current docs, with a suggested location in the documentation hierarchy for a new section
+
+The retrieval mechanism is identical to the Q&A pipeline — the change description is embedded and the most similar chunks are retrieved. What differs is the generation prompt: the LLM is asked to reason about documentation impact rather than answer a question. A gap detection signal (low maximum similarity score across retrieved chunks) flags changes with no existing coverage.
+
+### Multi-Mode Streamlit Interface (`app/app.py`)
+
+Once `doc_impact.py` is validated, the Streamlit app would be extended with a second mode alongside the current Q&A interface:
+
+- **Ask a question** — current behavior, unchanged
+- **Analyze a change** — text area for a change description, results panel showing a structured list of affected files with color-coded action badges: `update`, `create new section`, or `no change needed`, each with a one-line reason
+
 ## Tech Stack
 
 | Component | Choice |
