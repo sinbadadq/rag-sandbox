@@ -1,0 +1,273 @@
+# Fiddler MCP Server
+
+Fiddler provides a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that exposes your GenAI observability data to MCP-compatible AI assistants. Connect any MCP-compatible client and your AI assistant can explore applications, investigate traces, review evaluator results, monitor metrics, and more — without leaving the editor.
+
+{% hint style="warning" %}
+**Private Preview** — The Fiddler MCP Server is currently available to select design partners only. APIs and functionality may change without notice. No SLA or SLO applies. To inquire about access, contact your Fiddler Customer Success Manager or email <sales@fiddler.ai>.
+{% endhint %}
+
+{% hint style="info" %}
+The MCP server provides access to Fiddler's **GenAI and agentic observability** features. ML model monitoring tools are not available through MCP.
+{% endhint %}
+
+## Prerequisites
+
+* A Fiddler account with an API key (Settings > Credentials)
+* Your Fiddler instance URL (e.g., `app.fiddler.ai` for Fiddler SaaS; enterprise customers use a dedicated URL)
+* An MCP-compatible client (OpenCode, Claude Desktop, Claude Code, Cursor, or any client supporting remote HTTP MCP with custom headers)
+
+## Setup
+
+### OpenCode
+
+Add the following to your OpenCode configuration (e.g., `opencode.jsonc`):
+
+```json
+{
+  "mcp": {
+    "fiddler-genai": {
+      "enabled": true,
+      "type": "remote",
+      "url": "https://<your-fiddler-url>/v1/mcp/genai/",
+      "headers": {
+        "Authorization": "Bearer {env:FIDDLER_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Replace `<your-fiddler-url>` with your Fiddler instance URL (e.g., `app.fiddler.ai` for Fiddler SaaS). Set the `FIDDLER_API_KEY` environment variable to your Fiddler API key.
+
+To also enable the experimental tool group, add a second entry:
+
+```json
+{
+  "mcp": {
+    "fiddler-genai": {
+      "enabled": true,
+      "type": "remote",
+      "url": "https://<your-fiddler-url>/v1/mcp/genai/",
+      "headers": {
+        "Authorization": "Bearer {env:FIDDLER_API_KEY}"
+      }
+    },
+    "fiddler-genai-experimental": {
+      "enabled": true,
+      "type": "remote",
+      "url": "https://<your-fiddler-url>/v1/mcp/genai-experimental/",
+      "headers": {
+        "Authorization": "Bearer {env:FIDDLER_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Claude Desktop does not support remote MCP servers with custom headers through its built-in connector (which requires OAuth). Instead, connect via a JSON configuration file using the `mcp-remote` bridge.
+
+{% hint style="info" %}
+**Node.js required** — the `mcp-remote` bridge runs via `npx`. Make sure Node.js is installed before proceeding.
+{% endhint %}
+
+Edit (or create) the Claude Desktop config file at:
+
+* **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+* **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+Add the following `mcpServers` block:
+
+```json
+{
+  "mcpServers": {
+    "fiddler-genai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-fiddler-url>/v1/mcp/genai/",
+        "--header",
+        "Authorization: Bearer <your-fiddler-api-key>"
+      ]
+    }
+  }
+}
+```
+
+Replace `<your-fiddler-url>` with your Fiddler instance URL and `<your-fiddler-api-key>` with your Fiddler API key.
+
+{% hint style="warning" %}
+**Security note:** Placing your API key directly in a JSON config file is convenient for local development but is not a best practice for shared or version-controlled environments. Treat this file as you would any file containing credentials.
+{% endhint %}
+
+{% hint style="warning" %}
+**Troubleshooting: Claude Desktop cannot find `npx`**
+
+If the server fails to start, you may need to provide the absolute path to `npx`. Run `which npx` in your terminal to find it, then replace `"command": "npx"` with the full path in your config.
+{% endhint %}
+
+### Claude Code
+
+Claude Code can be configured via its CLI or directly via JSON config files at the global or project level.
+
+**CLI**
+
+The `claude mcp add` command is the quickest way to register the server:
+
+```bash
+claude mcp add --transport http fiddler-genai \
+  https://<your-fiddler-url>/v1/mcp/genai/ \
+  --header "Authorization: Bearer ${FIDDLER_API_KEY}"
+```
+
+{% hint style="warning" %}
+**Note:** The CLI command may store your resolved API key as plaintext in Claude Code's config file. For shared or version-controlled environments, use the config file approach below instead.
+{% endhint %}
+
+**Config file (recommended)**
+
+Add Fiddler directly to a JSON config file. Claude Code resolves `${FIDDLER_API_KEY}` at runtime rather than at registration time, so the raw token is never stored in the file.
+
+Choose the scope that fits your workflow:
+
+* **Global** — `~/.claude.json`: applies across all projects
+* **Project** — `.mcp.json` in the project root: applies only to that project
+
+Add the following entry to the `mcpServers` object in either file:
+
+```json
+"fiddler-genai": {
+  "type": "http",
+  "url": "https://<your-fiddler-url>/v1/mcp/genai/",
+  "headers": {
+    "Authorization": "Bearer ${FIDDLER_API_KEY}"
+  }
+}
+```
+
+Replace `<your-fiddler-url>` with your Fiddler instance URL. Set the `FIDDLER_API_KEY` environment variable before starting Claude Code.
+
+### Cursor
+
+Cursor does not support custom authentication headers for remote MCP servers. Connect via the `mcp-remote` bridge instead, using the same approach as Claude Desktop.
+
+{% hint style="info" %}
+**Node.js required** — the `mcp-remote` bridge runs via `npx`. Make sure Node.js is installed before proceeding.
+{% endhint %}
+
+Edit (or create) `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "fiddler-genai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-fiddler-url>/v1/mcp/genai/",
+        "--header",
+        "Authorization: Bearer ${FIDDLER_API_KEY}"
+      ]
+    }
+  }
+}
+```
+
+Replace `<your-fiddler-url>` with your Fiddler instance URL. Set the `FIDDLER_API_KEY` environment variable to your Fiddler API key before starting Cursor.
+
+{% hint style="warning" %}
+If you store `.cursor/mcp.json` in a version-controlled project, add it to `.gitignore` to avoid accidentally committing credentials.
+{% endhint %}
+
+### Other MCP Clients
+
+Any MCP-compatible client that supports remote HTTP MCP with custom request headers can connect to Fiddler. Use the following connection details:
+
+* **Server URL**: `https://<your-fiddler-url>/v1/mcp/genai/`
+* **Authorization header**: `Authorization: Bearer <your-api-key>`
+
+Refer to your client's documentation for how to configure remote MCP servers.
+
+## Example Workflows
+
+### Explore Your Applications
+
+Ask your AI assistant to give you an overview of your Fiddler environment:
+
+> "Show me all my GenAI applications and their health status."
+
+The assistant retrieves your projects and the applications within them, summarizing traffic counts and active/inactive status for a given time window. You get a clear picture of which applications are receiving traffic and which may need attention.
+
+### Investigate Trace Quality
+
+Drill into evaluation scores for a specific application:
+
+> "Find the last 20 traces for my chatbot app and show me any with low faithfulness scores."
+
+The assistant queries spans matching your criteria, then pulls the full session trace tree for any flagged entries. You can see exactly which turns triggered low scores without opening the Fiddler UI.
+
+### Check Evaluator Coverage
+
+Audit which evaluators are running and whether any backfills are still in progress:
+
+> "Which evaluator rules are active on my app and are any backfills still running?"
+
+The assistant enumerates the evaluator rules bound to your application and reports the progress of any historical backfill jobs. You can confirm that coverage is complete before drawing conclusions from your evaluation metrics.
+
+## Tool Groups
+
+### genai
+
+The `genai` tool group covers the following platform domains:
+
+* Projects & Apps
+* Evaluators & Rules
+* Traces & Sessions
+* Charts & Dashboards
+* Alerts
+* Metrics
+* LLM Gateway
+* Experiments
+* Attributes & Annotations
+* Backfills
+
+The `genai` tool group also provides glossary resources for MCP clients that support resources. Note that some popular clients — including Claude and OpenCode — do not currently support MCP resources.
+
+### genai-experimental
+
+The `genai-experimental` tool group provides write access to create, update, and delete resources across the same platform domains as `genai`.
+
+{% hint style="info" %}
+The `genai-experimental` tool group is disabled by default and requires separate administrator enablement on top of MCP access.
+{% endhint %}
+
+## Authentication and Limitations
+
+### Authentication
+
+The MCP server uses Bearer token authentication with your Fiddler API key — the same key used for the Fiddler Python Client SDK and REST API. Retrieve or create your API key from **Settings > Credentials**.
+
+The MCP server forwards the token to the Fiddler backend on every request. Standard role-based access control (RBAC) applies: the tools return only data that your API key's role is authorized to view.
+
+* **Rate limit**: 120 requests per minute per API key
+* **OAuth**: Not currently supported. Use the config file approach for clients that require OAuth (such as Claude Desktop)
+
+### Limitations
+
+* **GenAI and agentic tools only** — ML model monitoring features are not available through MCP
+* **Trace content truncation** — long trace content may be truncated by default to manage context window usage; ask your assistant to retrieve the full, untruncated content if you need to inspect a specific span in detail
+* **genai-experimental disabled by default** — requires administrator enablement; contact your CSM for access
+* **Claude UI MCP connector** — the connector built into Claude.ai requires OAuth, which Fiddler does not currently support; use the config file approach with `mcp-remote` instead
+
+## What's Next?
+
+* [**Agentic AI Overview**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) — Browse all Fiddler integrations for agentic AI
+* [**Fiddler OTel SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) — Instrument custom Python agents with OpenTelemetry
+* [**Fiddler Evals SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md) — Run offline evaluations on your LLM applications
+* [**Agentic AI Observability**](/getting-started/agentic-monitoring.md) — Complete setup guide for GenAI monitoring
+
+
+---

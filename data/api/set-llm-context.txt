@@ -1,0 +1,35 @@
+# set\_llm\_context
+
+Set additional context information for LLM interactions.
+
+The LLM context allows you to provide additional background information or available options that can be tracked alongside model invocations. This context will be added to telemetry spans as 'gen\_ai.llm.context' and can be used for debugging or analysis in Fiddler's platform.
+
+The context persists until explicitly changed by calling this function again with a new value. Works automatically in both synchronous and asynchronous contexts.
+
+## Parameters
+
+| Parameter | Type    | Required | Default | Description                                                                                                                   |
+| --------- | ------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `model`   | `Model` | ✗        | `None`  | The Model instance to attach context to                                                                                       |
+| `context` | `str`   | ✗        | `None`  | Context string providing additional information about available options, constraints, or background for the `LLM` interaction |
+
+## Example
+
+```python
+from strands.models.openai import OpenAIModel
+from fiddler_strandsagents import set_llm_context
+
+model = OpenAIModel(api_key="...", model_id="gpt-4")
+set_llm_context(
+    model,
+    'Available hotels: Hilton, Marriott, Hyatt...'
+)
+
+# Now when the model is invoked, the context will be
+# included in the telemetry span
+agent = Agent(model=model, system_prompt="You are a travel assistant")
+response = agent("Which hotel should I book?")
+```
+
+
+---

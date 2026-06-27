@@ -1,0 +1,85 @@
+# Column
+
+Represents a single column in a model schema with its metadata and constraints.
+
+A Column defines the structure and properties of a data column that will be used in a Fiddler model. It includes information about the column's data type, value ranges, categorical values, binning configuration, and other metadata necessary for proper data validation and monitoring.
+
+This class is used within ModelSchema to define the complete structure of data that a model expects to receive.
+
+## Examples
+
+Creating a numeric column:
+
+```python
+column = Column(
+    name="age",
+    data_type=DataType.INTEGER,
+    min=0,
+    max=120
+)
+```
+
+Creating a categorical column:
+
+```python
+column = Column(
+    name="category",
+    data_type=DataType.CATEGORY,
+    categories=["A", "B", "C"]
+)
+```
+
+Creating a vector column:
+
+```python
+column = Column(
+    name="embedding",
+    data_type=DataType.VECTOR,
+    n_dimensions=128
+)
+```
+
+Creating a numeric column with custom histogram bins:
+
+```python
+column = Column(
+    name="credit_score",
+    data_type=DataType.INTEGER,
+    min=350,
+    max=850,
+    bins=[350, 450, 550, 650, 750, 850]
+)
+```
+
+Updating bins on an existing model:
+
+```python
+model = fdl.Model.get(id_="abc-123")
+model.schema["credit_score"].bins = [350, 500, 650, 850]
+model.update()
+```
+
+> **Note:** Bin boundaries must span the column's existing \[min, max] range. If you are also changing the range, update min and max in the same call.
+
+Column name provided by the customer
+
+Data type of the column
+
+Min value of integer/float column
+
+Max value of integer/float column
+
+List of unique values of a categorical column
+
+Bin boundary values for integer/float column histograms. If omitted, uniform bins are auto-generated from min and max. Custom bins must be a strictly increasing list of numbers where the first value equals `min` and the last value equals `max`, with at least 2 and at most 16 boundary values (1 to 15 bins).
+
+Replace the list of given values to NULL if found in the events data
+
+Number of dimensions of a vector column
+
+## *class* Config
+
+## smart\_union *= True*
+
+
+---

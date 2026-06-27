@@ -1,0 +1,58 @@
+# AlertThresholdAlgo
+
+Threshold determination algorithms for alert rules.
+
+Defines how alert thresholds are calculated - either manually specified or automatically computed based on historical data patterns.
+
+## MANUAL
+
+User-specified static thresholds. Provides full control but requires domain knowledge to set appropriately.
+
+## STD\_DEV\_AUTO\_THRESHOLD
+
+Automatic thresholds based on standard deviation. Calculates thresholds as mean ± (multiplier × std\_dev) from historical data. Adapts to data patterns automatically.
+
+## Example
+
+```python
+# Manual threshold - user knows the acceptable drift limit
+manual_alert = AlertRule(
+        threshold_type=AlertThresholdAlgo.MANUAL,
+        critical_threshold=0.1,
+        warning_threshold=0.05
+    )
+
+    # Auto threshold - let system learn from historical patterns
+    auto_alert = AlertRule(
+            threshold_type=AlertThresholdAlgo.STD_DEV_AUTO_THRESHOLD,
+            auto_threshold_params={
+                    'warning_multiplier': 2.0,  # 2 std devs for warning
+                    'critical_multiplier': 3.0  # 3 std devs for critical
+                }
+            )
+```
+
+## MANUAL *= 'manual'*
+
+## STD\_DEV\_AUTO\_THRESHOLD *= 'standard\_deviation\_auto\_threshold'*
+
+## **str**()
+
+Return the string value of the enum.
+
+## Returns
+
+The enum's string value for serialization and display.
+
+**Return type:** str
+
+## Example
+
+```python
+algo = AlertThresholdAlgo.MANUAL
+str(algo)
+'manual'
+```
+
+
+---

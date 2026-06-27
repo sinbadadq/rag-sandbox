@@ -1,0 +1,9 @@
+# Pydantic Models
+
+- [DatasetItem](https://docs.fiddler.ai/api/fiddler-evals-sdk/pydantic-models/dataset-item.md): DatasetItem
+- [NewDatasetItem](https://docs.fiddler.ai/api/fiddler-evals-sdk/pydantic-models/new-dataset-item.md): NewDatasetItem
+- [Score](https://docs.fiddler.ai/api/fiddler-evals-sdk/pydantic-models/score.md): Score
+- [ScoreStatus](https://docs.fiddler.ai/api/fiddler-evals-sdk/pydantic-models/score-status.md): ScoreStatus
+
+
+---

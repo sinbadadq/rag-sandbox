@@ -1,0 +1,31 @@
+# is\_fiddler\_span
+
+Check if a span belongs to Fiddler's tracer.
+
+Verifies span ownership by checking for Fiddler's APPLICATION\_ID in resource attributes. This ensures isolation from other OpenTelemetry tracers that may be active.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `span`    | \`Span | None\`   | ✗       | `None`      |
+
+## Returns
+
+True if span is a Fiddler span, False otherwise.
+
+**Return type:** bool
+
+## Example
+
+```python
+from fiddler_otel.utils import is_fiddler_span
+from opentelemetry import trace
+
+otel_span = trace.get_current_span()
+if is_fiddler_span(otel_span):
+    print("This span belongs to Fiddler")
+```
+
+
+---

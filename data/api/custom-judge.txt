@@ -1,0 +1,208 @@
+# CustomJudge
+
+Create a fully customizable LLM-as-a-Judge evaluator with your own prompt and output schema.
+
+The CustomJudge evaluator allows you to define arbitrary evaluation criteria by specifying a custom prompt template and structured output fields. This is the most flexible evaluator in the Fiddler Evals SDK, enabling you to build domain-specific evaluation logic without writing custom code.
+
+Key Features:
+
+* **Custom Prompts**: Define your own evaluation prompt with `{{ placeholder }}` syntax
+* **Structured Outputs**: Specify typed output fields (string, boolean, integer, number)
+* **Categorical Choices**: Constrain string outputs to predefined categories
+* **Multi-Field Outputs**: Return multiple scores/labels from a single evaluation
+* **Field Descriptions**: Guide the LLM with descriptions for each output field
+
+Use Cases:
+
+* **Domain-Specific Evaluation**: Create evaluators tailored to your industry or use case
+* **Custom Rubrics**: Implement grading rubrics with specific criteria
+* **Multi-Aspect Scoring**: Evaluate multiple dimensions (e.g., tone, accuracy, helpfulness)
+* **Classification Tasks**: Categorize responses into predefined labels
+* **Compliance Checking**: Verify responses meet specific guidelines or policies
+
+Output Field Types:
+
+* **string**: Free-form text output, or categorical if `choices` is specified
+* **boolean**: True/False classification
+* **integer**: Whole number scores (e.g., 1-5 rating scale)
+* **number**: Floating-point scores (e.g., 0.0-1.0 confidence)
+
+## Parameters
+
+| Parameter         | Type                     | Required | Default | Description                                                                                                                                                                                                                                                      |
+| ----------------- | ------------------------ | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prompt_template` | `str`                    | ✗        | `None`  | The evaluation prompt with `{{ placeholder }}` markers for dynamic content. Placeholders are filled from the `inputs` dict passed to the `score()` method.                                                                                                       |
+| `output_fields`   | `Dict[str, OutputField]` | ✗        | `None`  | Schema defining the expected outputs. Each field has: `type`: One of 'string', 'boolean', 'integer', 'number'; `choices` (optional): List of allowed values for categorical string fields; `description` (optional): Instructions for the `LLM` about this field |
+| `model`           | `str`                    | ✗        | `None`  | `LLM` Gateway model name in `{provider}/{model}` format. E.g., `openai/gpt-4o`, `anthropic/claude-3-sonnet`                                                                                                                                                      |
+| `credential`      | `str, optional`          | ✗        | `None`  | Name of the `LLM` Gateway credential for the provider.                                                                                                                                                                                                           |
+
+## Returns
+
+A list of Score objects, one for each output field defined. : Each Score contains:
+
+* name: The output field name (e.g., "sentiment", "confidence")
+* value: The numeric value (for number/integer/boolean fields)
+* label: The string label (for string/categorical fields)
+* reasoning: Always None for CustomJudge (reasoning is returned as a field)
+
+**Return type:** list\[Score]
+
+## Example
+
+Basic sentiment analysis with categorical output:
+
+```python
+from fiddler_evals.evaluators import CustomJudge
+
+evaluator = CustomJudge(
+    model="openai/gpt-4o",
+    credential="my-openai-key",
+    prompt_template="""
+        Analyze the sentiment of the following customer review:
+
+        Review: {{ review_text }}
+
+        Classify the sentiment and explain your reasoning.
+    """,
+    output_fields={
+        "sentiment": {
+            "type": "string",
+            "choices": ["positive", "negative", "neutral"],
+        },
+        "confidence": {
+            "type": "number",
+            "description": "Confidence score between 0 and 1"
+        },
+        "reasoning": {
+            "type": "string",
+        }
+    }
+)
+
+scores = evaluator.score(inputs={
+    "review_text": "The product exceeded my expectations! Fast shipping too."
+})
+
+# Access individual scores by index or iterate
+for score in scores:
+    print(f"{score.name}: {score.value or score.label}")
+# Output:
+# sentiment: positive
+# confidence: 0.95
+# reasoning: The review expresses satisfaction...
+```
+
+## Example
+
+Multi-criteria response quality evaluation:
+
+```python
+evaluator = CustomJudge(
+    model="anthropic/claude-3-sonnet",
+    credential="my-anthropic-key",
+    prompt_template="""
+        Evaluate the quality of this customer support response.
+
+        Customer Question: {{ question }}
+        Support Response: {{ response }}
+
+        Rate the response on multiple criteria.
+    """,
+    output_fields={
+        "helpful": {
+            "type": "boolean",
+            "description": "Does the response address the customer's question?"
+        },
+        "professional_tone": {
+            "type": "boolean",
+            "description": "Is the tone professional and courteous?"
+        },
+        "quality_score": {
+            "type": "integer",
+            "description": "Overall quality rating from 1 (poor) to 5 (excellent)"
+        }
+    }
+)
+
+scores = evaluator.score(inputs={
+    "question": "How do I reset my password?",
+    "response": "Click 'Forgot Password' on the login page and follow the steps."
+})
+
+# Convert to dict for easy access
+scores_dict = {s.name: s for s in scores}
+print(f"Helpful: {scores_dict['helpful'].value}")  # True
+print(f"Quality: {scores_dict['quality_score'].value}")  # 4
+```
+
+## Example
+
+Code review evaluator:
+
+````python
+evaluator = CustomJudge(
+    model="openai/gpt-4o",
+    credential="my-openai-key",
+    prompt_template="""
+        Review this code change for potential issues:
+```{{ language }}
+        ```
+
+Context: {{ pr_description }}
+""",
+output_fields={
+    "has_bugs": {
+        "type": "boolean",
+        "description": "Are there any obvious bugs or logic errors?"
+    },
+    "severity": {
+        "type": "string",
+        "choices": ["critical", "major", "minor", "none"],
+        "description": "Severity of issues found"
+    },
+    "feedback": {
+        "type": "string",
+        "description": "Specific feedback for the code author"
+    }
+}
+)
+```python
+{{ code_diff }}
+````
+
+```
+
+<div data-gb-custom-block data-tag="hint" data-style='info'>
+
+- Placeholder names in `{{ }}` must exactly match keys in the `inputs` dict
+- The LLM is instructed to return JSON matching your output schema
+- For best results, include clear descriptions for each output field
+- Use `choices` for categorical fields to ensure consistent outputs
+- This evaluator requires an active connection to the Fiddler API
+
+</div>
+
+#### name *= 'custom_judge'*
+
+#### score()
+
+Score using the Custom Judge.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `inputs` | `Dict[str, Any]` | ✗ | `None` | Values for the {{ placeholders }} in your prompt_template. Keys must match placeholder names exactly. |
+
+#### Returns
+
+A list of Score objects, one for each output field defined.
+
+**Return type:** list[Score]
+
+#### Raises
+  **ValueError** -- If inputs is empty.
+```
+
+
+---

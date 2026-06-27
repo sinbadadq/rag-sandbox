@@ -1,0 +1,53 @@
+# ModelCompact
+
+Lightweight model representation for listing and basic operations.
+
+A minimal model object containing only essential identifiers. Used by Model.list() to efficiently return model information without fetching full schema and configuration details.
+
+## Example
+
+```python
+# Get from listing
+models = list(Model.list(project_id=project.id))
+compact_model = models[0]
+
+# Access basic info
+print(f"Model: {compact_model.name} v{compact_model.version}")
+print(f"ID: {compact_model.id}")
+
+# Fetch full details when needed
+full_model = compact_model.fetch()
+print(f"Task: {full_model.task}")
+print(f"Schema: {len(full_model.schema.columns)} columns")
+```
+
+## version *: str | None* *= None*
+
+## fetch()
+
+Fetch the complete Model instance.
+
+Retrieves the full Model object with all schema, spec, and configuration details from the Fiddler platform using this compact model's ID.
+
+## Returns
+
+Complete model instance with all details and capabilities.
+
+**Return type:** [`Model`](/api/fiddler-python-client-sdk/entities/model.md)
+
+## Example
+
+```python
+# From model listing
+compact = next(Model.list(project_id=project.id))
+
+# Get full model details
+full_model = compact.fetch()
+
+# Now can access full functionality
+full_model.publish(source=data)
+print(f"Input columns: {full_model.spec.inputs}")
+```
+
+
+---

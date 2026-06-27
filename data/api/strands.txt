@@ -1,0 +1,45 @@
+# Introduction
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-strands)](https://pypi.org/project/fiddler-strands/)
+
+**Version:** 0.4.0
+
+## Overview
+
+Complete API reference documentation for the fiddler-strandsagents package.
+
+## Components
+
+### Attributes
+
+Attributes module documentation
+
+* [get\_conversation\_id](/api/fiddler-strands-agents-sdk/attributes/get-conversation-id.md)
+* [get\_llm\_context](/api/fiddler-strands-agents-sdk/attributes/get-llm-context.md)
+* [get\_session\_attributes](/api/fiddler-strands-agents-sdk/attributes/get-session-attributes.md)
+* [get\_span\_attributes](/api/fiddler-strands-agents-sdk/attributes/get-span-attributes.md)
+* [set\_conversation\_id](/api/fiddler-strands-agents-sdk/attributes/set-conversation-id.md)
+* [set\_llm\_context](/api/fiddler-strands-agents-sdk/attributes/set-llm-context.md)
+* [set\_session\_attributes](/api/fiddler-strands-agents-sdk/attributes/set-session-attributes.md)
+* [set\_span\_attributes](/api/fiddler-strands-agents-sdk/attributes/set-span-attributes.md)
+
+### Hooks
+
+Hooks module documentation
+
+* [FiddlerInstrumentationHook](/api/fiddler-strands-agents-sdk/fiddler-instrumentation-hook.md)
+
+### Instrumentation
+
+Instrumentation module documentation
+
+* [StrandsAgentInstrumentor](/api/fiddler-strands-agents-sdk/strands-agent-instrumentor.md)
+
+### Span Processor
+
+Span Processor module documentation
+
+* [FiddlerSpanProcessor](/api/fiddler-strands-agents-sdk/fiddler-span-processor.md)
+
+
+---

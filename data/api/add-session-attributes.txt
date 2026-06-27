@@ -1,0 +1,47 @@
+# add\_session\_attributes
+
+Adds custom session-level attributes that persist across all spans in the current context.
+
+Session attributes are key-value pairs that apply to all operations within the current execution context (thread or async coroutine). Use this to add metadata that describes the session environment, such as user information, deployment environment, or feature flags.
+
+These attributes are stored in context variables and automatically included in all spans created during the session. They persist until the context ends or the attribute is updated with a new value.
+
+Note: Context variables are shallow copied - modifications to mutable values (lists, dicts) are shared between contexts.
+
+## Parameters
+
+| Parameter | Type                                                                   | Required | Default | Description                                                                                                                                                                                              |
+| --------- | ---------------------------------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`     | `str`                                                                  | ✓        | `-`     | The attribute key to add or update. Will be formatted as 'fiddler.session.user.{key}' in the OpenTelemetry span.                                                                                         |
+| `value`   | `str \| bool \| int \| float \| Sequence[str \| bool \| int \| float]` | ✓        | `-`     | The attribute value to set. Accepts any OpenTelemetry primitive value type, or a homogeneous sequence of one of these types. Available since `fiddler-otel` 1.1.1; earlier versions accepted only `str`. |
+
+## Returns
+
+None
+
+**Return type:** None
+
+## Examples
+
+```python
+from fiddler_langgraph import add_session_attributes
+
+# String values
+add_session_attributes("user_id", "user_12345")
+add_session_attributes("tier", "premium")
+
+# Numeric and boolean values (since fiddler-otel 1.1.1)
+add_session_attributes("request_count", 42)        # int
+add_session_attributes("confidence_score", 0.87)   # float
+add_session_attributes("is_premium", True)         # bool
+
+# Add deployment environment context
+add_session_attributes("environment", "production")
+add_session_attributes("region", "us-west-2")
+
+# Update an existing attribute
+add_session_attributes("user_id", "user_67890")  # Overwrites previous value
+```
+
+
+---

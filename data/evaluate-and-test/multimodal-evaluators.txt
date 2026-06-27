@@ -1,0 +1,72 @@
+# Multimodal Evaluators
+
+Multimodal evaluators enable you to evaluate GenAI applications that use images or documents. This is particularly useful for monitoring document processing pipelines — verifying extraction accuracy, checking summarization faithfulness, or validating that generated descriptions match source images.
+
+{% hint style="warning" %}
+**Private Preview** — Multimodal evaluation is currently in private preview. To inquire about access, contact your Fiddler Customer Success Manager or email <sales@fiddler.ai>.
+{% endhint %}
+
+## Use Cases
+
+* **Document extraction verification** — Given a receipt, invoice, or form and extracted JSON, verify the extraction is accurate
+* **Summarization faithfulness** — Given a document and its summary, check if the summary accurately represents the source
+* **Image-to-text verification** — Given an image and generated description, verify the description matches the image content
+
+## Supported Models
+
+### Fiddler-Hosted Models
+
+| Model                   | Vision Support | Notes                                  |
+| ----------------------- | -------------- | -------------------------------------- |
+| `fiddler/ministral3-8b` | ✅ Yes          | PDFs automatically converted to images |
+| `fiddler/llama3.1-8b`   | ❌ No           | Use for text-only evaluations          |
+
+### Third-Party Providers
+
+Vision-capable models from third-party providers work through the LLM Gateway. Consult provider documentation for model-specific capabilities and limits:
+
+| Provider           | Example Models                       | Documentation                                                                          |
+| ------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| OpenAI             | `gpt-4o`, `gpt-4o-mini`              | [OpenAI Vision](https://platform.openai.com/docs/guides/vision)                        |
+| Anthropic          | `claude-3-opus`, `claude-3-sonnet`   | [Anthropic Vision](https://docs.anthropic.com/en/docs/vision)                          |
+| Google (Gemini)    | `gemini-2.5-pro`, `gemini-2.5-flash` | [Gemini Vision](https://ai.google.dev/gemini-api/docs/vision)                          |
+| Google (Vertex AI) | `gemini-*`, `claude-*`               | [Vertex AI](https://cloud.google.com/vertex-ai/docs/generative-ai/multimodal/overview) |
+
+## Limitations
+
+### Platform-Wide Limits
+
+These limits apply to all models and providers:
+
+| Context               | Size Limit                     |
+| --------------------- | ------------------------------ |
+| Production Monitoring | 10 MB per span (OpenTelemetry) |
+| Evals SDK             | 20 MB per request              |
+
+### Fiddler-Hosted Model Limits
+
+These limits apply to `fiddler/ministral3-8b`:
+
+| Constraint                 | Limit                             |
+| -------------------------- | --------------------------------- |
+| Supported formats          | JPEG, PNG, GIF, WebP, PDF         |
+| Maximum images per request | 8                                 |
+| Maximum PDF pages          | 8                                 |
+| PDF handling               | Automatically converted to images |
+
+### Third-Party Models
+
+Limits vary by provider. Consult the provider's documentation for:
+
+* Supported image formats
+* Maximum image dimensions and file sizes
+* Maximum images per request
+* Token limits for vision content
+
+## Next Steps
+
+* [Multimodal Evaluators Cookbook](/developers/cookbooks/multimodal-evaluators.md) — Hands-on examples for document processing pipelines
+* [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) — General CustomJudge patterns
+
+
+---

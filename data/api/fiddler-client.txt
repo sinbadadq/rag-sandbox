@@ -1,0 +1,265 @@
+# FiddlerClient
+
+The main client for instrumenting Generative AI applications with Fiddler observability.
+
+This client configures and manages the OpenTelemetry tracer that sends telemetry data to the Fiddler platform for monitoring, analysis, and debugging of your AI agents and workflows.
+
+Flush on exit: A shutdown handler is registered via `atexit()` so that pending spans are flushed and the tracer is shut down when the process exits. For short scripts or critical workloads, call [`force_flush()`](#force_flush) and [`shutdown()`](#shutdown) explicitly (e.g. in a `try`/`finally` or signal handler) since `atexit` may not run in all environments (e.g. SIGKILL, fork).
+
+Asyncio: Tracing works in asyncio (context vars propagate across `await`). When shutting down from async code, use [`aflush()`](#aflush) and [`ashutdown()`](#ashutdown) so the event loop is not blocked; the sync [`force_flush()`](#force_flush) and [`shutdown()`](#shutdown) can block for up to the flush timeout.
+
+Context manager: Use `with FiddlerClient(...) as client:` to ensure [`shutdown()`](#shutdown) is called on exit (flush then shutdown; atexit is unregistered).
+
+## Parameters
+
+| Parameter                   | Type                       | Required | Default                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | -------------------------- | -------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `application_id`            | `str`                      | ✓        | `-`                        | The unique identifier (UUID4) for the application. Must be a valid UUID4 (e.g. `550e8400-e29b-41d4-a716-446655440000`). Copy this from the **GenAI Applications** page in the Fiddler UI. Required in all modes — even when `otlp_enabled=False` — because the S3 connector uses it to route traces to the correct application.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `api_key`                   | `str`                      | ✗        | `''`                       | The API key for authenticating with the Fiddler backend. **Required when `otlp_enabled=True` (the default).** Can be omitted or left empty when `otlp_enabled=False` (offline / S3 routing mode).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `url`                       | `str`                      | ✗        | `''`                       | The base URL for your Fiddler instance (e.g. `https://your-instance.fiddler.ai`). **Required when `otlp_enabled=True` (the default).** Can be omitted or left empty when `otlp_enabled=False` (offline / S3 routing mode). Must use `http` or `https` scheme.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `otlp_enabled`              | `bool`                     | ✗        | `True`                     | Controls whether traces are exported directly to the Fiddler OTLP endpoint. Set to `False` to disable all direct export to Fiddler — useful when traces must first be written to local files for S3 upload (offline / S3 routing mode). When `False`, `api_key` and `url` are not required. **Note:** `console_tracer`, `jsonl_capture_enabled`, and `otlp_json_capture_enabled` are all independent of this flag and can be used in any combination.                                                                                                                                                                                                                                                                                               |
+| `console_tracer`            | `bool`                     | ✗        | `False`                    | If `True`, span data is **also** printed to the console (stdout). This is **additive** — traces are still exported to Fiddler via OTLP (unless `otlp_enabled=False`). Setting this to `True` does **not** suppress or replace the OTLP export. Useful for local debugging to confirm spans are being created.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `span_limits`               | `SpanLimits \| None`       | ✗        | `None`                     | Configuration for span limits, such as the maximum number of attributes or events. When `None` (default), OpenTelemetry automatically applies its standard defaults: `max_attributes`: 128 (or `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` env var); `max_events`: 128 (or `OTEL_SPAN_EVENT_COUNT_LIMIT` env var); `max_links`: 128 (or `OTEL_SPAN_LINK_COUNT_LIMIT` env var); `max_event_attributes`: 128 (or `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT` env var); `max_link_attributes`: 128 (or `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT` env var); `max_span_attribute_length`: None/unlimited (or `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` env var). Override these by passing a custom `SpanLimits` object (see example below) or by setting the environment variables. |
+| `sampler`                   | `sampling.Sampler \| None` | ✗        | `None`                     | The sampler for deciding which spans to record. Defaults to the parent-based always-on OpenTelemetry sampler (100% sampling).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `compression`               | `Compression`              | ✗        | `Compression.Gzip`         | The compression algorithm for exporting traces. Can be `Compression.Gzip`, `Compression.Deflate`, or `Compression.NoCompression`. Only used when `otlp_enabled=True`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `jsonl_capture_enabled`     | `bool`                     | ✗        | `False`                    | If `True`, span data is **also** saved to a local JSONL file in a custom Fiddler format. This is **additive** — OTLP export to Fiddler continues as normal (unless `otlp_enabled=False`). Setting this to `True` does **not** suppress the OTLP export. Useful for keeping a local copy of trace data. **Note:** This JSONL format is not compatible with the Fiddler S3 connector. For S3 ingestion use `otlp_json_capture_enabled=True` instead.                                                                                                                                                                                                                                                                                                  |
+| `jsonl_file_path`           | `str`                      | ✗        | `fiddler_trace_data.jsonl` | Path to the JSONL file where trace data will be saved. Only used when `jsonl_capture_enabled=True`. Override with the `FIDDLER_JSONL_FILE` environment variable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `otlp_json_capture_enabled` | `bool`                     | ✗        | `False`                    | If `True`, traces are written to local `.json` files in standard OTLP JSON format (`ExportTraceServiceRequest` envelope). Files are written to `otlp_json_output_dir`. This format is directly compatible with the Fiddler S3 connector — upload the generated files to S3 and the connector ingests them without any reformatting. This is **additive** relative to OTLP export; combine with `otlp_enabled=False` to write to files only (offline / S3 routing mode).                                                                                                                                                                                                                                                                             |
+| `otlp_json_output_dir`      | `str`                      | ✗        | `fiddler_traces`           | Directory path where OTLP JSON files are written when `otlp_json_capture_enabled=True`. The directory is created automatically if it does not exist. Each batch of spans is written to a separate timestamped `.json` file.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+## Raises
+
+* **`ValueError`** — If `application_id` is not a valid UUID4.
+* **`ValueError`** — If `otlp_enabled=True` and `api_key` is empty or not provided.
+* **`ValueError`** — If `otlp_enabled=True` and `url` is empty, missing a scheme, or uses a scheme other than `http`/`https`.
+
+## Examples
+
+Basic connection to your Fiddler instance:
+
+```python
+client = FiddlerClient(
+    application_id='YOUR_APPLICATION_ID',  # UUID4, required in all modes
+    api_key='YOUR_API_KEY',
+    url='https://your-instance.fiddler.ai',
+)
+```
+
+High-volume applications with custom configuration:
+
+```python
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+
+client = FiddlerClient(
+    application_id='YOUR_APPLICATION_ID',
+    api_key='YOUR_API_KEY',
+    url='https://your-instance.fiddler.ai',
+    span_limits=SpanLimits(
+        max_span_attributes=64,           # Reduce from default 128
+        max_span_attribute_length=2048,   # Limit from default None (unlimited)
+    ),
+    sampler=sampling.TraceIdRatioBased(0.1),  # Sample 10% of traces
+    compression=Compression.Gzip,
+)
+```
+
+Local development with console output (traces still sent to Fiddler):
+
+```python
+# console_tracer=True prints spans to stdout AND continues to export to Fiddler.
+# It does NOT suppress OTLP export. Use it to confirm spans are being created locally.
+client = FiddlerClient(
+    application_id='00000000-0000-0000-0000-000000000000',
+    api_key='dev-key',
+    url='http://localhost:4318',
+    console_tracer=True,
+)
+```
+
+Offline / S3 routing mode (no data sent directly to Fiddler):
+
+```python
+# Use this when traces must be routed through an intermediate store (e.g. S3)
+# before reaching Fiddler, rather than being sent directly.
+#
+# - otlp_enabled=False     → disables direct OTLP export; api_key and url are not needed
+# - otlp_json_capture_enabled=True → writes traces to local .json files in standard
+#                                     OTLP JSON format (ExportTraceServiceRequest envelope)
+# - application_id is still required so the S3 connector knows which Fiddler
+#   application to route the traces to after upload
+#
+# Upload the generated .json files from otlp_json_output_dir to your S3 bucket.
+# The Fiddler S3 connector reads them directly with no reformatting required.
+client = FiddlerClient(
+    application_id='YOUR_APPLICATION_ID',
+    otlp_enabled=False,
+    otlp_json_capture_enabled=True,
+    otlp_json_output_dir='./fiddler_traces',  # default: 'fiddler_traces'
+)
+```
+
+## **enter**()
+
+Context manager entry. Returns this client.
+
+**Return type:** [*FiddlerClient*](#fiddlerclient)
+
+## **exit**(exc\_type, exc\_val, exc\_tb)
+
+Context manager exit. Flushes and shuts down the tracer provider.
+
+**Return type:** None
+
+## force\_flush()
+
+Flushes pending spans to the exporter.
+
+Call this before process exit (e.g. in signal handlers or atexit) to reduce intermittent span loss. BatchSpanProcessor buffers spans in memory and exports on a schedule; without flush, buffered spans can be lost on exit.
+
+This method is blocking (up to `timeout_millis`). From async code, use [`aflush()`](#aflush) to avoid blocking the event loop.
+
+## Parameters
+
+| Parameter        | Type  | Required | Default | Description                                                    |
+| ---------------- | ----- | -------- | ------- | -------------------------------------------------------------- |
+| `timeout_millis` | `int` | ✗        | `30000` | Maximum time to wait for flush in milliseconds. Default 30000. |
+
+## Returns
+
+True if flush completed within the timeout, False otherwise.
+
+**Return type:** bool
+
+## *async* aflush(timeout\_millis=30000)
+
+Async version of [`force_flush()`](#force_flush).
+
+Runs the flush in a thread pool so the event loop is not blocked. Use this when shutting down an asyncio application.
+
+**Return type:** bool
+
+## shutdown()
+
+Shuts down the tracer provider after flushing pending spans.
+
+Call this when the application is exiting to ensure all spans are exported. Safe to call multiple times. Registered automatically via atexit when the client is created. The atexit handler is unregistered so it will not run again at process exit.
+
+This method is blocking (flush can take up to 30 seconds). From async code, use [`ashutdown()`](#ashutdown) to avoid blocking the event loop.
+
+**Return type:** None
+
+## *async* ashutdown()
+
+Async version of [`shutdown()`](#shutdown).
+
+Runs flush and shutdown in a thread pool so the event loop is not blocked. Use this when shutting down an asyncio application, e.g. in an `async with` cleanup or before closing the event loop.
+
+**Return type:** None
+
+## get\_tracer\_provider()
+
+Gets the OpenTelemetry TracerProvider instance.
+
+Initializes the provider on the first call.
+
+## Returns
+
+The configured OpenTelemetry TracerProvider.
+
+**Return type:** TracerProvider
+
+## Raises
+
+**RuntimeError** -- If tracer provider initialization fails.
+
+## update\_resource()
+
+Updates the OpenTelemetry resource with additional attributes.
+
+Use this to add metadata that applies to all spans, such as version numbers or environment names.
+
+{% hint style="warning" %}
+Must be called before get\_tracer() is invoked.
+{% endhint %}
+
+## Parameters
+
+| Parameter    | Type             | Required | Default | Description                             |
+| ------------ | ---------------- | -------- | ------- | --------------------------------------- |
+| `attributes` | `dict[str, Any]` | ✓        | `-`     | Key-value pairs to add to the resource. |
+
+## Raises
+
+**ValueError** -- If the tracer has already been initialized. **Return type:** None
+
+## Examples
+
+```python
+from fiddler_langgraph import FiddlerClient
+client = FiddlerClient(application_id='...', api_key='...', url='https://your-instance.fiddler.ai')
+client.update_resource({'service.version': '1.2.3'})
+```
+
+## get\_tracer()
+
+Returns an OpenTelemetry tracer instance for creating spans.
+
+Initializes the tracer on the first call. This is the primary method for developers to get a tracer for custom instrumentation.
+
+## Returns
+
+OpenTelemetry tracer instance.
+
+**Return type:** trace.Tracer
+
+## Raises
+
+**RuntimeError** -- If tracer initialization fails.
+
+## Examples
+
+```python
+from fiddler_langgraph import FiddlerClient
+client = FiddlerClient(application_id='...', api_key='...', url='https://your-instance.fiddler.ai')
+tracer = client.get_tracer()
+with tracer.start_as_current_span('my-operation'):
+    print('Doing some work...')
+```
+
+## start\_as\_current\_span()
+
+Create a span using context manager (automatic lifecycle).
+
+## Parameters
+
+| Parameter | Type                                             | Required | Default | Description                                              |
+| --------- | ------------------------------------------------ | -------- | ------- | -------------------------------------------------------- |
+| `name`    | `str`                                            | ✓        | `-`     | Name for the span.                                       |
+| `as_type` | `Literal['span', 'generation', 'chain', 'tool']` | ✗        | `span`  | Type of span - "span", "generation", "chain", or "tool". |
+
+## Returns
+
+Wrapper with context manager support.
+
+**Return type:** *FiddlerSpan* | *FiddlerGeneration* | *FiddlerChain* | *FiddlerTool*
+
+## start\_span()
+
+Create a span with manual control. User must call span.end().
+
+## Parameters
+
+| Parameter | Type                                             | Required | Default | Description                                              |
+| --------- | ------------------------------------------------ | -------- | ------- | -------------------------------------------------------- |
+| `name`    | `str`                                            | ✓        | `-`     | Name for the span.                                       |
+| `as_type` | `Literal['span', 'generation', 'chain', 'tool']` | ✗        | `span`  | Type of span - "span", "generation", "chain", or "tool". |
+
+## Returns
+
+Wrapper requiring explicit end() call.
+
+**Return type:** *FiddlerSpan* | *FiddlerGeneration* | *FiddlerChain* | *FiddlerTool*
+
+
+---

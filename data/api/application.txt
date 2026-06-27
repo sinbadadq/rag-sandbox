@@ -1,0 +1,267 @@
+# Application
+
+Represents a GenAI Application container for organizing GenAI application resources.
+
+An Application is a logical container within a Project that groups related GenAI application resources including datasets, experiments, evaluators, and monitoring configurations. Applications provide resource organization, access control, and lifecycle management for GenAI App monitoring workflows.
+
+Key Features:
+
+* **Resource Organization**: Container for related GenAI application resources
+* **Project Context**: Applications are scoped within projects for isolation
+* **Access Management**: Application-level permissions and access control
+* **Monitoring Coordination**: Centralized monitoring and alerting configuration
+* **Lifecycle Management**: Coordinated creation, updates, and deletion of resources
+
+Application Lifecycle:
+
+1. **Creation**: Create application with unique name within a project
+2. **Configuration**: Set up datasets, evaluators, and monitoring
+3. **Operations**: Publish logs, monitor performance, manage alerts
+4. **Maintenance**: Update configurations and resources
+5. **Cleanup**: Delete application when no longer needed
+
+## Example
+
+```python
+# Create a new application for fraud detection
+application = Application.create(name="fraud-detection-app", project_id=project_id)
+print(f"Created application: {application.name} (ID: {application.id})")
+```
+
+{% hint style="info" %}
+Applications are permanent containers - once created, the name cannot be changed. Deleting an application removes all contained resources and configurations. Consider the organizational structure carefully before creating applications.
+{% endhint %}
+
+## *classmethod* get\_by\_id(id\_)
+
+Retrieve an application by its unique identifier.
+
+Fetches an application from the Fiddler platform using its UUID. This is the most direct way to retrieve an application when you know its ID.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+The application instance with all metadata and configuration.
+
+**Return type:** `Application`
+
+## Raises
+
+* **NotFound** -- If no application exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get application by UUID
+application = Application.get_by_id(id_="550e8400-e29b-41d4-a716-446655440000")
+print(f"Retrieved application: {application.name}")
+print(f"Created: {application.created_at}")
+print(f"Project: {application.project.name}")
+```
+
+{% hint style="info" %}
+This method makes an API call to fetch the latest application state from the server. The returned application instance reflects the current state in Fiddler.
+{% endhint %}
+
+## *classmethod* get\_by\_name(name, project\_id)
+
+Retrieve an application by name within a project.
+
+Finds and returns an application using its name within the specified project. This is useful when you know the application name and project but not its UUID. Application names are unique within a project, making this a reliable lookup method.
+
+## Parameters
+
+| Parameter    | Type   | Required | Default | Description                                                                                                    |
+| ------------ | ------ | -------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `name`       | `str`  | ✗        | `None`  | The name of the application to retrieve. Application names are unique within a project and are case-sensitive. |
+| `project_id` | \`UUID | str\`    | ✗       | `None`                                                                                                         |
+
+## Returns
+
+The application instance matching the specified name.
+
+**Return type:** `Application`
+
+## Raises
+
+* **NotFound** -- If no application exists with the specified name in the project.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get project instance
+project = Project.get_by_name(name="fraud-detection-project")
+
+# Get application by name within a project
+application = Application.get_by_name(
+    name="fraud-detection-app",
+    project_id=project.id
+)
+print(f"Found application: {application.name} (ID: {application.id})")
+print(f"Created: {application.created_at}")
+print(f"Project: {application.project.name}")
+```
+
+{% hint style="info" %}
+Application names are case-sensitive and must match exactly. Use this method when you have a known application name from configuration or user input.
+{% endhint %}
+
+## *classmethod* list(project\_id)
+
+List all applications in a project.
+
+Retrieves all applications that the current user has access to within the specified project. Returns an iterator for memory efficiency when dealing with many applications.
+
+## Parameters
+
+| Parameter    | Type   | Required | Default | Description |
+| ------------ | ------ | -------- | ------- | ----------- |
+| `project_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## Yields
+
+`Application` -- Application instances for all accessible applications in the project.
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API. **Return type:** *Iterator*\[[*Application*](#application)]
+
+## Example
+
+```python
+# Get project instance
+project = Project.get_by_name(name="fraud-detection-project")
+
+# List all applications in a project
+for application in Application.list(project_id=project.id):
+    print(f"Application: {application.name}")
+    print(f"  ID: {application.id}")
+    print(f"  Created: {application.created_at}")
+
+# Convert to list for counting and filtering
+applications = list(Application.list(project_id=project.id))
+print(f"Total applications in project: {len(applications)}")
+
+# Find applications by name pattern
+fraud_apps = [
+    app for app in Application.list(project_id=project.id)
+    if "fraud" in app.name.lower()
+]
+print(f"Fraud detection applications: {len(fraud_apps)}")
+```
+
+{% hint style="info" %}
+This method returns an iterator for memory efficiency. Convert to a list with list(Application.list(project\_id)) if you need to iterate multiple times or get the total count. The iterator fetches applications lazily from the API.
+{% endhint %}
+
+## *classmethod* create(name, project\_id)
+
+Create a new application in a project.
+
+Creates a new application within the specified project on the Fiddler platform. The application must have a unique name within the project.
+
+## Parameters
+
+| Parameter    | Type   | Required | Default | Description                                          |
+| ------------ | ------ | -------- | ------- | ---------------------------------------------------- |
+| `name`       | `str`  | ✗        | `None`  | Application name, must be unique within the project. |
+| `project_id` | \`UUID | str\`    | ✗       | `None`                                               |
+
+## Returns
+
+The newly created application instance with server-assigned fields.
+
+**Return type:** `Application`
+
+## Raises
+
+* **Conflict** -- If an application with the same name already exists in the project.
+* **ValidationError** -- If the application configuration is invalid (e.g., invalid name format).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get project instance
+project = Project.get_by_name(name="fraud-detection-project")
+
+# Create a new application for fraud detection
+application = Application.create(
+    name="fraud-detection-app",
+    project_id=project.id
+)
+print(f"Created application with ID: {application.id}")
+print(f"Created at: {application.created_at}")
+print(f"Project: {application.project.name}")
+```
+
+{% hint style="info" %}
+After successful creation, the application instance is returned with server-assigned metadata. The application is immediately available for adding datasets, evaluators, and other resources.
+{% endhint %}
+
+## *classmethod* get\_or\_create(name, project\_id)
+
+Get an existing application by name or create a new one if it doesn't exist.
+
+This is a convenience method that attempts to retrieve an application by name within a project, and if not found, creates a new application with that name. Useful for idempotent application setup in automation scripts and deployment pipelines.
+
+## Parameters
+
+| Parameter    | Type   | Required | Default | Description                                        |
+| ------------ | ------ | -------- | ------- | -------------------------------------------------- |
+| `name`       | `str`  | ✗        | `None`  | The name of the application to retrieve or create. |
+| `project_id` | \`UUID | str\`    | ✗       | `None`                                             |
+
+## Returns
+
+Either the existing application with the specified name, : or a newly created application if none existed.
+
+**Return type:** `Application`
+
+## Raises
+
+* **ValidationError** -- If the application name format is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get project instance
+project = Project.get_by_name(name="fraud-detection-project")
+
+# Safe application setup - get existing or create new
+application = Application.get_or_create(
+    name="fraud-detection-app",
+    project_id=project.id
+)
+print(f"Using application: {application.name} (ID: {application.id})")
+
+# Idempotent setup in deployment scripts
+application = Application.get_or_create(
+    name="llm-pipeline-app",
+    project_id=project.id
+)
+
+# Use in configuration management
+environments = ["dev", "staging", "prod"]
+applications = {}
+for env in environments:
+    applications[env] = Application.get_or_create(
+        name=f"fraud-detection-{env}",
+        project_id=project.id
+    )
+```
+
+{% hint style="info" %}
+This method is idempotent - calling it multiple times with the same name and project\_id will return the same application. It logs when creating a new application for visibility in automation scenarios.
+{% endhint %}
+
+
+---

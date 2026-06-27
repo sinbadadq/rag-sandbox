@@ -1,0 +1,319 @@
+# Multimodal Evaluators
+
+Build evaluators that analyze images and documents alongside text using `CustomJudge` with vision-capable models. This cookbook covers common document processing pipeline monitoring scenarios.
+
+**Use this cookbook when:** You need to verify that a GenAI application correctly extracted, summarized, or described content from images or documents.
+
+**Time to complete**: \~25 minutes
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* Vision-capable model configured in [LLM Gateway](/reference/settings/llm-gateway.md):
+  * Fiddler-hosted: `fiddler/ministral3-8b` (available by default)
+  * Third-party: Configure provider credentials (OpenAI, Anthropic, etc.)
+* `pip install fiddler-evals requests`
+
+**Tip:** When using Fiddler-hosted models, use the **Test Connection** button on the LLM Gateway page to warm up the model before running evaluations. This reduces cold-start latency on your first requests.
+{% endhint %}
+
+{% hint style="warning" %}
+**Private Preview** — Multimodal evaluation is currently in private preview. To inquire about access, contact your Fiddler Customer Success Manager or email <sales@fiddler.ai>.
+{% endhint %}
+
+***
+
+## Example 1: Document Extraction Verification
+
+This example verifies that data extracted from a table matches the source document.
+
+{% stepper %}
+{% step %}
+**Connect to Fiddler and Load Helper**
+
+```python
+import base64
+import json
+from pathlib import Path
+
+import requests
+from fiddler_evals import init
+from fiddler_evals.evaluators import CustomJudge
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+
+init(url=URL, token=TOKEN)
+
+def load_document(source: str) -> tuple[str, str]:
+    """
+    Load a document from a file path or URL.
+
+    :param source: Local file path or HTTP(S) URL
+    :returns: Tuple of (base64_data, mime_type)
+    """
+    mime_types = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+    }
+
+    if source.startswith(('http://', 'https://')):
+        headers = {'User-Agent': 'FiddlerEvals/1.0'}
+        response = requests.get(source, headers=headers, timeout=10)
+        response.raise_for_status()
+        content = response.content
+        ext = Path(source).suffix.lower()
+    else:
+        path = Path(source)
+        ext = path.suffix.lower()
+        content = path.read_bytes()
+
+    mime_type = mime_types.get(ext, 'application/octet-stream')
+    b64_data = base64.b64encode(content).decode('utf-8')
+
+    return b64_data, mime_type
+```
+
+{% hint style="warning" %}
+**Image Input Format** — Images and PDFs must be passed as a list containing a structured object with `media_type`, `encoding`, and `data` fields. Passing a data URL string directly will cause errors. The `load_document` helper returns these components separately so you can construct the correct format.
+{% endhint %}
+
+{% hint style="info" %}
+**Base64 Payload Size** — Base64 representation adds \~33% to the original file size. A 20KB image becomes \~27KB in the API request. Keep this overhead in mind when working near size limits.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Create the Extraction Verification Judge**
+
+This evaluator compares extracted fields against the source document:
+
+```python
+extraction_judge = CustomJudge(
+    prompt_template="""
+        You are verifying data extraction accuracy. Compare the extracted data
+        against the source document and determine if the extraction is correct.
+        Verify fields "metric" and "outputType" accurately match the source document.
+
+        Respond with:
+        - extraction_accurate: True if all extracted fields match the source document
+        - errors_found: Briefly list any extraction errors, or "None" if accurate
+
+        Source Document:
+        {{ document }}
+
+        Extracted Data:
+        {{ extracted_data }}
+    """,
+    output_fields={
+        'extraction_accurate': {'type': 'boolean'},
+        'errors_found': {'type': 'string'},
+    },
+    model='fiddler/ministral3-8b',
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Evaluate the Extraction**
+
+Load a sample document and verify the extracted data:
+
+<figure><img src="/files/EuSyB1E2IkYXdKA1UAos" alt="Text Statistics metrics table showing Textstat, Evaluate, Sentiment, and Token Count evaluators with their respective output types"><figcaption><p>Sample document: Text Statistics evaluators table</p></figcaption></figure>
+
+```python
+# Load the document
+b64_data, mime_type = load_document('https://media.githubusercontent.com/media/fiddler-labs/fiddler-examples/main/cookbooks/assets/multimodal-text-statistics-table.png')
+
+# Extracted data to verify against the source document
+#   only 1 of 4 rows shown, as a 'bad extraction'
+extracted_json = [{'metric': 'Textstat', 'outputType': 'float'}]
+
+scores = extraction_judge.score(
+    inputs={
+        'document': [
+            {
+                'media_type': mime_type,
+                'encoding': 'base64',
+                'data': b64_data,
+            }
+        ],
+        'extracted_data': json.dumps(extracted_json),
+    }
+)
+
+scores_dict = {s.name: s for s in scores}
+print(f'Extraction accurate: {scores_dict["extraction_accurate"].value}')
+print(f'Errors found: {scores_dict["errors_found"].label}')
+
+# Example output:
+# Extraction accurate: 0.0
+# Errors found: Incomplete extraction: Missing 'Evaluate', 'Sentiment', and 'Token Count' metrics. The 'outputType' for 'Textstat' is correct, but the extraction only includes one entry instead of all four metrics listed in the source document.
+```
+
+{% endstep %}
+{% endstepper %}
+
+***
+
+## Example 2: Document Summarization Faithfulness
+
+This example verifies that a summary accurately represents the source document.
+
+{% file src="/files/w0RWH89gd9A1cyaPdTbU" %}
+The source document for this example (Fiddler Platform Release 26.7 notes).
+{% endfile %}
+
+{% stepper %}
+{% step %}
+**Create the Summarization Judge**
+
+```python
+summarization_judge = CustomJudge(
+    prompt_template="""
+    You are evaluating whether a summary is FAITHFUL to its source document.
+    IMPORTANT: A summary is meant to be brief. Do NOT penalize the summary
+    for omitting details, examples, or supporting context from the source.
+    Only flag information that is "Missing" if it is so essential that the
+    summary fundamentally misrepresents the source's main message.
+    Categories (in priority order):
+    - "Introduced Errors": Summary contains claims that contradict or
+      hallucinate facts not in the source. THIS IS THE MOST IMPORTANT
+      CATEGORY — flag any factual inaccuracies here.
+    - "Missing Key Information": Summary omits a fundamental message of
+      the source (rare — only use if the summary's main thrust is incomplete)
+    - "Missing Details": Avoid this category unless absolutely necessary.
+      Summarization inherently omits details.
+    - "Faithful": Summary accurately represents the source's main points
+      without introducing errors
+    Respond with:
+    - faithfulness_result: Choose the most severe applicable category
+    - reasoning: Briefly identify any factual errors. Do not
+      enumerate omitted details unless they fundamentally distort meaning.
+    Source Document:
+    {{ document }}
+    Summary:
+    {{ summary }}
+    """,
+    output_fields={
+        'faithfulness_result': {
+            'type': 'string',
+            'choices': [
+                'Introduced Errors',
+                'Missing Key Information',
+                'Missing Details',
+                'Faithful',
+            ],
+        },
+        'reasoning': {'type': 'string'},
+    },
+    model='fiddler/ministral3-8b',
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Evaluate the Summary**
+
+```python
+# Load the document
+# Use the example document or replace with your own
+url = 'https://raw.githubusercontent.com/fiddler-labs/fiddler-examples/main/cookbooks/assets/multimodal-summarization-doc.pdf'
+b64_data, mime_type = load_document(url)
+
+# Example of an UNFAITHFUL summary (contains subtle errors)
+unfaithful_summary = """
+Fiddler Release 26.7 (released March 31, 2026) introduces several improvements
+to the LLM Gateway and evaluation tooling.
+
+The LLM Gateway now supports Google Vertex AI as a provider, enabling teams
+to route evaluator and LLM-as-a-Judge requests through GCP. Supported models
+include Gemini, Claude, Llama, Mistral, and more.
+
+Multi-target event updates for LLM models now correctly preserve all target
+columns during event updates, fixing a bug where additional targets were
+dropped from classification and regression models.
+
+Evaluation datasets can now be created and managed directly from the UI
+with CSV upload support for up to 5,000 rows per upload.
+"""
+scores = summarization_judge.score(inputs={
+    'document': [{
+        'media_type': mime_type,
+        'encoding': 'base64',
+        'data': b64_data,
+    }],
+    'summary': unfaithful_summary,
+})
+[score] = scores
+print(f'Faithfulness result: {score.label}')
+print(f'Reasoning: {score.reasoning}')
+```
+
+**Example Output:**
+
+```
+# Example output:
+# Faithfulness result: Introduced Errors
+# Reasoning: The summary contains two key inaccuracies: (1) It incorrectly
+# states that multi-target event updates fix a bug in classification and
+# regression models, when the source explicitly states this update only
+# affects LLM and NOT_SET model types (which are the only ones supporting
+# multiple targets). (2) It claims CSV uploads are limited to 5,000 rows,
+# when the source limits them to 1,000 rows per upload.
+```
+
+{% endstep %}
+{% endstepper %}
+
+{% hint style="info" %}
+**Scaling Up** — For batch evaluation across datasets, see [Running RAG Experiments at Scale](/developers/cookbooks/rag-experiments-at-scale.md) which demonstrates the `evaluate()` function for efficient processing.
+{% endhint %}
+
+***
+
+## Tips
+
+### Stay Within Size Limits
+
+| Context                            | Limit                                  |
+| ---------------------------------- | -------------------------------------- |
+| Production Monitoring              | 10 MB per span                         |
+| Evals SDK                          | 20 MB per request                      |
+| Fiddler Ministral (context window) | 32K tokens (\~25KB images recommended) |
+| Fiddler Ministral (PDF pages)      | 8 pages max                            |
+| Fiddler Ministral (images)         | 8 images max                           |
+
+### Optimize Large Documents
+
+* **Compress images** before encoding — reduce resolution if full quality isn't needed
+* **Split large PDFs** — evaluate sections separately if exceeding page limits
+* **Use appropriate DPI** — higher DPI means larger file sizes but better text recognition
+
+### Use Multiple Images
+
+Fiddler Ministral supports up to 8 images per evaluation. To evaluate content with multiple images, add a separate template variable for each image in your prompt template (e.g., `{{ image_1 }}`, `{{ image_2 }}`) and pass each as a structured input list following the same format as Example 1's `document` field.
+
+***
+
+## Next Steps
+
+* [Multimodal Evaluators Reference](/evaluate-and-test/multimodal-evaluators.md) — Supported models and limitations
+* [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) — General CustomJudge patterns
+* [Evaluator Rules](/evaluate-and-test/evaluator-rules.md) — Deploy evaluators in production monitoring
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

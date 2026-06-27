@@ -1,0 +1,66 @@
+# init
+
+Initialize the Fiddler client with connection parameters and global configuration.
+
+This function establishes a connection to the Fiddler platform and configures the global client state. It handles authentication, server compatibility validation, logging setup, and creates the singleton connection instance used throughout the client library.
+
+## Parameters
+
+| Parameter  | Type    | Required                       | Default | Description                                                       |
+| ---------- | ------- | ------------------------------ | ------- | ----------------------------------------------------------------- |
+| `url`      | `str`   | ✗                              | `None`  | The base `URL` to your Fiddler platform instance                  |
+| `token`    | `str`   | ✗                              | `None`  | Authentication token obtained from the Fiddler UI Credentials tab |
+| `proxies`  | \`dict  | None\`                         | ✗       | `None`                                                            |
+| `timeout`  | \`float | tuple\[float, float] \| None\` | ✗       | `None`                                                            |
+| `verify`   | `bool`  | ✗                              | `True`  | Whether to verify server's `TLS` certificate                      |
+| `validate` | `bool`  | ✗                              | `True`  | Whether to validate server/client version compatibility           |
+
+## Raises
+
+* **ValueError** -- If url or token parameters are empty
+* **IncompatibleClient** -- If server version is incompatible with client version
+* **ConnectionError** -- If unable to connect to the Fiddler platform **Return type:** None
+
+## Examples
+
+Basic initialization:
+
+```python
+import fiddler as fdl
+
+fdl.init(
+    url="https://your-instance.fiddler.ai",
+    token="your-auth-token"
+)
+```
+
+Initialization with custom timeout and proxy:
+
+```python
+fdl.init(
+    url="https://your-instance.fiddler.ai",
+    token="your-auth-token",
+    timeout=(10.0, 60.0),  # 10s connect, 60s read timeout
+    proxies={"https": "https://proxy.company.com:8080"}
+)
+```
+
+Initialization for development with relaxed settings:
+
+```python
+fdl.init(
+    url="https://your-instance.fiddler.ai",
+    token="dev-token",
+    verify=False,  # Skip SSL verification
+    validate=False,  # Skip version compatibility check
+)
+```
+
+{% hint style="info" %}
+The client implements automatic retry strategies for transient failures. Configure retry duration via FIDDLER\_CLIENT\_RETRY\_MAX\_DURATION\_SECONDS environment variable (default: 300 seconds).
+{% endhint %}
+
+Logging is performed under the 'fiddler' namespace at INFO level. If no root logger is configured, a stderr handler is automatically attached unless auto\_attach\_log\_handler=False.
+
+
+---

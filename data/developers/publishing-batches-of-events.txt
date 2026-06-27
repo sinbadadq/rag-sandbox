@@ -1,0 +1,72 @@
+# Publishing Batches of Events
+
+Fiddler provides multiple options for publishing batches of production data, allowing you to choose the format and method that best suits your needs.
+
+### Supported Data Formats
+
+* pandas DataFrame
+* CSV file (`.csv`),
+* Parquet file (`.parquet`)
+
+### Supported Data Locations
+
+* In memory - pandas DataFrame
+* Local disk - CSV, parquet
+
+> **Note:**
+>
+> Fiddler's Python client offers the ability to integrate with Cloud data stores such as AWS S3. Refer to our [Integrations Guides](https://docs.fiddler.ai/integrations/) for examples.
+
+### Batch Publishing Examples
+
+Publish a batch of inference events using a parquet file, CSV file, or DataFrame using the Model.publish() function. When publishing in batch mode, `Model.publish()` executes asynchronously and returns a Job object. The job can be used to:
+
+* Track by ID in the UI on the Jobs page
+* Poll for status until completion
+* Use the `wait()` method for synchronous behavior
+* Log the job ID for reference
+
+#### Parquet File
+
+```python
+import fiddler as fdl
+
+# Instantiate the Model object for your model
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+publish_job = model.publish('my_events_batch.parquet')
+
+# The publish() method is asynchronous. Use the publish job's wait() method 
+# if synchronous behavior is desired.
+publish_job.wait() 
+```
+
+#### CSV File
+
+```python
+import fiddler as fdl
+
+# Instantiate the Model object for your model
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+publish_job = model.publish('my_events_batch.csv')
+```
+
+#### Pandas DataFrame
+
+```python
+import pandas as pd
+import fiddler as fdl
+
+# Instantiate the Model object for your model
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+my_events_df = pd.read_csv('my_events_batch.csv')
+publish_job = model.publish(my_events_df)
+```
+
+*Please allow a few minutes for events to populate the related charts.* *Total processing time is a function of both width and count of the inference events.*
+
+
+---

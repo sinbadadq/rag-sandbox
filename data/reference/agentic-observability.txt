@@ -1,0 +1,155 @@
+# Agentic Observability
+
+Agentic Observability is the practice of monitoring, tracing, and analyzing autonomous AI agent systems to ensure their reliability, transparency, and alignment with business objectives. It extends beyond traditional application performance monitoring (APM) by capturing the cognitive lifecycle of AI agents—including reasoning processes, tool selection, execution outcomes, self-reflection, and inter-agent coordination—to provide complete visibility into distributed multi-agent systems.
+
+Unlike traditional observability, which tracks deterministic metrics such as latency and error rates, Agentic Observability addresses the unique challenges of probabilistic, goal-driven systems that autonomously plan, decide, and adapt based on dynamic environments and outcomes.
+
+<figure><img src="/files/bcxRA5yQOIpVibxvnvPu" alt="Example of a travel planner implemented with a multi-agent system"><figcaption></figcaption></figure>
+
+## Core Terminology
+
+### Agent
+
+An autonomous AI system that can plan actions, make decisions, interact with tools, and learn from experience. Agents operate through a cognitive loop of thought, action, execution, reflection, and alignment.
+
+### Multi-Agent System
+
+A distributed system where multiple AI agents coordinate to accomplish complex workflows. Each agent maintains its own state, reasoning, and tool interactions while communicating and collaborating with other agents.
+
+### Trace
+
+A complete record of an agent's execution path, including all decisions, tool calls, and outcomes for a specific task or session. Traces capture the full context of agent behavior.
+
+### Span
+
+An individual unit of work within a trace, representing discrete operations such as tool invocations, API calls, or agent-to-agent communications. Spans form the building blocks of hierarchical observability.
+
+### Session
+
+A bounded interaction context containing multiple agent executions, typically representing a complete user request or workflow that may involve multiple agents and numerous traces. Also known as a conversation.
+
+### Tool Call
+
+An agent's invocation of external capabilities, APIs, or functions to accomplish specific tasks. Tool calls represent the bridge between agent reasoning and real-world actions.
+
+## How Fiddler Provides Agentic Observability
+
+Fiddler's Agentic Observability platform delivers comprehensive monitoring for multi-agent systems through a hierarchical approach that captures data across multiple layers:
+
+**1. Application Layer**: High-level system health metrics, aggregated performance indicators, and cross-agent dependencies
+
+**2. Session Layer**: User interaction contexts, workflow orchestration patterns, and end-to-end request tracking
+
+**3. Agent Layer**: Individual agent performance, reasoning traces, decision paths, and behavioral patterns
+
+**4. Action Layer**: Granular tool calls, API interactions, execution results, and timing metrics
+
+The platform integrates with leading agentic frameworks (LangGraph, Strands, custom agents) and provides:
+
+* **Hierarchical Root Cause Analysis**: Drill down from application-level issues to specific agent decisions or tool failures
+* **Semantic Tracing**: Capture not just what agents do, but why they make particular decisions
+* **Cross-Agent Visibility**: Monitor coordination, information flow, and dependencies between agents
+* **Real-time Behavioral Analysis**: Detect off-policy behavior, coordination failures, and goal misalignment
+
+<figure><img src="/files/gjU1ORkyE3FkDD4Er3tl" alt="Chart of system faithfulness with hierarchical trace view expanded"><figcaption><p>Hierarchical Root Cause Analysis</p></figcaption></figure>
+
+<figure><img src="/files/igMRXstC7lNihZHmH7Iy" alt="MAS dashboard with aggregated KPIs and time-series metrics"><figcaption><p>Aggregated Metrics</p></figcaption></figure>
+
+## Why Agentic Observability Is Important
+
+As enterprises deploy multi-agent systems for critical business processes, the complexity of monitoring increases exponentially, requiring up to 26 times more monitoring resources than single-agent applications. Agentic Observability addresses several critical challenges:
+
+* **Debugging Complexity**: Multi-agent systems generate extensive reasoning traces, tool logs, and decision paths that traditional APM tools cannot effectively parse or correlate.
+* **Trust and Compliance**: With 90% of enterprises citing security, trust, and compliance as top concerns for agentic AI, comprehensive observability enables policy enforcement and regulatory adherence.
+* **Cascading Failures**: Errors in one agent can propagate through dependencies, making root cause analysis essential for system reliability.
+* **Performance Optimization**: Understanding agent decision-making patterns enables teams to optimize workflows, reduce unnecessary tool calls, and improve response times.
+* **Alignment Verification**: Ensures agents operate within defined boundaries and adhere to business objectives, preventing autonomous systems from deviating from intended behavior.
+
+## The Agent Lifecycle: Five Observable Stages
+
+Fiddler breaks down agent observability into five critical stages that form a continuous feedback loop:
+
+1. **Thought (Ingest, Retrieve, Interpret)**: Captures prompt processing, memory retrieval, belief state formation, and goal interpretation
+2. **Action (Plan and Select Tools)**: Monitors decision operationalization, tool selection logic, and execution sequencing
+3. **Execution (Perform Tasks)**: Tracks tool invocations, API calls, input/output traces, latency, and success/failure signals
+4. **Reflection (Evaluate and Adapt)**: Observes self-critique processes, trajectory scoring, error analysis, and adaptive learning
+5. **Alignment (Enforce Trust and Safety)**: Implements guardrails, trust model evaluations, and human-in-the-loop interventions
+
+## Types of Agentic Observability
+
+* **Development-Time Observability**: Trace and debug multi-agent systems during development to identify coordination issues, optimize workflows, and validate agent behavior before production deployment.
+* **Runtime Performance Monitoring**: Track operational metrics including agent latency, tool call efficiency, resource utilization, and throughput across distributed agent deployments.
+* **Behavioral Analysis**: Monitor agent reasoning patterns, decision consistency, goal achievement rates, and adaptation mechanisms to ensure aligned autonomous behavior.
+* **Coordination Monitoring**: Observe inter-agent communication, information handoffs, task delegation patterns, and collaborative decision-making in multi-agent systems.
+* **Trust and Safety Monitoring**: Implement continuous evaluation of agent outputs against safety policies, compliance requirements, and ethical guidelines with real-time intervention capabilities.
+
+## Challenges
+
+Implementing effective Agentic Observability presents unique technical and operational challenges:
+
+* **Data Volume and Complexity**: Multi-agent systems generate massive amounts of hierarchical data across reasoning traces, tool logs, and coordination events, requiring sophisticated data management strategies.
+* **Semantic Understanding**: Unlike traditional metrics, agent decisions require semantic interpretation to understand the "why" behind actions, not just the "what."
+* **Real-time Processing**: Agents operate at high speed with complex interdependencies, demanding low-latency observability that doesn't impact system performance.
+* **Cross-Agent Correlation**: Tracing causality across multiple autonomous agents with asynchronous interactions requires advanced correlation algorithms and timestamp synchronization.
+* **Dynamic Adaptation**: Agents that learn and adapt their behavior over time make it challenging to establish stable baselines for anomaly detection.
+* **Privacy and Security**: Monitoring agent reasoning and data flow must strike a balance between comprehensive visibility and data privacy requirements, as well as security constraints.
+
+## Agentic Observability Implementation How-to Guide
+
+1. **Establish Observability Architecture**
+   * Design hierarchical data collection across application, session, agent, and action layers
+   * Implement a unified telemetry pipeline supporting both infrastructure metrics and semantic traces
+   * Configure data retention policies, balancing granularity with storage costs
+2. **Instrument Agent Frameworks**
+   * Integrate observability SDKs with your agentic framework (LangGraph, Strands, custom)
+   * Capture agent lifecycle events: thought formation, tool selection, execution, reflection
+   * Implement correlation IDs for cross-agent tracing
+3. **Define Behavioral Baselines**
+   * Establish expected agent behavior patterns and decision boundaries
+   * Configure anomaly detection for off-policy actions and coordination failures
+   * Set performance thresholds for latency, success rates, and resource usage
+4. **Implement Hierarchical Monitoring**
+   * Create dashboards with drill-down capabilities from the system to the span level
+   * Configure alerts for both technical failures and semantic misalignments
+   * Enable real-time root cause analysis workflows
+5. **Deploy Trust and Safety Controls**
+   * Integrate trust models for output validation and safety scoring
+   * Implement guardrails for real-time intervention on policy violations
+   * Configure human-in-the-loop escalation for critical decisions
+6. **Establish Continuous Improvement**
+   * Analyze agent performance trends and optimization opportunities
+   * Use reflection data to identify systematic improvements
+   * Iterate on agent coordination patterns based on observed bottlenecks
+
+## Frequently Asked Questions
+
+**Q: How does Agentic Observability differ from LLM Observability?**
+
+Agentic Observability extends beyond monitoring individual LLM calls to capture the complete autonomous decision-making lifecycle, inter-agent coordination, and goal-driven behavior. While LLM Observability focuses on model inputs and outputs, as well as quality metrics, Agentic Observability provides visibility into planning, tool usage, reflection, and multi-agent orchestration.
+
+**Q: What frameworks does Fiddler support for Agentic Observability?**
+
+Fiddler integrates with leading agent frameworks, including LangGraph, Strands, and custom-built agent systems. The platform offers SDKs and APIs for seamless integration, eliminating the need for architectural changes.
+
+**Q: Can Agentic Observability handle real-time monitoring at scale?**
+
+Yes, Fiddler's platform is designed for enterprise-scale deployments, featuring hierarchical data aggregation, efficient trace sampling, and distributed processing to maintain low-latency monitoring even with high-volume, multi-agent systems.
+
+**Q: How do I monitor agent coordination in distributed systems?**
+
+Fiddler provides cross-agent correlation through unified session tracking, distributed tracing with correlation IDs, and visualization of agent dependencies and information flow. The hierarchical view enables tracking coordination from high-level workflows down to individual message passing.
+
+## Related Terms
+
+* [LLM Observability](/reference/glossary/llm-observability.md)
+* [Guardrails](/reference/glossary/guardrails.md)
+* [Trust Models](/reference/glossary/trust-service.md)
+* [Root Cause Analysis](/observability/analytics.md#root-cause-analysis)
+
+## Related Resources
+
+* [Agentic Observability in the Enterprise](https://www.fiddler.ai/agentic-observability)
+* [Building Reliable Agentic Systems](https://www.fiddler.ai/blog/agentic-observability-development)
+
+
+---

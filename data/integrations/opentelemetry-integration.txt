@@ -1,0 +1,184 @@
+# OpenTelemetry Integration
+
+## Overview
+
+Fiddler supports native OpenTelemetry integration through the OTLP (OpenTelemetry Protocol) standard, enabling you to monitor custom AI agents and multi-framework environments with full observability. This integration provides a vendor-neutral approach to collecting telemetry data from your agentic applications, allowing you to instrument agents built with any framework or custom implementation.
+
+The OpenTelemetry integration maps your agent's span attributes to Fiddler's semantic conventions, capturing LLM calls, tool executions, agent chains, and custom business metrics. This approach is ideal for teams running multiple agentic frameworks or building custom agent architectures that require unified monitoring across diverse technologies.
+
+With OpenTelemetry, you maintain complete control over your instrumentation while benefiting from Fiddler's advanced analytics, trace visualization, cost tracking, and performance monitoring capabilities.
+
+## When to Use OpenTelemetry Integration
+
+Use OpenTelemetry integration when:
+
+* **Multi-framework environments**: You're using multiple agent frameworks and need unified observability
+* **Custom agent architectures**: Your agent framework doesn't have a dedicated Fiddler SDK
+* **Advanced instrumentation control**: You need fine-grained control over trace attributes and sampling
+* **Standards-based approach**: You want a vendor-neutral telemetry solution using industry standards
+* **Existing OpenTelemetry setup**: You're already using OpenTelemetry and want to route traces to Fiddler
+
+{% hint style="success" %}
+**Using LiteLLM?**
+
+If you are using LiteLLM — either the SDK directly or the proxy gateway — Fiddler has a [dedicated LiteLLM Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md) with a purpose-built span mapper that handles LiteLLM's specific trace format automatically. No manual attribute mapping needed — just set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` and traces will flow to Fiddler automatically.
+{% endhint %}
+
+{% hint style="info" %}
+**When to Use Fiddler SDKs Instead**
+
+For specific frameworks with dedicated SDKs, we recommend using the framework-specific integration for easier setup and automatic instrumentation:
+
+* **LangGraph and LangChain** → [Use Fiddler LangGraph SDK](/api/fiddler-langgraph-sdk/langgraph.md)
+* **Strands Agents** → Use [Strands Agents SDK](/api/fiddler-strands-agents-sdk/strands.md)
+
+These SDKs provide auto-instrumentation and require significantly less code to set up.
+{% endhint %}
+
+## Quick Links
+
+### Getting Started
+
+* [**OpenTelemetry Quick Start Guide**](/developers/agentic-ai-monitoring/opentelemetry-quick-start.md) - Step-by-step guide to integrate OpenTelemetry with Fiddler (\~10-15 minutes)
+* [**Advanced OpenTelemetry Notebook**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb) - Comprehensive working examples with production patterns ([Open in Colab](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb))
+
+### Related Documentation
+
+* [Getting Started: Agentic Observability](/getting-started/agentic-monitoring.md) - Overview of agentic observability concepts
+* [Agentic AI Integrations](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) - Compare integration options for different frameworks
+* [Fiddler LangGraph SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) - Alternative for LangGraph/LangChain users
+* [Strands Agents SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md) - Alternative for Strands agent users
+
+## Supported Features
+
+OpenTelemetry integration with Fiddler supports:
+
+| Feature                   | Support | Description                                              |
+| ------------------------- | ------- | -------------------------------------------------------- |
+| **LLM Tracing**           | ✅ Full  | Track LLM calls with prompts, responses, and token usage |
+| **Tool Execution**        | ✅ Full  | Monitor tool calls with inputs and outputs               |
+| **Agent Chains**          | ✅ Full  | Visualize complex agent workflows and decision flows     |
+| **Custom Attributes**     | ✅ Full  | Add business context with user-defined attributes        |
+| **Conversation Tracking** | ✅ Full  | Track multi-turn conversations across sessions           |
+| **Token Cost Analysis**   | ✅ Full  | Monitor LLM API costs through token tracking             |
+| **Performance Metrics**   | ✅ Full  | Latency, throughput, and error rate tracking             |
+| **Sampling**              | ✅ Full  | Configure trace sampling for high-volume applications    |
+| **Batch Processing**      | ✅ Full  | Optimize network usage with batched exports              |
+| **Compression**           | ✅ Full  | Reduce data transmission with gzip compression           |
+
+## Integration Overview
+
+### Architecture
+
+```
+┌─────────────────────────────────────┐
+│   Your AI Agent Application         │
+│                                     │
+│  ┌──────────────────────────────┐  │
+│  │  OpenTelemetry SDK           │  │
+│  │  - TracerProvider            │  │
+│  │  - Span creation             │  │
+│  │  - Attribute mapping         │  │
+│  └──────────────────────────────┘  │
+│              │                      │
+│              ▼                      │
+│  ┌──────────────────────────────┐  │
+│  │  OTLP Exporter               │  │
+│  │  - Batch processing          │  │
+│  │  - Compression               │  │
+│  └──────────────────────────────┘  │
+└─────────────────────────────────────┘
+              │
+              │ HTTPS (OTLP/HTTP)
+              ▼
+┌─────────────────────────────────────┐
+│   Fiddler Platform                  │
+│                                     │
+│  ┌──────────────────────────────┐  │
+│  │  OTLP Ingestion Endpoint     │  │
+│  └──────────────────────────────┘  │
+│              │                      │
+│              ▼                      │
+│  ┌──────────────────────────────┐  │
+│  │  Trace Processing            │  │
+│  │  - Semantic validation       │  │
+│  │  - Attribute extraction      │  │
+│  └──────────────────────────────┘  │
+│              │                      │
+│              ▼                      │
+│  ┌──────────────────────────────┐  │
+│  │  Analytics & Visualization   │  │
+│  │  - Dashboards                │  │
+│  │  - Alerts                    │  │
+│  │  - Cost tracking             │  │
+│  └──────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+### Required Setup
+
+1. **Environment Configuration**
+   * Set `OTEL_EXPORTER_OTLP_ENDPOINT` to your Fiddler instance URL
+   * Configure `OTEL_EXPORTER_OTLP_HEADERS` with authentication and application ID
+   * Set `OTEL_RESOURCE_ATTRIBUTES` with your application UUID
+2. **OpenTelemetry Initialization**
+   * Install OpenTelemetry packages
+   * Initialize `TracerProvider` with proper configuration
+   * Configure `OTLPSpanExporter` for Fiddler endpoint
+   * Add `BatchSpanProcessor` for efficient transmission
+3. **Span Instrumentation**
+   * Create spans for agent operations (chains, LLM calls, tools)
+   * Map attributes to Fiddler semantic conventions
+   * Add custom business context as needed
+
+## Attribute Mapping
+
+Fiddler requires specific attributes to properly process and visualize your traces:
+
+### Required Attributes
+
+**Resource Level:**
+
+* `application.id` - Your Fiddler application UUID (UUID4 format)
+
+**Span Level:**
+
+* `fiddler.span.type` - Type of operation: `chain`, `llm`, `tool`, or `agent`
+
+### Optional Attributes
+
+* **Agent**: `gen_ai.agent.name` - Name of your AI agent. If provided, set on **every span in the trace** so all spans are attributed to the correct agent.
+* **Agent**: `gen_ai.agent.id` - Unique identifier for the agent. If provided, set on **every span in the trace** alongside `gen_ai.agent.name`.
+* **LLM Spans**: Model, system prompt, user input, output, token usage
+* **Tool Spans**: Tool name, input JSON, output JSON
+* **Conversation**: `gen_ai.conversation.id` for session tracking
+* **Custom**: `fiddler.session.user.*` and `fiddler.span.user.*` for business context
+
+## Getting Started
+
+Ready to integrate OpenTelemetry with Fiddler?
+
+1. [**Follow the Quick Start Guide**](/developers/agentic-ai-monitoring/opentelemetry-quick-start.md) - Complete setup in 10-15 minutes
+2. [**Explore the Advanced Notebook**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb) - Learn production patterns
+3. **Review the attribute reference** - Understand required and optional attributes
+4. **Test your integration** - Verify traces appear in Fiddler dashboard
+
+## Example: Instrumenting a Custom Agent
+
+While OpenTelemetry integration works with any framework, here's a basic example:
+
+```python
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
+
+# Instrument your agent execution
+with tracer.start_as_current_span("custom_agent") as span:
+    span.set_attribute("fiddler.span.type", "chain")
+    span.set_attribute("gen_ai.agent.name", "my_agent")   # optional
+    span.set_attribute("gen_ai.agent.id", "my_agent_v1")  # optional
+    # ... your agent code
+```
+
+
+---

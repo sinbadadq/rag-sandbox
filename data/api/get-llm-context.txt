@@ -1,0 +1,30 @@
+# get\_llm\_context
+
+Get the LLM context for the current model.
+
+Retrieves the context string that was previously set using set\_llm\_context(). Works automatically in both synchronous and asynchronous contexts.
+
+## Parameters
+
+| Parameter | Type    | Required | Default | Description                                 |
+| --------- | ------- | -------- | ------- | ------------------------------------------- |
+| `model`   | `Model` | ✗        | `None`  | The Model instance to retrieve context from |
+
+## Returns
+
+The LLM context string, or empty string if none has been set
+
+**Return type:** str
+
+## Example
+
+```python
+from fiddler_strandsagents import set_llm_context, get_llm_context
+
+set_llm_context(model, "Important background information")
+context = get_llm_context(model)
+print(context)  # "Important background information"
+```
+
+
+---

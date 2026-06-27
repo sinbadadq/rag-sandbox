@@ -1,0 +1,121 @@
+# Fiddler OTel SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-otel)](https://pypi.org/project/fiddler-otel/)
+
+## 1.1
+
+### **1.1.1**
+
+*April 2026*
+
+#### Bug fixes
+
+* **`add_session_attributes()` now accepts all OTel primitive value types** — Previously, `value` was restricted to `str`, forcing callers to convert numeric metadata to strings before attaching it to a session. Numeric values now flow through unchanged, so downstream charts and filters that expect numeric types (e.g. integer counts, floating-point scores) work as intended.
+
+  Supported value types: `str`, `bool`, `int`, `float`, and homogeneous sequences of these (per the OpenTelemetry attribute specification).
+
+  ```python
+  from fiddler_otel import add_session_attributes
+
+  add_session_attributes(key='user_id', value='user_12345')   # str
+  add_session_attributes(key='request_count', value=42)        # int
+  add_session_attributes(key='confidence', value=0.87)         # float
+  add_session_attributes(key='is_premium', value=True)         # bool
+  ```
+
+### **1.1.0**
+
+*April 2026*
+
+#### New features
+
+* **Offline / S3 routing mode** — Traces can now be written to local `.json` files in standard OTLP JSON format and routed through an intermediate store (e.g. Amazon S3) instead of being sent directly to Fiddler. This enables deployment in environments where security or network policies require all data to pass through a controlled intermediary before reaching Fiddler.
+
+  New `FiddlerClient` constructor parameters:
+
+  | Parameter                   | Type   | Default            | Description                                                                                                                                                     |
+  | --------------------------- | ------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `otlp_enabled`              | `bool` | `True`             | Set to `False` to disable direct OTLP export to Fiddler. When `False`, `api_key` and `url` are not required.                                                    |
+  | `otlp_json_capture_enabled` | `bool` | `False`            | When `True`, writes traces to local `.json` files in standard OTLP JSON format (`ExportTraceServiceRequest` envelope) compatible with the Fiddler S3 connector. |
+  | `otlp_json_output_dir`      | `str`  | `'fiddler_traces'` | Directory for OTLP JSON output files. Created automatically if absent. Each span batch is written to a separate timestamped file.                               |
+
+  Usage example:
+
+  ```python
+  from fiddler_otel import FiddlerClient
+
+  # No api_key or url needed in offline mode
+  client = FiddlerClient(
+      application_id='YOUR_APPLICATION_ID',   # Required — used by S3 connector to route traces
+      otlp_enabled=False,
+      otlp_json_capture_enabled=True,
+      otlp_json_output_dir='./fiddler_traces',
+  )
+  ```
+
+  Upload the generated `.json` files from `otlp_json_output_dir` to S3. The Fiddler S3 connector ingests them directly with no reformatting required.
+* **`application_id` as first positional parameter** — `FiddlerClient.__init__` now accepts `application_id` as the first (and only strictly required) argument. `api_key` and `url` default to `''` and are only validated when `otlp_enabled=True`.
+
+#### Clarifications (no functional change)
+
+* `console_tracer=True` has always been **additive** — it prints spans to stdout alongside the existing OTLP export. It does **not** suppress export to Fiddler. The documentation has been updated to reflect this clearly.
+* `jsonl_capture_enabled=True` has always been **additive** — it writes spans to a local JSONL file alongside the existing OTLP export. It does **not** suppress export to Fiddler. Note: the JSONL format is Fiddler's custom format and is **not** compatible with the S3 connector; use `otlp_json_capture_enabled=True` for S3 ingestion.
+
+#### Breaking changes
+
+* **Parameter reordering in `FiddlerClient.__init__`**: `application_id` is now the first parameter, before `api_key` and `url`. Code using **keyword arguments** (the recommended pattern) is unaffected. Code passing arguments **positionally** will break — update to use keyword arguments.
+
+***
+
+## 1.0
+
+### **1.0.0**
+
+*March 18, 2026*
+
+Initial release of the Fiddler OTel SDK as a standalone package. The core OpenTelemetry instrumentation functionality has been extracted from `fiddler-langgraph` into this independent package, which now serves as the foundation for all Fiddler framework integrations.
+
+#### Core classes
+
+* **`FiddlerClient`**: Main client that configures and manages the OTel tracer. Handles OTLP authentication, compression, span limits, sampling, and lifecycle (flush/shutdown). Registers an `atexit` handler for automatic span flushing.
+* **`@trace` decorator**: Automatic function tracing with input/output capture. Supports sync and async functions, all four span types (`span`, `generation`, `chain`, `tool`), and decorator parameters for `model`, `system`, `user_id`, and `version`.
+* **`get_current_span()`**: Retrieve the active Fiddler span inside a `@trace`-decorated function as a typed wrapper.
+* **`get_client()`**: Retrieve the global `FiddlerClient` singleton.
+
+#### Span wrappers
+
+`FiddlerSpan` (base), `FiddlerGeneration`, `FiddlerChain`, `FiddlerTool` — typed wrappers with semantic convention helpers.
+
+* `FiddlerGeneration`: `set_model()`, `set_system()`, `set_system_prompt()`, `set_user_prompt()`, `set_completion()`, `set_usage()`, `set_context()`, `set_messages()`, `set_output_messages()`, `set_tool_definitions()`
+* `FiddlerTool`: `set_tool_name()`, `set_tool_input()`, `set_tool_output()`, `set_tool_definitions()`
+* All wrappers: `set_input()`, `set_output()`, `set_attribute()`, `set_agent_name()`, `set_agent_id()`, `set_conversation_id()`, `record_exception()`, `end()`
+
+#### Context and session
+
+* **`set_conversation_id()`**: Set the conversation ID as a `ContextVar` that propagates to all spans in the current thread or async task.
+* **`add_session_attributes(key, value)`**: Attach session-level metadata to all spans in the current thread or async coroutine. Emitted as `fiddler.session.user.{key}` and automatically propagated from parent to child spans.
+* **`FiddlerSpanProcessor`**: OTel `SpanProcessor` that auto-propagates `gen_ai.agent.name`, `gen_ai.agent.id`, `gen_ai.conversation.id`, `session.id`, and `user.id` from parent to child spans.
+* **Context isolation**: Each `FiddlerClient` uses its own isolated OTel `Context`, preventing interference with any existing global tracer in the application.
+
+#### Configuration and debugging
+
+* **JSONL local capture**: `jsonl_capture_enabled` and `jsonl_file_path` constructor parameters for local span capture. The `FIDDLER_JSONL_FILE` environment variable overrides the file path when `jsonl_file_path` is not set explicitly.
+* **Console tracing**: `console_tracer=True` parameter to print spans to stdout during development.
+* **Flush and shutdown**: `force_flush()`, `shutdown()`, `aflush()`, `ashutdown()`, and context manager support.
+
+#### Constants
+
+* **`FiddlerSpanAttributes`**: Constants for all Fiddler OTel span attribute keys.
+* **`FiddlerResourceAttributes`**: Constants for Fiddler OTel resource attribute keys.
+* **`SpanType`**: Constants for valid `fiddler.span.type` values.
+
+## 0.1
+
+### **0.1.1**
+
+*March 17, 2026*
+
+Pre-release.
+
+
+---

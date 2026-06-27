@@ -1,0 +1,71 @@
+# Guardrails FAQ
+
+## Fiddler Guardrails: Frequently Asked Questions
+
+### Deployment & Latency
+
+**Q: Why am I getting much higher latencies than advertised?**
+
+**A:** The lower latencies are only available on paid plans when a request is made to a dedicated Fiddler deployment within the same network boundaries.
+
+Latency spikes can also occur due to temporary usage surges, even though we provision for peak capacity. If you’re consistently experiencing higher latencies, please contact us on the #fiddler-guardrails-support channel.
+
+**Q: What does this error code mean? How do I fix it?**
+
+**A:** Please visit the [Guardrails tutorials](/developers/tutorials/guardrails.md) for detailed information about error codes and their solutions.
+
+### Service Features & Upgrades
+
+**Q: What's included in the Free Guardrails?**
+
+**A:** The Free Guardrails include:
+
+* 200 requests per day limit
+* 70 requests per hour limit
+* 2 requests per second
+* Integration options with NVIDIA NeMo Guardrails and Langchain
+
+**Q: Can I get a higher rate limit?**
+
+**A:** There's currently no in-app rate limit upgrade option. However, we offer paid plans with increased capacity, additional features, and enterprise-level support. [Contact us](https://www.fiddler.ai/contact) to discuss your requirements.
+
+**Q: Will there be an in-app upgrade option in the future?**
+
+**A:** We recognize the importance of a seamless upgrade experience and are actively exploring ways to improve this in future versions. Your feedback helps shape our roadmap.
+
+### General Information & Future Plans
+
+**Q: What is the Fiddler Trust Service?**
+
+**A:** Integral to the Fiddler AI Observability and Security platform, the [Fiddler Trust Service](https://www.fiddler.ai/trust-service) includes a series of proprietary, fine-tuned Fiddler Trust Models that enable high-quality LLM monitoring, scoring in live environments with the fastest guardrails in the industry. For added security, the Fiddler Trust Service can be deployed in VPC or air-gapped environments, ensuring enterprises maintain strict data control and safeguard LLM applications.
+
+**Q: How does Fiddler Guardrails use the Fiddler Trust Service?**
+
+**A:** At <100ms latency, Fiddler Guardrails is the fastest in the industry. It leverages the scoring of the Fiddler Trust Models to evaluate prompts and responses and moderate harmful outputs for hallucination, toxicity, and jailbreaks. Simply specify your desired metric thresholds and let Fiddler Guardrails handle the enforcement.
+
+**Q: What languages are supported?**
+
+**A:** Fiddler Guardrails currently only supports English. Based on user feedback, we're evaluating support for additional languages.
+
+**Q: How can I stay updated on service improvements?**
+
+**A:** Stay informed about regular updates to Fiddler Guardrails by:
+
+* Following our [product updates page](/changelog/release-notes/product-releases.md)
+* Subscribing to our [newsletter](https://www.fiddler.ai/blog#subscribe)
+* Joining the [Fiddler Community Slack](https://www.fiddler.ai/slackinvite)
+
+**Q: Where can I share feedback or request features?**
+
+**A:** We welcome your input! Please reach out to our team on Slack in the #fiddler-guardrails-support channel. Your feedback helps us prioritize improvements.
+
+**Q: Is Fiddler Guardrails an experimental or beta product?**
+
+**A:** No, Fiddler Guardrails is a fully supported service from Fiddler AI Observability and Security platform. While the Free Guardrails has some limitations, the feature-complete experience is available to platform subscribers.
+
+**Q: Are you hiring?**
+
+**A:** We are! Please look at our [careers page](https://www.fiddler.ai/careers) for open positions.
+
+
+---

@@ -1,0 +1,24 @@
+# set\_session\_attributes
+
+Add Fiddler-specific session attributes to an agent's metadata.
+
+Session attributes provide context about the agent's execution environment, such as user roles, cost centers, or any custom metadata that should be tracked across all invocations within a session.
+
+## Parameters
+
+| Parameter | Type    | Required | Default | Description                                             |
+| --------- | ------- | -------- | ------- | ------------------------------------------------------- |
+| `agent`   | `Agent` | ✗        | `None`  | The Strands Agent instance to add session attributes to |
+
+## Example
+
+```python
+from strands import Agent
+from fiddler_strandsagents import set_session_attributes
+
+agent = Agent(model=model, system_prompt="...")
+set_session_attributes(agent, role="customer_support", region="us-west")
+```
+
+
+---

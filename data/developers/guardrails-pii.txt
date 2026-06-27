@@ -1,0 +1,493 @@
+# PII
+
+Get your sensitive information detection running in **minutes** with Fiddler's Fast PII Guardrails. This guide walks you through detecting PII, PHI, and custom entities to protect sensitive data across your applications.
+
+## What You'll Build
+
+In this quick start, you'll implement a sensitive information detection system that:
+
+* Detects 35+ types of personally identifiable information (PII)
+* Identifies 7 types of protected health information (PHI)
+* Configures custom entity detection for organization-specific data
+* Provides real-time detection with sub-second latency
+
+{% hint style="info" %}
+**Interactive Tutorial**
+
+For more advanced examples, including batch processing, performance optimization, and production deployment patterns:
+
+[**Open the Complete Sensitive Information Guardrail Notebook in Google Colab →**](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Sensitive_Information_Guardrail.ipynb)
+
+[**Or download the notebook from GitHub →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Sensitive_Information_Guardrail.ipynb)
+{% endhint %}
+
+## Prerequisites
+
+* Fiddler account with [access token](/reference/settings.md#credentials)
+* Python 3.10+ environment
+* Basic understanding of data privacy concepts
+
+## Overview
+
+Fiddler's Fast PII and PHI detection provides enterprise-grade protection against data leakage by automatically detecting sensitive information across multiple categories. These guardrails integrate seamlessly with Fiddler's AI Observability platform, enabling continuous monitoring and automated compliance reporting.
+
+### Key Capabilities
+
+* **PII Detection**: 35+ entity types, including names, addresses, SSN, credit cards, emails, phone numbers
+* **PHI Detection**: 7 healthcare-specific entity types for HIPAA compliance
+* **Custom Entities**: Define organization-specific sensitive data patterns
+* **Real-time Processing**: Sub-second latency for production applications
+
+{% stepper %}
+{% step %}
+**Set Up Your Environment**
+
+Connect to Fiddler and configure the Sensitive Information Guardrail API:
+
+```python
+import json
+import pandas as pd
+import requests
+import time
+import fiddler as fdl
+
+# Replace with your actual values
+URL = 'https://your_company.fiddler.ai'
+TOKEN = 'your_token_here'
+
+# API Configuration
+SENSITIVE_INFORMATION_URL = f"{URL}/v3/guardrails/sensitive-information"
+FIDDLER_HEADERS = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Content-Type": "application/json",
+}
+
+# Connect to Fiddler
+fdl.init(url=URL, token=TOKEN)
+print("✅ Connected to Fiddler successfully!")
+```
+
+{% endstep %}
+
+{% step %}
+**Define Helper Functions**
+
+Create reusable functions for interacting with the API:
+
+```python
+def get_sensitive_information_response(
+    text: str,
+    entity_categories: str | list[str] = 'PII',
+    custom_entities: list[str] = None,
+):
+    """
+    Detect sensitive information in text.
+
+    Args:
+        text: Input text to analyze
+        entity_categories: 'PII', 'PHI', 'Custom Entities', or list
+        custom_entities: Custom entity patterns (when using 'Custom Entities')
+
+    Returns:
+        Tuple of (API response dict, latency in seconds)
+    """
+    data = {'input': text}
+
+    # Add entity configuration if specified
+    if entity_categories != 'PII' or custom_entities:
+        data['entity_categories'] = entity_categories
+        if custom_entities:
+            data['custom_entities'] = custom_entities
+
+    start_time = time.monotonic()
+
+    try:
+        response = requests.post(
+            SENSITIVE_INFORMATION_URL,
+            headers=FIDDLER_HEADERS,
+            json={'data': data},
+        )
+        response.raise_for_status()
+        return response.json(), (time.monotonic() - start_time)
+
+    except requests.exceptions.RequestException as e:
+        print(f'❌ API call failed: {e}')
+        return {}, (time.monotonic() - start_time)
+
+
+def print_detection_results(response, latency):
+    """Display detection results in a formatted way."""
+    entities = response.get('fdl_sensitive_information_scores', [])
+
+    print(f"\n🔍 Detection Results (⏱️ {latency:.3f}s)")
+    print(f"📊 Total Entities Found: {len(entities)}\n")
+
+    if not entities:
+        print("✅ No sensitive information detected.")
+        return
+
+    # Group by entity type
+    by_type = {}
+    for entity in entities:
+        label = entity.get('label', 'unknown')
+        if label not in by_type:
+            by_type[label] = []
+        by_type[label].append(entity)
+
+    # Display grouped results
+    for label, group in sorted(by_type.items()):
+        print(f"🏷️  {label.upper()} ({len(group)} found):")
+        for entity in group:
+            print(f"   • '{entity['text']}' (confidence: {entity['score']:.3f})")
+        print()
+```
+
+{% endstep %}
+
+{% step %}
+**Example 1: PII Detection**
+
+Detect common personally identifiable information:
+
+```python
+# Sample text with various PII types
+sample_text = """
+I'm John Doe and I live at 1234 Maple Street, Springfield, IL 62704.
+You can reach me at john.doe@email.com or call me at (217) 555-1234.
+My social security number is 123-45-6789, and I was born on January 15, 1987.
+My credit card number is 4111 1111 1111 1111 with CVV 123.
+"""
+
+print("🧪 Testing PII Detection")
+print("📄 Input Text:")
+print(sample_text)
+
+# Call the API with default PII configuration
+response, latency = get_sensitive_information_response(sample_text)
+
+# Display results
+print_detection_results(response, latency)
+```
+
+**Expected Output:**
+
+```
+🔍 Detection Results (⏱️ 0.125s)
+📊 Total Entities Found: 8
+
+🏷️  PERSON (1 found):
+   • 'John Doe' (confidence: 0.987)
+
+🏷️  ADDRESS (1 found):
+   • '1234 Maple Street, Springfield, IL 62704' (confidence: 0.945)
+
+🏷️  EMAIL (1 found):
+   • 'john.doe@email.com' (confidence: 0.998)
+
+🏷️  PHONE NUMBER (1 found):
+   • '(217) 555-1234' (confidence: 0.976)
+
+🏷️  SOCIAL SECURITY NUMBER (1 found):
+   • '123-45-6789' (confidence: 0.991)
+
+🏷️  CREDIT CARD NUMBER (1 found):
+   • '4111 1111 1111 1111' (confidence: 0.989)
+
+🏷️  CVV (1 found):
+   • '123' (confidence: 0.892)
+
+🏷️  DATE OF BIRTH (1 found):
+   • 'January 15, 1987' (confidence: 0.923)
+```
+
+{% endstep %}
+
+{% step %}
+**Example 2: PHI Detection for Healthcare**
+
+Detect protected health information in medical contexts:
+
+```python
+# Sample text with PHI information
+healthcare_text = """
+Patient report: John Smith was prescribed metformin for his diabetes condition.
+His health insurance number is HI-987654321, and medical record shows
+serial number MED-2024-001 for his glucose monitor device.
+Birth certificate number is BC-IL-1987-001234.
+Current medication includes aspirin and lisinopril for blood pressure management.
+"""
+
+print("🏥 Testing PHI Detection for Healthcare Data")
+print("📄 Input Text:")
+print(healthcare_text)
+
+# Call the API with PHI configuration
+response, latency = get_sensitive_information_response(
+    healthcare_text,
+    entity_categories="PHI"
+)
+
+# Display results
+print_detection_results(response, latency)
+```
+
+**Expected Output:**
+
+```
+🔍 Detection Results (⏱️ 0.098s)
+📊 Total Entities Found: 5
+
+🏷️  PERSON (1 found):
+   • 'John Smith' (confidence: 0.976)
+
+🏷️  MEDICATION (3 found):
+   • 'metformin' (confidence: 0.945)
+   • 'aspirin' (confidence: 0.932)
+   • 'lisinopril' (confidence: 0.928)
+
+🏷️  HEALTH INSURANCE NUMBER (1 found):
+   • 'HI-987654321' (confidence: 0.887)
+```
+
+{% endstep %}
+
+{% step %}
+**Example 4: Custom Entity Detection**
+
+Define and detect organization-specific sensitive data:
+
+```python
+# Sample text with custom entities
+custom_text = """
+Employee ID: EMP-2024-001, Badge Number: BD-789456
+Project code: PROJ-AI-2024, Server hostname: srv-prod-01
+API key: sk-abc123xyz789
+Internal ticket: TICK-2024-5678
+"""
+
+# Define custom entities for your organization
+custom_entities = [
+    'employee id',
+    'badge number',
+    'project code',
+    'api key',
+    'server hostname',
+    'ticket number'
+]
+
+print("🎯 Testing Custom Entity Detection")
+print(f"🏷️ Custom entities: {custom_entities}")
+
+# Call the API with custom entity configuration
+response, latency = get_sensitive_information_response(
+    custom_text,
+    entity_categories='Custom Entities',
+    custom_entities=custom_entities
+)
+
+# Display results
+print_detection_results(response, latency)
+```
+
+**Expected Output:**
+
+```
+🔍 Detection Results (⏱️ 0.112s)
+📊 Total Entities Found: 6
+
+🏷️  EMPLOYEE ID (1 found):
+   • 'EMP-2024-001' (confidence: 0.923)
+
+🏷️  BADGE NUMBER (1 found):
+   • 'BD-789456' (confidence: 0.911)
+
+🏷️  PROJECT CODE (1 found):
+   • 'PROJ-AI-2024' (confidence: 0.897)
+
+🏷️  API KEY (1 found):
+   • 'sk-abc123xyz789' (confidence: 0.945)
+
+🏷️  SERVER HOSTNAME (1 found):
+   • 'srv-prod-01' (confidence: 0.878)
+
+🏷️  TICKET NUMBER (1 found):
+   • 'TICK-2024-5678' (confidence: 0.902)
+```
+
+{% endstep %}
+{% endstepper %}
+
+## API Reference
+
+### Endpoint
+
+```
+POST /v3/guardrails/sensitive-information
+```
+
+### Request Format
+
+```json
+{
+  "data": {
+    "input": "Text to analyze for sensitive information",
+    "entity_categories": "PII" | "PHI" | "Custom Entities" | ["PII", "PHI"],
+    "custom_entities": ["api key", "employee id", "custom pattern"]
+  }
+}
+```
+
+### Request Parameters
+
+| Parameter           | Type            | Description                                                    | Default  |
+| ------------------- | --------------- | -------------------------------------------------------------- | -------- |
+| `input`             | string          | Text to analyze for sensitive information                      | Required |
+| `entity_categories` | string or array | Detection mode(s) to use                                       | "PII"    |
+| `custom_entities`   | array           | Custom entity patterns (required when using "Custom Entities") | None     |
+
+### Response Format
+
+```json
+{
+  "fdl_sensitive_information_scores": [
+    {
+      "score": 0.987,
+      "label": "email",
+      "start": 78,
+      "end": 100,
+      "text": "jane.smith@company.com"
+    }
+  ]
+}
+```
+
+### Response Fields
+
+| Field   | Type    | Description                            |
+| ------- | ------- | -------------------------------------- |
+| `score` | float   | Confidence score (0.0 to 1.0)          |
+| `label` | string  | Entity type identifier                 |
+| `start` | integer | Character position where entity starts |
+| `end`   | integer | Character position where entity ends   |
+| `text`  | string  | The detected entity text               |
+
+### Supported Entity Types
+
+#### PII Entities (35+ types)
+
+* **Personal**: person, date\_of\_birth
+* **Contact**: email, email\_address, phone\_number, mobile\_phone\_number, landline\_phone\_number, address, postal\_code
+* **Financial**: credit\_card\_number, credit\_card\_expiration\_date, cvv, cvc, bank\_account\_number, iban
+* **Government IDs**: social\_security\_number, passport\_number, drivers\_license\_number, tax\_identification\_number, cpf, cnpj, national\_health\_insurance\_number
+* **Digital**: ip\_address, digital\_signature
+* **And more...**
+
+#### PHI Entities (7 types)
+
+* **Medical**: medication, medical\_condition, medical\_record\_number
+* **Insurance**: health\_insurance\_number, health\_plan\_id
+* **Identifiers**: birth\_certificate\_number, device\_serial\_number
+
+### Code Examples
+
+{% tabs %}
+{% tab title="Python - Requests" %}
+
+```python
+import requests
+
+url = "https://your_company.fiddler.ai/v3/guardrails/sensitive-information"
+headers = {
+    "Authorization": "Bearer YOUR_TOKEN",
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "data": {
+        "input": "Contact John at john@email.com",
+        "entity_categories": "PII"
+    }
+}
+
+response = requests.post(url, json=payload, headers=headers)
+entities = response.json().get("fdl_sensitive_information_scores", [])
+
+for entity in entities:
+    print(f"Found {entity['label']}: {entity['text']} (confidence: {entity['score']})")
+```
+
+{% endtab %}
+
+{% tab title="Python - Error Handling" %}
+
+```python
+def safe_detect_pii(text):
+    """Detect PII with proper error handling."""
+    try:
+        response = requests.post(
+            SENSITIVE_INFORMATION_URL,
+            headers=FIDDLER_HEADERS,
+            json={'data': {'input': text}},
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+
+    except requests.exceptions.Timeout:
+        print("Request timed out. Try again or check your connection.")
+        return None
+
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            print("Authentication failed. Check your API token.")
+        elif e.response.status_code == 429:
+            print("Rate limit exceeded. Wait before retrying.")
+        else:
+            print(f"HTTP error {e.response.status_code}: {e.response.text}")
+        return None
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+```
+
+{% endtab %}
+
+{% tab title="cURL" %}
+
+```bash
+curl -X POST 'https://your_company.fiddler.ai/v3/guardrails/sensitive-information' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -d '{
+    "data": {
+      "input": "My SSN is 123-45-6789",
+      "entity_categories": "PII"
+    }
+  }'
+```
+
+{% endtab %}
+{% endtabs %}
+
+## Next Steps
+
+After completing this quick start:
+
+* Explore other [Fiddler guardrails](/protect-and-guardrails/guardrails-faq.md) for comprehensive AI safety
+* Review the complete [guardrails documentation](/getting-started/guardrails.md) for all available guardrail types
+* [Integrate guardrails into your applications ](/protect-and-guardrails/guardrails.md)for production use
+
+## Summary
+
+You've learned how to:
+
+* ✅ Detect 35+ types of PII in text data
+* ✅ Identify PHI for healthcare compliance
+* ✅ Configure custom entities for your organization
+* ✅ Integrate the Fast PII Guardrails API into your applications.
+
+The Fast PII Guardrails offer enterprise-grade protection for sensitive information with sub-second latency, making them ideal for real-time applications while ensuring compliance with privacy regulations such as GDPR, HIPAA, and CCPA.
+
+
+---

@@ -1,0 +1,70 @@
+{
+  "experiment": "Section-Filtered Retrieval",
+  "run_timestamp": "2026-06-26T23:59:38.216200+00:00",
+  "results": [
+    {
+      "query": "What drift metrics does Fiddler track for production models?",
+      "section": "observability",
+      "unfiltered_response": "Based on the provided information, Fiddler tracks the following drift metrics for production models:\n\n## Data Drift Metrics\n\nFiddler calculates data drift between the distribution of a field in the baseline dataset and that same distribution for the time period of interest using:\n\n1. **Jensen-Shannon Divergence (JSD)** - A statistical measure to quantify the difference between data distributions\n2. **Population Stability Index (PSI)** - Another metric for measuring distributional shifts in data\n\nThese metrics help identify:\n- **What data is drifting** - Which specific features or fields are experiencing distributional changes\n- **When it's drifting** - The time periods when drift occurs\n- **How it's drifting** - The nature and magnitude of the distributional shifts\n\n## Model Drift Monitoring\n\nIn addition to data drift metrics, Fiddler monitors model drift through:\n\n- **Performance tracking** - Continuous evaluation of model predictions against ground truth values to identify degradation in accuracy, precision, recall, or custom business metrics\n- **Segment-specific analyses** - Detection of drift that might affect specific data population segments differently\n- **Feature importance tracking** - Monitoring changes in how features contribute to predictions\n\nThese drift metrics serve as early warning indicators for potential model performance degradation and help teams make data-driven decisions about when model interventions or retraining are necessary.",
+      "unfiltered_sources": [
+        "reference/metric.txt",
+        "reference/model-drift.txt",
+        "reference/model-drift.txt",
+        "reference/data-drift.txt",
+        "reference/ml-metrics-reference.txt"
+      ],
+      "filtered_response": "Fiddler tracks the following drift metrics for production models:\n\n1. **Jensen\u2013Shannon distance (JSD)** - A distance metric calculated between the distribution of a field in the baseline and that same distribution for the time period of interest. For numerical columns, distributions are approximated using histograms with configurable bin boundaries.\n\n2. **Population Stability Index (PSI)** - A drift metric based on the multinomial classification of a variable into bins or categories. For numerical columns, the bin boundaries can be customized via the column's bins property.\n\nThese drift metrics are available on model inputs, outputs, and custom features. They help identify what data is drifting, when it's drifting, and how it's drifting, which is the first step in identifying possible model performance issues.\n\nAdditionally, Fiddler provides **vector monitoring capabilities** for detecting drift in multidimensional feature spaces, particularly useful for complex features like text embeddings or image data. This uses a clustering-based data drift detection algorithm to calculate drift values between baseline and published events for custom features.",
+      "filtered_sources": [
+        "observability/data-drift-platform.txt",
+        "observability/monitoring-charts-platform.txt",
+        "observability/platform.txt",
+        "observability/alerts-platform.txt",
+        "observability/vector-monitoring-platform.txt"
+      ],
+      "unfiltered_eval_scores": {
+        "relevance": 4.0,
+        "completeness": 4.0,
+        "specificity": 4.0,
+        "analysis": "The response directly addresses drift metrics tracked by Fiddler, correctly identifying JSD and PSI as the primary data drift metrics. However, it adds vague information about 'model drift monitoring' and 'performance tracking' that may not be specifically what Fiddler calls 'drift metrics,' potentially conflating drift detection with general performance monitoring without concrete metric names."
+      },
+      "filtered_eval_scores": {
+        "relevance": 5.0,
+        "completeness": 5.0,
+        "specificity": 5.0,
+        "analysis": "The response directly answers the question by identifying specific drift metrics (JSD and PSI) that Fiddler tracks, explains how they work, and mentions their application to inputs, outputs, and custom features. It also includes additional relevant information about vector monitoring for embeddings, providing concrete technical details throughout."
+      }
+    },
+    {
+      "query": "How do I get started with LLM monitoring in Fiddler?",
+      "section": "getting-started",
+      "unfiltered_response": "To get started with LLM monitoring in Fiddler, follow these three steps:\n\n1. **Onboard your LLM application** - Define your application's inputs, outputs, and which enrichment metrics you need to track\n\n2. **Publish your application data** - Send your prompts, responses, and context data to Fiddler (typically the \"digital exhaust\" from your model serving platform)\n\n3. **Monitor performance** - Use dashboards and alerts to track the metrics most important to your use case\n\nFiddler will automatically handle generating enrichments, detecting anomalies, and providing visualizations for your LLM applications.\n\n## Quick Start Option\n\nFor a hands-on introduction, you can use the **Simple LLM Monitoring** quick start guide, which takes approximately 10 minutes and uses sample data provided by Fiddler. You can access it through:\n- [Google Colab notebook](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Chatbot.ipynb)\n- Direct download from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Chatbot.ipynb)\n\nThis will help you understand the platform's capabilities for monitoring metrics like hallucinations, toxicity, relevance, latency, and other LLM-specific measurements in real-time.",
+      "unfiltered_sources": [
+        "getting-started/llm-monitoring.txt",
+        "getting-started/ml-observability.txt",
+        "developers/simple-llm-monitoring.txt",
+        "getting-started/llm-monitoring.txt",
+        "getting-started/ml-observability.txt"
+      ],
+      "filtered_response": "To get started with LLM monitoring in Fiddler, you need to follow three simple steps:\n\n## 1. Onboard Your LLM Application\nDefine your application's inputs, outputs, and which enrichment metrics you need. This sets up the foundation for monitoring.\n\n## 2. Publish Your Application Data\nSend your application data to Fiddler, including prompts, responses, and context. This is typically the \"digital exhaust\" from your model serving platform.\n\n## 3. Monitor Performance\nUse dashboards and alerts to track the metrics most important to your use case. Fiddler automatically handles generating enrichments, detecting anomalies, and providing visualizations.\n\n## Quick Start Resources\n\nFor a hands-on introduction, you can follow the **Simple LLM Monitoring** quick start guide, which takes approximately 10 minutes to complete.\n\nAfter getting started, you can explore:\n- Understanding LLM Enrichment Metrics\n- How Fiddler generates LLM metrics\n- Available LLM metrics\n- Creating LLM visualizations using embeddings\n- The Fiddler Python client SDK and guides\n\nFiddler will automatically handle the complex work of generating enrichments, detecting anomalies, and providing the visualizations you need to maintain high-quality LLM applications.",
+      "filtered_sources": [
+        "getting-started/llm-monitoring.txt",
+        "getting-started/ml-observability.txt",
+        "getting-started/llm-monitoring.txt",
+        "getting-started/ml-observability.txt",
+        "getting-started/agentic-monitoring.txt"
+      ],
+      "unfiltered_eval_scores": {
+        "relevance": 5.0,
+        "completeness": 4.0,
+        "specificity": 4.0,
+        "analysis": "The response directly addresses how to get started with LLM monitoring in Fiddler by providing a clear three-step process and a quick start option with specific links. It covers the main workflow and includes concrete resources, though it could provide more technical details about implementation specifics like API calls or configuration parameters."
+      },
+      "filtered_eval_scores": {
+        "relevance": 5.0,
+        "completeness": 4.0,
+        "specificity": 3.0,
+        "analysis": "The response directly addresses how to get started with LLM monitoring in Fiddler by providing a clear three-step process and pointing to specific resources like the Simple LLM Monitoring quick start guide. However, it lacks concrete details about how to actually perform each step (e.g., specific API calls, code examples, or UI navigation steps)."
+      }
+    }
+  ]
+}

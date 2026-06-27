@@ -1,0 +1,50 @@
+# XaiParams
+
+Configuration parameters for explainability (XAI) analysis in Fiddler models.
+
+XaiParams defines the configuration for explainability analysis, including custom explanation methods and default explanation strategies. These parameters control how feature importance, SHAP values, and other explainability metrics are computed for your model.
+
+This configuration is essential for models that require custom explanation logic or when you want to override the default explanation methods provided by Fiddler's built-in explainability features.
+
+## Examples
+
+Creating XAI parameters with custom methods:
+
+```python
+xai_params = XaiParams(
+    custom_explain_methods=["custom_shap", "custom_lime", "domain_specific"],
+    default_explain_method="custom_shap"
+)
+```
+
+Creating XAI parameters with only default method:
+
+```python
+simple_xai_params = XaiParams(
+    default_explain_method="integrated_gradients"
+)
+```
+
+Creating XAI parameters for multiple explanation strategies:
+
+```python
+multi_xai_params = XaiParams(
+    custom_explain_methods=[
+        "business_rule_explainer",
+        "feature_interaction_explainer",
+        "counterfactual_explainer"
+    ],
+    default_explain_method="business_rule_explainer"
+)
+
+Creating empty XAI parameters (use Fiddler defaults):
+
+    default_xai_params = XaiParams()
+```
+
+User-defined explain\_custom method of the model object defined in package.py
+
+Default explanation method
+
+
+---

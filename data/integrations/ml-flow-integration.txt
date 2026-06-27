@@ -1,0 +1,56 @@
+# MLflow
+
+Fiddler allows your team to onboard, monitor, explain, and analyze your models developed with [MLflow](https://mlflow.org/).
+
+This guide shows you how to ingest the model metadata and artifacts stored in your MLflow model registry and use them to set up model observability in the Fiddler Platform:
+
+1. Exporting Model Metadata from MLflow to Fiddler
+2. Uploading Model Artifacts to Fiddler for XAI
+
+### Onboarding a Model
+
+Refer to this [section](/integrations/ml-platforms-and-tools/ml-platforms/databricks-integration.md#creating-the-fiddler-model) of the Databricks integration guide for onboarding your model to Fiddler using model information from MLflow.
+
+### Uploading Model Artifacts
+
+Using the [**MLflow API**](https://mlflow.org/docs/latest/python_api/mlflow.html) you can query the model registry and get the **model signature** which describes the inputs and outputs as a dictionary.
+
+#### Uploading Model Files
+
+Sharing your model artifacts helps Fiddler explain your models. By leveraging the MLflow API you can download these model files:
+
+```python
+import os
+import mlflow
+from mlflow.store.artifact.models_artifact_repo import ModelsArtifactRepository
+
+model_name = "example-model-name"
+model_stage = "Staging"  # Should be either 'Staging' or 'Production'
+
+mlflow.set_tracking_uri("databricks")
+os.makedirs("model", exist_ok=True)
+local_path = ModelsArtifactRepository(
+    f'models:/{model_name}/{model_stage}'
+).download_artifacts("", dst_path="model")
+
+print(f'{model_stage} Model {model_name} is downloaded at {local_path}')
+```
+
+Once you have the model file, you can create a package.py file in this model directory that describes how to access this model.
+
+Finally, you can upload all the model artifacts to Fiddler:
+
+```python
+# Assumes an initialized Python client session and instantiated Model
+job = model.add_artifact(
+    model_dir=MODEL_ARTIFACTS_DIR,
+)
+job.wait()
+```
+
+Alternatively, you can skip uploading your model and use Fiddler to generate a surrogate model to get low-fidelity explanations for your model.
+
+Please refer to the Explainability guide for detailed information on model artifacts, packages, and surrogate models.
+
+
+---

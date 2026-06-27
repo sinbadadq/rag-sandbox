@@ -1,0 +1,10 @@
+llama-index
+llama-index-llms-anthropic
+llama-index-embeddings-huggingface
+sentence-transformers
+requests
+beautifulsoup4
+lxml
+python-dotenv
+jupyter
+streamlit

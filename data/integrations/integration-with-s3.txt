@@ -1,0 +1,150 @@
+# Amazon S3
+
+This guide explains how to integrate AWS S3 with Fiddler to retrieve baseline or production data for model monitoring. You'll learn how to:
+
+* Extract data from S3 buckets using different authentication methods
+* Load data efficiently based on your needs
+* Connect the extracted data with Fiddler's monitoring capabilities
+
+### How to Integrate Fiddler with AWS S3
+
+#### Prerequisites
+
+Before getting started, ensure you have:
+
+* An AWS account with access to the required S3 bucket
+* Required Python packages installed: boto3, pandas, and fiddler-client
+* Appropriate AWS credentials or profile configuration
+* Basic familiarity with Python and AWS S3 concepts
+
+### AWS Authentication Methods
+
+#### Method 1: Using AWS Access Keys
+
+If you're using AWS access keys for authentication, use this approach:
+
+```python
+import boto3
+import pandas as pd
+
+# AWS Configuration
+S3_BUCKET = 'your_bucket_name'
+S3_FILENAME = 'path/to/your/file.csv'
+AWS_ACCESS_KEY_ID = 'your_access_key'
+AWS_SECRET_ACCESS_KEY = 'your_secret_key'
+AWS_REGION = 'your_region' 
+
+# Create AWS session
+session = boto3.session.Session(
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=AWS_REGION,
+)
+
+# Initialize S3 client
+s3 = session.client('s3')
+
+# Read data into pandas DataFrame
+s3_data = s3.get_object(Bucket=S3_BUCKET, Key=S3_FILENAME)['Body']
+df = pd.read_csv(s3_data)
+```
+
+#### Method 2: Using AWS Profiles (Recommended)
+
+For enhanced security, we recommend using AWS profiles instead of hardcoding credentials:
+
+```python
+import boto3
+import pandas as pd
+
+# Configuration
+S3_BUCKET = 'your_bucket_name'
+S3_FILENAME = 'path/to/your/file.csv'
+AWS_PROFILE = 'your_profile_name'
+
+# Create session using profile
+session = boto3.session.Session(profile_name=AWS_PROFILE)
+s3 = session.client('s3')
+
+# Read data
+s3_data = s3.get_object(Bucket=S3_BUCKET, Key=S3_FILENAME)['Body']
+df = pd.read_csv(s3_data)
+```
+
+### Data Loading Options
+
+#### Option 1: Direct Memory Loading
+
+For smaller datasets that fit in memory, load directly into a pandas DataFrame as shown in the examples above.
+
+#### Option 2: File System Loading
+
+For larger datasets or when memory constraints exist, save to disk first:
+
+```python
+import boto3
+
+# AWS Configuration
+S3_BUCKET = 'your_bucket_name'
+S3_FILENAME = 'path/to/your/file.csv'
+OUTPUT_PATH = 'local/path/to/output.csv'
+
+# Initialize S3 client (using either authentication method)
+session = boto3.session.Session(profile_name='your_profile_name')
+s3 = session.client('s3')
+
+# Download file
+s3.download_file(
+    Bucket=S3_BUCKET,
+    Key=S3_FILENAME,
+    Filename=OUTPUT_PATH
+)
+```
+
+### Using AWS S3 Data with Fiddler
+
+#### For Baseline Datasets
+
+After loading your data, you can use it to create a baseline dataset in Fiddler. See the [Creating a Baseline Dataset](/developers/client-library-reference/publishing-production-data/creating-a-baseline-dataset.md) guide for more details.
+
+```python
+import fiddler as fdl
+
+# Assumes an initialized Python client session and instantiated Model
+job = model.publish(
+    source=s3_data_df,
+    environment=fdl.EnvType.PRE_PRODUCTION,
+    dataset_name='your_baseline_name',
+)
+print(
+    f'Initiated pre-production dataset upload with Job ID = {job.id}'
+)
+```
+
+#### For Production Traffic
+
+To publish production data for monitoring. Refer to the [batch publishing guide](/developers/client-library-reference/publishing-production-data/publishing-batches-of-events.md) for more details. For more publishing options, see the additional publishing guides located [here](/developers/client-library-reference/publishing-production-data.md).
+
+```python
+import fiddler as fdl
+
+# Assumes an initialized Python client session and instantiated Model
+job = model.publish(
+    source=s3_data_df,
+    environment=fdl.EnvType.PRODUCTION,
+)
+print(
+    f'Initiated Production dataset upload with Job ID = {job.id}'
+)
+```
+
+#### Best Practices
+
+* Always use AWS profiles instead of hardcoded credentials in production environments
+* Implement proper error handling around S3 operations
+* Consider data size when choosing between memory and file system loading
+* Use appropriate AWS IAM roles and permissions
+* Monitor memory usage when working with large datasets
+
+
+---

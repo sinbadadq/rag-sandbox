@@ -1,0 +1,27 @@
+# Faithfulness
+
+This Quick Start notebook introduces Fiddler Guardrails, an enterprise solution that safeguards LLM applications from risks like hallucinations, toxicity, and jailbreaking attempts. Learn how to implement the **FTL Faithfulness** Model, which evaluates factual consistency between AI-generated responses and their source context in RAG applications.
+
+{% hint style="info" %}
+**This tutorial covers FTL Faithfulness** (`ftl_response_faithfulness`) — Fiddler's proprietary Fast Trust Model for real-time guardrail use cases. For the LLM-as-a-Judge RAG Faithfulness evaluator used in Agentic Monitoring and Experiments, see the [RAG Health Metrics Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md).
+{% endhint %}
+
+Inside you'll find:
+
+* Step-by-step implementation instructions
+* Code examples for evaluating response accuracy
+* Practical demonstration of hallucination detection
+* Sample inputs and outputs with score interpretation
+
+Before running the notebook, get your API key from the sign-up page below. See the documentation and FAQs for more help with getting started.
+
+[Get Started with Your Free Guardrails →](https://www.fiddler.ai/free-guardrails)
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Guardrails_Trial_Faithfulness.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Guardrails_Trial_Faithfulness.ipynb).
+
+
+---

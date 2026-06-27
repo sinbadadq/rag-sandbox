@@ -1,0 +1,41 @@
+# DatasetDataSource
+
+Data source for explainability analysis using a sample from a dataset.
+
+DatasetDataSource allows you to perform explainability analysis on a random sample of data from a specified environment/dataset. This is useful for understanding general model behavior, analyzing feature importance patterns across multiple instances, or getting representative explanations.
+
+This data source type is ideal for exploratory analysis, understanding overall model behavior, or when you want to analyze explanations across a representative sample rather than specific instances.
+
+## Examples
+
+Creating a dataset data source for production sampling:
+
+```python
+dataset_source = DatasetDataSource(
+    env_type="PRODUCTION",
+    num_samples=100,
+    env_id="prod_dataset_uuid"
+)
+```
+
+Creating a dataset data source for validation analysis:
+
+```python
+validation_source = DatasetDataSource(
+    env_type="VALIDATION",
+    num_samples=50
+)
+```
+
+Creating a dataset data source with default sampling:
+
+```python
+default_source = DatasetDataSource(
+    env_type="PRODUCTION"
+)
+```
+
+## env\_id *: str | UUID | None*
+
+
+---

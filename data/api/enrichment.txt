@@ -1,0 +1,72 @@
+# Enrichment
+
+Represents custom features derived from enrichment operations.
+
+Enrichment features apply external processing or analysis to existing columns to create derived insights. This can include operations like sentiment analysis, toxicity detection, entity extraction, SQL validation, JSON validation, or any custom transformation that adds value to the original data.
+
+The feature type is automatically set to CustomFeatureType.ENRICHMENT and enables domain-specific analysis through configurable enrichment operations.
+
+## Examples
+
+```python
+# Creating a sentiment analysis enrichment:
+
+sentiment_enrichment = Enrichment(
+    name="review_sentiment",
+    columns=["review_text"],
+    enrichment="sentiment_analysis",
+    config={
+        "model": "vader",
+        "return_scores": True
+    }
+)
+
+# Creating a SQL validation enrichment:
+
+sql_enrichment = Enrichment(
+    name="sql_validation",
+    columns=["query_string"],
+    enrichment="sql_validation",
+    config={
+        "dialect": "postgresql",
+        "strict": True
+    }
+)
+
+# Creating a JSON validation enrichment:
+
+json_enrichment = Enrichment(
+    name="json_validation",
+    columns=["json_string"],
+    enrichment="json_validation",
+    config={
+        "strict": True,
+        "validation_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+                "prop_1": {"type": "number"}
+            },
+            "required": ["prop_1"],
+            "additionalProperties": False
+        }
+    }
+)
+
+# Creating a toxicity detection enrichment:
+
+toxicity_enrichment = Enrichment(
+    name="content_toxicity",
+    columns=["user_comment"],
+    enrichment="toxicity_detection",
+    config={
+        "threshold": 0.7,
+        "categories": ["toxic", "severe_toxic", "obscene"]
+    }
+)
+```
+
+## config *: Dict\[str, Any]*
+
+
+---

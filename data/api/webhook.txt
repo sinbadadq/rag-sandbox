@@ -1,0 +1,142 @@
+# Webhook
+
+Webhook for integrating external notification systems with Fiddler alerts.
+
+A Webhook represents an integration endpoint for delivering alert notifications to external systems like Slack, Microsoft Teams, or custom HTTP endpoints. Webhooks enable real-time alert delivery to team communication tools.
+
+## name
+
+Human-readable name for the webhook. Should be descriptive and indicate the target system or team.
+
+## url
+
+The webhook endpoint URL provided by the external system. This is the destination where alert notifications will be sent.
+
+## provider
+
+The webhook provider type (`WebhookProvider`). Determines message formatting and delivery method.
+
+## Example
+
+```python
+# Create Slack webhook for critical alerts
+slack_webhook = Webhook(
+    name="critical-alerts-slack",
+    url="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+    provider=WebhookProvider.SLACK
+).create()
+
+# Create Microsoft Teams webhook for team notifications
+teams_webhook = Webhook(
+    name="ml-team-notifications",
+    url="https://outlook.office.com/webhook/xxxxx/IncomingWebhook/xxxxx",
+    provider=WebhookProvider.MS_TEAMS
+).create()
+
+# List all webhooks
+webhooks = list(Webhook.list())
+for webhook in webhooks:
+
+    print(f"Webhook: {webhook.name} ({webhook.provider})")
+
+    # Update webhook URL
+    webhook = Webhook.from_name("critical-alerts-slack")
+    webhook.url = "https://hooks.slack.com/services/NEW/WEBHOOK/URL"
+    webhook.update()
+```
+
+{% hint style="info" %}
+Webhook URLs are sensitive credentials that should be kept secure. The provider type determines how messages are formatted and delivered. Test webhooks thoroughly before using them in production alert rules.
+{% endhint %}
+
+Initialize a Webhook instance.
+
+Creates a webhook configuration for integrating external notification systems with Fiddler alert notifications. The webhook defines where and how alert messages should be delivered to external platforms.
+
+## Parameters
+
+| Parameter  | Type              | Required | Default | Description                                                                                                                                                          |
+| ---------- | ----------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`     | `str`             | ✗        | `None`  | Human-readable name for the webhook. Should be descriptive and indicate the target system, team, or purpose (e.g., "ml-team-slack", "critical-alerts-teams").        |
+| `url`      | `str`             | ✗        | `None`  | The webhook endpoint `URL` provided by the external system. This is the destination where Fiddler will send `HTTP` `POST` requests with alert notification payloads. |
+| `provider` | \`WebhookProvider | str\`    | ✗       | `None`                                                                                                                                                               |
+
+## Example
+
+```python
+# Slack webhook for ML team alerts
+slack_webhook = Webhook(
+    name="ml-team-slack-alerts",
+    url="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+    provider=WebhookProvider.SLACK
+)
+
+# Microsoft Teams webhook for data quality alerts
+teams_webhook = Webhook(
+    name="data-quality-teams",
+    url="https://outlook.office.com/webhook/xxxxx/IncomingWebhook/xxxxx",
+    provider=WebhookProvider.MS_TEAMS
+)
+
+# Generic webhook for custom integrations
+custom_webhook = Webhook(
+    name="custom-monitoring-system",
+    url="https://monitoring.company.com/webhooks/fiddler",
+    provider=WebhookProvider.GENERIC
+)
+```
+
+{% hint style="info" %}
+After initialization, call create() to register the webhook with the Fiddler platform. Webhook URLs are sensitive and should be kept secure.
+{% endhint %}
+
+## *classmethod* get(id\_)
+
+Get the webhook instance using webhook id
+
+* **Params uuid:** UUID belongs to the Webhook
+
+## Returns
+
+Webhook object **Return type:** [*Webhook*](#webhook)
+
+## *classmethod* from\_name(name)
+
+Get the webhook instance using webhook name
+
+**Return type:** [*Webhook*](#webhook)
+
+## *classmethod* list()
+
+Get a list of all webhooks in the organization
+
+**Return type:** *Iterator*\[[*Webhook*](#webhook)]
+
+## create()
+
+Create a new webhook
+
+* **Params name:** name of webhook
+* **Params url:** webhook url
+* **Params provider:** Either 'SLACK' or 'MS\_TEAMS'
+
+## Returns
+
+Created Webhook object.
+
+**Return type:** [*Webhook*](#webhook)
+
+## update()
+
+Update an existing webhook.
+
+**Return type:** None
+
+## delete()
+
+Delete an existing webhook.
+
+**Return type:** None
+
+
+---

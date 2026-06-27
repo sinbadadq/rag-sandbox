@@ -1,0 +1,449 @@
+# LangGraph SDK Advanced
+
+## What You'll Learn
+
+This interactive notebook demonstrates advanced monitoring patterns for production LangGraph applications through a realistic travel planning system with multiple specialized agents.
+
+**Key Topics Covered:**
+
+* Multi-agent workflow monitoring and orchestration
+* Custom instrumentation with decorators and span wrappers
+* Combining auto-instrumentation with fine-grained manual spans
+* Conversation tracking across complex interactions
+* Production configuration for high-volume scenarios
+* Advanced error handling and recovery patterns
+* Business intelligence integration and analytics
+
+## Interactive Tutorial
+
+The notebook walks through building a comprehensive travel planning application featuring hotel search, weather analysis, itinerary planning, and supervisor agents working together.
+
+[**Open the Advanced Observability Notebook in Google Colab →**](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Advanced_Observability.ipynb)
+
+[**Or download the notebook directly from GitHub →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Advanced_Observability.ipynb)
+
+### Custom Instrumentation Tutorial
+
+For hands-on examples of decorator-based and manual instrumentation, including `@trace()`, span wrappers, and async support:
+
+[**Open the Custom Instrumentation Notebook in Google Colab →**](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Custom_Instrumentation.ipynb)
+
+[**Or download the notebook directly from GitHub →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Custom_Instrumentation.ipynb)
+
+## Custom Instrumentation Patterns
+
+The SDK supports three instrumentation approaches. You can use them individually or combine them in the same application. For complete API reference, see the [Instrumentation Methods](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#instrumentation-methods) section in the integration guide.
+
+### Combining Auto-Instrumentation with Decorators
+
+Use `LangGraphInstrumentor` for automatic LangGraph/LangChain tracing, then add `@trace()` decorators to capture custom business logic that runs outside the framework:
+
+```python
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor, trace, get_current_span
+
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+# Auto-instrument LangGraph nodes
+instrumentor = LangGraphInstrumentor(client)
+instrumentor.instrument()
+
+# Add custom tracing to business logic outside LangGraph
+@trace(name="validate_input", as_type="chain")
+def validate_user_input(user_message: str) -> dict:
+    span = get_current_span(as_type="chain")
+    if span:
+        span.set_input(user_message)
+
+    result = {"valid": True, "sanitized": user_message.strip()}
+
+    if span:
+        span.set_output(result)
+    return result
+
+# Both auto-instrumented LangGraph spans and custom spans
+# appear together in Fiddler's trace view
+validated = validate_user_input(user_message)
+result = agent.invoke({"messages": [{"role": "user", "content": validated["sanitized"]}]})
+```
+
+### Multi-Agent Decorator Patterns
+
+When building multi-agent systems, `@trace()` decorators automatically establish parent-child span relationships through nested function calls:
+
+```python
+import asyncio
+from fiddler_langgraph import trace, get_current_span
+
+@trace(name="supervisor", as_type="chain")
+async def supervisor_agent(state: dict) -> dict:
+    """Top-level orchestrator — creates parent span."""
+    span = get_current_span(as_type="chain")
+    if span:
+        span.set_attribute("agent_count", len(state.get("tasks", [])))
+
+    # Child spans nest automatically under the supervisor span
+    results = await asyncio.gather(
+        research_agent(state),
+        analysis_agent(state),
+    )
+
+    if span:
+        span.set_output({"completed": len(results)})
+    return {"results": results}
+
+@trace(name="research_agent", as_type="chain")
+async def research_agent(state: dict) -> dict:
+    """Child span nested under supervisor."""
+    span = get_current_span(as_type="chain")
+    if span:
+        span.set_attribute("data_sources", 3)
+    # ... research logic ...
+    return {"findings": "..."}
+
+@trace(name="analysis_agent", as_type="chain")
+async def analysis_agent(state: dict) -> dict:
+    """Child span nested under supervisor."""
+    span = get_current_span(as_type="chain")
+    if span:
+        span.set_attribute("analysis_type", "comparative")
+    # ... analysis logic ...
+    return {"analysis": "..."}
+```
+
+### Using Span Wrappers for Typed Attributes
+
+Span wrapper classes provide typed helper methods for setting semantic attributes on LLM calls, tool invocations, and chain operations. Use them with `start_as_current_span()` for fine-grained control:
+
+```python
+from fiddler_langgraph import FiddlerClient
+
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+# as_type="generation" returns a FiddlerGeneration wrapper with LLM-specific helper methods
+with client.start_as_current_span("llm_call", as_type="generation") as gen:
+    gen.set_model("gpt-4o")
+    gen.set_system_prompt("You are a travel planning assistant.")
+    gen.set_user_prompt(user_input)
+
+    response = call_llm(user_input)
+
+    gen.set_completion(response.content)
+    gen.set_usage(response.usage.prompt_tokens, response.usage.completion_tokens)
+
+# as_type="tool" returns a FiddlerTool wrapper with tool-specific helper methods
+with client.start_as_current_span("search_hotels", as_type="tool") as tool:
+    tool.set_tool_name("hotel_search")
+    tool.set_tool_input({"city": "Paris", "dates": "2026-03-01"})
+
+    results = search_hotels("Paris", "2026-03-01")
+
+    tool.set_tool_output(results)
+```
+
+For the complete list of helper methods on each span wrapper class, see the [Span Types and Helper Methods](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#span-types-and-helper-methods) reference.
+
+## Production Configuration Best Practices
+
+Before deploying LangGraph applications to production, configure the SDK for your specific workload characteristics.
+
+### High-Volume Applications
+
+Optimize for applications processing thousands of traces per minute:
+
+```python
+import os
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+from fiddler_langgraph import FiddlerClient
+
+# Configure batch processing BEFORE initializing FiddlerClient
+os.environ['OTEL_BSP_MAX_QUEUE_SIZE'] = '500'         # Increased from default 100
+os.environ['OTEL_BSP_SCHEDULE_DELAY_MILLIS'] = '500'  # Faster export than default 1000ms
+os.environ['OTEL_BSP_MAX_EXPORT_BATCH_SIZE'] = '50'   # Larger batches than default 10
+os.environ['OTEL_BSP_EXPORT_TIMEOUT'] = '10000'       # Longer timeout than default 5000ms
+
+# Increase span limits to capture more data
+production_limits = SpanLimits(
+    max_events=128,                   # Default: 32
+    max_links=64,                     # Default: 32
+    max_span_attributes=128,          # Default: 32
+    max_event_attributes=64,          # Default: 32
+    max_link_attributes=32,           # Default: 32
+    max_span_attribute_length=8192,   # Default: 2048
+)
+
+# Sample 5-10% of traces to manage data volume
+production_sampler = sampling.TraceIdRatioBased(0.05)
+
+client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    span_limits=production_limits,
+    sampler=production_sampler,
+    compression=Compression.Gzip,
+)
+```
+
+### Low-Latency Requirements
+
+Optimize for applications requiring sub-second trace export:
+
+```python
+import os
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+from fiddler_langgraph import FiddlerClient
+
+# Reduce batch delay for faster exports
+os.environ['OTEL_BSP_SCHEDULE_DELAY_MILLIS'] = '100'  # Export every 100ms
+os.environ['OTEL_BSP_MAX_EXPORT_BATCH_SIZE'] = '5'    # Smaller batches
+
+client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    compression=Compression.Gzip,  # Still use compression
+)
+```
+
+### Memory-Constrained Environments
+
+Configure conservative limits for edge deployments or containerized environments:
+
+```python
+import os
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+from fiddler_langgraph import FiddlerClient
+
+memory_constrained_limits = SpanLimits(
+    max_events=16,                  # Minimal event capture
+    max_links=16,                   # Minimal linking
+    max_span_attributes=32,         # Reduced attributes
+    max_event_attributes=16,        # Reduced event attributes
+    max_link_attributes=16,         # Reduced link attributes
+    max_span_attribute_length=1024, # Shorter attribute values
+)
+
+os.environ['OTEL_BSP_MAX_QUEUE_SIZE'] = '50'           # Smaller queue
+os.environ['OTEL_BSP_MAX_EXPORT_BATCH_SIZE'] = '5'    # Smaller batches
+
+client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    span_limits=memory_constrained_limits,
+    sampler=sampling.TraceIdRatioBased(0.1),  # Sample 10%
+    compression=Compression.Gzip,
+)
+```
+
+### Development vs Production Configurations
+
+**Development Configuration:**
+
+```python
+import os
+from fiddler_langgraph import FiddlerClient
+
+# Capture everything with verbose debugging
+# console_tracer=True prints spans to stdout AND continues to export to Fiddler (additive)
+dev_client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    console_tracer=True,    # Also prints spans to console; does NOT disable OTLP export
+    sampler=None,           # Capture 100% of traces
+)
+```
+
+**Production Configuration:**
+
+```python
+import os
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+from fiddler_langgraph import FiddlerClient
+
+# Define production limits (see High-Volume Applications above for full example)
+production_limits = SpanLimits(
+    max_events=128, max_span_attributes=128, max_span_attribute_length=8192
+)
+
+# Optimized for performance and cost
+prod_client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    sampler=sampling.TraceIdRatioBased(0.05),  # Sample 5%
+    compression=Compression.Gzip,              # Reduce bandwidth
+    span_limits=production_limits,             # Controlled limits
+)
+```
+
+### Best Practices for Context and Conversation IDs
+
+Structure your identifiers for maximum analytical value:
+
+```python
+from fiddler_langgraph import set_llm_context, set_conversation_id
+import uuid
+
+# Set meaningful, searchable context labels
+set_llm_context(model, 'Customer Support - Tier 1 - Billing Inquiries')
+set_llm_context(model, 'Content Generation - Marketing Copy - Blog Posts')
+set_llm_context(model, 'Data Analysis - Financial Reports - Q4 2025')
+
+# Use structured conversation IDs with metadata
+user_id = 'user-12345'
+session_type = 'support'
+timestamp = '2026-06-15'
+conversation_id = f'{user_id}_{session_type}_{timestamp}_{uuid.uuid4()}'
+set_conversation_id(conversation_id)
+
+# Example: user-12345_support_2026-06-15_550e8400-e29b-41d4-a716-446655440000
+```
+
+### Prerequisites
+
+* Fiddler account with API credentials
+* OpenAI API key for example interactions
+* Basic familiarity with LangGraph concepts
+
+### Time Required
+
+* **Complete tutorial**: 45-60 minutes
+* **Quick overview**: 15-20 minutes
+
+## Telemetry Data Reference
+
+Understanding the data captured by the Fiddler LangGraph SDK.
+
+### Span Attributes
+
+The SDK automatically captures these OpenTelemetry attributes:
+
+| Attribute                 | Type    | Description                                                                      |
+| ------------------------- | ------- | -------------------------------------------------------------------------------- |
+| `gen_ai.agent.name`       | `str`   | Name of the AI agent (auto-extracted from LangGraph, configurable for LangChain) |
+| `gen_ai.agent.id`         | `str`   | Unique identifier (format: `trace_id:agent_name`)                                |
+| `gen_ai.conversation.id`  | `str`   | Session identifier set via `set_conversation_id()`                               |
+| `fiddler.span.type`       | `str`   | Span classification: `chain`, `tool`, `llm`, or `agent`                          |
+| `gen_ai.llm.input.system` | `str`   | System prompt content                                                            |
+| `gen_ai.llm.input.user`   | `str`   | User input/prompt                                                                |
+| `gen_ai.llm.output`       | `str`   | Model response text                                                              |
+| `gen_ai.llm.context`      | `str`   | Custom context set via `set_llm_context()`                                       |
+| `gen_ai.request.model`    | `str`   | Model identifier (e.g., "gpt-4o-mini")                                           |
+| `gen_ai.llm.token_count`  | `int`   | Token usage metrics                                                              |
+| `gen_ai.tool.name`        | `str`   | Tool function name                                                               |
+| `gen_ai.tool.input`       | `str`   | Tool input parameters (JSON)                                                     |
+| `gen_ai.tool.output`      | `str`   | Tool execution results (JSON)                                                    |
+| `gen_ai.tool.definitions` | `str`   | Tool definitions available to the LLM (JSON array of OpenAI-format tool schemas) |
+| `gen_ai.input.messages`   | `str`   | Complete message history provided as input to the LLM (JSON array)               |
+| `gen_ai.output.messages`  | `str`   | Output messages generated by the LLM, including tool calls (JSON array)          |
+| `duration_ms`             | `float` | Span duration in milliseconds                                                    |
+| `fiddler.error.message`   | `str`   | Error message (if span failed)                                                   |
+| `fiddler.error.type`      | `str`   | Error type classification                                                        |
+
+### Setting Attributes with Span Wrappers
+
+When using [manual instrumentation](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#manual-instrumentation), span wrapper classes provide typed helper methods that set these attributes automatically. For example, `FiddlerGeneration.set_model("gpt-4o")` sets `gen_ai.request.model`, and `FiddlerTool.set_tool_name("search")` sets `gen_ai.tool.name`.
+
+| Span Wrapper        | Key Methods                                                                                                                                                       | Attributes Set                                                                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FiddlerGeneration` | `set_model()`, `set_system_prompt()`, `set_user_prompt()`, `set_completion()`, `set_usage()`, `set_messages()`, `set_output_messages()`, `set_tool_definitions()` | `gen_ai.request.model`, `gen_ai.llm.input.*`, `gen_ai.llm.output`, `gen_ai.usage.*`, `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.tool.definitions` |
+| `FiddlerTool`       | `set_tool_name()`, `set_tool_input()`, `set_tool_output()`, `set_tool_definitions()`                                                                              | `gen_ai.tool.name`, `gen_ai.tool.input`, `gen_ai.tool.output`, `gen_ai.tool.definitions`                                                                          |
+| `FiddlerChain`      | `set_input()`, `set_output()`                                                                                                                                     | Input/output data attributes                                                                                                                                      |
+| `FiddlerSpan`       | `set_attribute()`, `set_agent_name()`, `set_conversation_id()`                                                                                                    | Any custom or standard attribute                                                                                                                                  |
+
+For the complete method reference, see [Span Types and Helper Methods](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#span-types-and-helper-methods).
+
+### Querying and Filtering in Fiddler
+
+Use these attributes in the Fiddler UI to:
+
+* **Filter by agent:** `gen_ai.agent.name = "hotel_search_agent"`
+* **Find conversations:** `gen_ai.conversation.id = "user-123_support_2026-06-15..."`
+* **Analyze by model:** `gen_ai.request.model = "gpt-4o"`
+* **Track errors:** `fiddler.error.type EXISTS`
+
+## Who Should Use This
+
+* AI engineers building production LangGraph applications
+* DevOps teams monitoring agentic systems
+* Technical leaders evaluating observability strategies
+
+## Limitations and Considerations
+
+### Current Limitations
+
+* **Framework Support**: LangGraph is fully supported with automatic agent name extraction
+  * LangChain applications require manual agent name configuration
+  * Non-LangGraph Python code can use `@trace()` decorators or manual context managers for custom instrumentation (see [Instrumentation Methods](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#instrumentation-methods))
+* **Protocol Support**: Currently uses HTTP-based OTLP
+  * gRPC support planned for future releases
+* **Attribute Limits**: Default OpenTelemetry limits apply
+  * Configurable via `span_limits` parameter
+  * Very large attribute values may be truncated
+
+### Performance Considerations
+
+**Overhead**: Typical performance impact is < 5% with default settings
+
+* Use sampling to reduce overhead in high-volume scenarios
+* Adjust batch processing delays based on latency requirements
+
+**Memory**: Span queue size affects the memory footprint
+
+* Default queue (100 spans) uses \~1-2MB
+* Increase `OTEL_BSP_MAX_QUEUE_SIZE` for high throughput
+* Decrease for memory-constrained environments
+
+**Network**: Compression significantly reduces bandwidth usage
+
+* Gzip compression: \~70-80% reduction
+* Use `Compression.NoCompression` only for debugging
+
+### Production Deployment Checklist
+
+Before deploying to production:
+
+* [ ] Set appropriate sampling rate (typically 5-10% for high-volume apps)
+* [ ] Configure span limits based on your data characteristics
+* [ ] Tune batch processing parameters for your traffic patterns
+* [ ] Enable Gzip compression (default, recommended)
+* [ ] Use environment variables for credentials (not hardcoded)
+* [ ] Test instrumentation in staging environment first
+* [ ] Monitor SDK performance impact
+* [ ] Set up alerts for instrumentation failures
+* [ ] Document your configuration for team knowledge sharing
+
+### When to Tune Each Setting
+
+| Scenario                     | Configuration                                   |
+| ---------------------------- | ----------------------------------------------- |
+| **High-volume production**   | Increase queue size, batch size, sampling rate  |
+| **Low-latency requirements** | Decrease schedule delay, smaller batches        |
+| **Memory constraints**       | Decrease span limits, queue size, batch size    |
+| **Development/debugging**    | Disable sampling, enable console tracer         |
+| **Cost optimization**        | Increase sampling (lower %), enable compression |
+
+## Next Steps
+
+After completing the tutorial:
+
+* **Custom Instrumentation Notebook**: [Hands-on decorator and span wrapper examples](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Custom_Instrumentation.ipynb)
+* **Integration Guide**: [Instrumentation Methods reference](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#instrumentation-methods) for `@trace()`, manual instrumentation, and span wrapper APIs
+* **Technical Reference**: [Fiddler LangGraph SDK Documentation](/api/fiddler-langgraph-sdk/langgraph.md)
+* **Production Deployment**: Adapt the demonstrated patterns for your specific use case
+
+
+---

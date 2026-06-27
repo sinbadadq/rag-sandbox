@@ -1,0 +1,78 @@
+# DownloadFormat
+
+File formats for downloading and exporting explanation data.
+
+This enum defines the supported file formats for downloading explanation results from Fiddler. Different formats offer different advantages in terms of performance, compatibility, and data structure preservation.
+
+## PARQUET
+
+Apache Parquet format for efficient columnar storage
+
+## CSV
+
+Comma-separated values format for broad compatibility
+
+## Examples
+
+Downloading explanations in different formats:
+
+```python
+# Download as Parquet (recommended for large datasets)
+parquet_data = model.download_explanations(
+    format=fdl.DownloadFormat.PARQUET,
+    chunk_size=1000
+)
+
+# Download as CSV (better compatibility)
+csv_data = model.download_explanations(
+    format=fdl.DownloadFormat.CSV,
+    chunk_size=500
+)
+```
+
+{% hint style="info" %}
+Choose format based on your analysis tools and data size requirements. Parquet is recommended for large datasets due to compression and performance.
+{% endhint %}
+
+## PARQUET *= 'PARQUET'*
+
+Apache Parquet format for efficient columnar data storage.
+
+Parquet is a columnar storage format that provides excellent compression and query performance. It preserves data types and schema information, making it ideal for analytical workloads and large datasets.
+
+Advantages:
+
+* Excellent compression ratios
+* Fast query performance
+* Preserves data types and schema
+* Efficient for analytical operations
+
+Best for:
+
+* Large explanation datasets
+* Analytical workflows
+* Integration with data science tools
+* Long-term data storage
+
+## CSV *= 'CSV'*
+
+Comma-separated values format for broad tool compatibility.
+
+CSV is a simple, widely-supported text format that can be opened by virtually any data analysis tool, spreadsheet application, or programming language. While less efficient than Parquet, it offers maximum compatibility.
+
+Advantages:
+
+* Universal compatibility
+* Human-readable format
+* Simple structure
+* Supported by all tools
+
+Best for:
+
+* Small to medium datasets
+* Sharing with non-technical users
+* Quick data inspection
+* Integration with legacy systems
+
+
+---

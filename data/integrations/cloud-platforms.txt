@@ -1,0 +1,351 @@
+# Cloud Platforms Overview
+
+Run Fiddler AI Observability in your preferred cloud environment with native platform integrations. Deploy as a fully managed Partner AI App on AWS SageMaker, run in your Kubernetes clusters, or leverage cloud-native services for ML model monitoring at scale.
+
+## Why Cloud Platform Integrations Matter
+
+Modern AI systems are built on cloud infrastructure. Fiddler's cloud platform integrations ensure you can:
+
+* **Maintain Data Sovereignty** - Keep all your data and models within your existing cloud security boundaries
+* **Simplify Procurement** - Subscribe through cloud marketplaces with consolidated billing
+* **Leverage Existing Infrastructure** - Use your current IAM, networking, and security configurations
+* **Scale Seamlessly** - Cloud-native deployment automatically scales with your ML workloads
+* **Reduce Operational Overhead** - Managed platform integrations eliminate manual infrastructure management
+
+## AWS Deployments
+
+### AWS SageMaker Partner AI App
+
+Run Fiddler as a fully managed Partner AI App within Amazon SageMaker.
+
+**Best for:** Enterprise AWS customers wanting seamless SageMaker integration with zero external infrastructure
+
+**Key Features:**
+
+* Fully managed infrastructure within your AWS account
+* Native SageMaker Studio integration
+* No external accounts or data transfer required
+* Automatic updates and maintenance handled by AWS
+* Consolidated AWS billing through Marketplace
+
+**Deployment Options:**
+
+* **30-Day Free Trial** - Full functionality for up to 5 models (infrastructure costs apply)
+* **Tiered Subscriptions** - Small, Medium, and Large configurations for different team sizes
+* **AWS Marketplace** - Monthly or annual subscriptions with flexible pricing
+
+**Status:** ✓ **GA** - Production-ready
+
+[**Get Started with AWS SageMaker Partner AI App →**](/integrations/cloud-platforms-and-deployment/aws-sagemaker.md)
+
+**Related AWS Integrations:**
+
+* [Amazon S3](/integrations/data-platforms-and-pipelines/data-platforms/integration-with-s3.md) - Connect Fiddler to S3 data sources
+* [SageMaker Pipelines](/integrations/data-platforms-and-pipelines/data-platforms/sagemaker-integration.md) - Monitor SageMaker ML pipelines
+* [Strands SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md) - Monitor Strands Agents
+
+## Multi-Cloud & Kubernetes
+
+While AWS SageMaker Partner AI App is our featured cloud platform integration, Fiddler supports deployment across multiple cloud providers:
+
+### Supported Deployment Patterns
+
+**Cloud Platforms:**
+
+* **AWS** - Native SageMaker Partner AI App (recommended), EC2, EKS
+* **Azure** - Azure ML integration (contact sales), AKS deployment
+* **Google Cloud** - GKE deployment, Vertex AI connectivity
+* **Private Cloud** - On-premises Kubernetes with cloud connectivity
+
+**Kubernetes Deployments:**
+
+* **Helm Charts** - Production-grade Kubernetes deployment templates
+* **Operator Pattern** - Automated lifecycle management for Fiddler clusters
+* **Multi-Cluster Support** - Monitor ML models across distributed Kubernetes environments
+* **Cloud-Agnostic** - Run on EKS, AKS, GKE, or on-premises Kubernetes
+
+**Container Orchestration:**
+
+* **Docker Compose** - Development and testing environments
+* **Docker Swarm** - Small-scale production deployments
+* **Kubernetes** - Enterprise production deployments
+
+## Deployment Architecture Patterns
+
+### Pattern 1: Fully Managed (Recommended for AWS)
+
+**Use AWS SageMaker Partner AI App** for zero-infrastructure management:
+
+```
+AWS Account (Your VPC)
+├── SageMaker Studio (UI Access)
+├── Fiddler Partner AI App (Managed)
+│   ├── Compute (Managed by AWS)
+│   ├── Storage (Your S3 buckets)
+│   └── Database (Managed RDS)
+└── Your ML Models (SageMaker Endpoints)
+```
+
+**Advantages:**
+
+* No operational overhead
+* Automatic scaling and updates
+* AWS handles infrastructure security
+* Seamless Studio integration
+
+### Pattern 2: Self-Managed Kubernetes
+
+**Use Helm Charts** for full control over infrastructure:
+
+```
+Cloud Provider (Your Kubernetes Cluster)
+├── Fiddler Namespace
+│   ├── API Server Pods
+│   ├── Worker Pods
+│   ├── Database (StatefulSet)
+│   └── Storage (PersistentVolumes)
+└── Ingress/Load Balancer
+```
+
+**Advantages:**
+
+* Full infrastructure control
+* Cloud-agnostic deployment
+* Custom security configurations
+* On-premises compatibility
+
+### Pattern 3: Hybrid Multi-Cloud
+
+**Deploy Fiddler in one cloud, monitor models across all:**
+
+```
+Primary Cloud (Fiddler Installation)
+├── Fiddler Platform
+└── Centralized Monitoring Dashboard
+
+Connected Clouds
+├── AWS (SageMaker models)
+├── Azure (Azure ML models)
+├── GCP (Vertex AI models)
+└── On-Premises (Legacy models)
+```
+
+**Advantages:**
+
+* Unified observability across clouds
+* Centralized governance and compliance
+* Flexible hybrid architecture
+
+## Getting Started
+
+### For AWS Customers
+
+**Quick Start Path:**
+
+1. **Subscribe** - Get Fiddler from AWS Marketplace
+2. **Deploy** - Use SageMaker Partner AI Apps one-click deployment
+3. **Configure** - Run the [Quick Setup Script](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-quick-setup-script.md) for IAM roles
+4. **Monitor** - Connect your SageMaker models and LLM applications
+
+[**Full AWS Deployment Guide →**](/integrations/cloud-platforms-and-deployment/aws-sagemaker.md)
+
+**Need Help?**
+
+* [Quick Setup Script](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-quick-setup-script.md) - Automated IAM configuration
+* [Admin Guide](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-admin-guide.md) - Detailed deployment and management
+* [User Guide](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-user-guide.md) - Accessing and using Fiddler
+
+### For Kubernetes Deployments
+
+**Prerequisites:**
+
+* Kubernetes 1.21+ cluster
+* Helm 3.8+ installed
+* Storage provisioner (for persistent volumes)
+* Ingress controller (for external access)
+
+**Installation:**
+
+```bash
+# Add Fiddler Helm repository
+helm repo add fiddler https://helm.fiddler.ai
+helm repo update
+
+# Install Fiddler
+helm install fiddler fiddler/fiddler \
+  --namespace fiddler \
+  --create-namespace \
+  --set license.key=<your-license-key> \
+  --set ingress.enabled=true \
+  --set ingress.hostname=fiddler.your-domain.com
+```
+
+[**Contact Sales for Kubernetes Deployment →**](mailto:sales@fiddler.ai)
+
+### For Other Cloud Providers
+
+**Azure Customers:**
+
+* Azure ML integration available
+* AKS deployment supported
+* [Contact us for deployment assistance →](mailto:support@fiddler.ai)
+
+**Google Cloud Customers:**
+
+* GKE deployment supported
+* Vertex AI connectivity available
+* [Contact us for deployment assistance →](mailto:support@fiddler.ai)
+
+## Migration & Upgrade Paths
+
+### From Other Monitoring Platforms
+
+**Migrating from Competitor Platform:**
+
+1. **Parallel Deployment** - Run Fiddler alongside existing monitoring
+2. **Data Migration** - Import historical metrics and model metadata
+3. **Gradual Cutover** - Model-by-model transition with zero downtime
+4. **Training & Onboarding** - Dedicated support during migration
+
+**Common Migration Sources:**
+
+* **Arize** - Direct migration tools available
+* **Weights & Biases** - Model metadata import supported
+* **DataRobot** - Custom migration scripts available
+* **Custom Solutions** - API-based migration assistance
+
+### Upgrading Within Fiddler
+
+**AWS SageMaker Partner AI App Upgrades:**
+
+* **Tier Upgrades** - Scale from Small → Medium → Large as needed
+* **Version Updates** - Automatic updates during maintenance windows
+* **Trial to Production** - Requires redeployment (preserve data with migration scripts)
+
+**Self-Managed Upgrades:**
+
+* **Helm Upgrades** - Standard `helm upgrade` process
+* **Rolling Updates** - Zero-downtime deployments
+* **Backup & Restore** - Automated backup before each upgrade
+
+## Security & Compliance
+
+### Data Residency
+
+**AWS SageMaker Partner AI App:**
+
+* All data stays within your AWS account and region
+* No external data transfer to Fiddler's infrastructure
+* Choose your preferred AWS region during deployment
+
+**Self-Managed Deployments:**
+
+* Full control over data location
+* Support for air-gapped environments
+* On-premises deployment options
+
+### Compliance Certifications
+
+* **SOC 2 Type II** - Fiddler platform certified
+* **GDPR** - Data processing agreements available
+* **HIPAA** - Compliant deployment options for healthcare
+* **FedRAMP** - In progress (contact for timeline)
+
+### Security Features
+
+* **Encryption at Rest** - All stored data encrypted (AWS KMS, customer-managed keys)
+* **Encryption in Transit** - TLS 1.3 for all network communication
+* **SSO Integration** - SAML 2.0, OIDC support (Azure AD, Okta, AWS SSO)
+* **RBAC** - Role-based access control with fine-grained permissions
+* **Audit Logging** - Complete audit trail of all platform activities
+
+## Cost Optimization
+
+### AWS SageMaker Partner AI App Pricing
+
+**Total Cost of Ownership (TCO):**
+
+* **Software License** - Billed through AWS Marketplace
+* **Infrastructure** - AWS resource costs (EC2, RDS, S3, etc.)
+* **Data Transfer** - Minimal costs (data stays in your VPC)
+
+**Tier Selection Guidelines:**
+
+| Team Size   | Models Monitored | Recommended Tier | Est. Monthly Cost\* |
+| ----------- | ---------------- | ---------------- | ------------------- |
+| < 10 users  | < 20 models      | Small            | $500 - $1,000       |
+| 10-50 users | 20-100 models    | Medium           | $1,500 - $3,000     |
+| 50+ users   | 100+ models      | Large            | $3,000 - $6,000     |
+
+\*Infrastructure costs only (software license additional)
+
+**Cost Optimization Tips:**
+
+* Start with **Small tier** for POCs and development
+* Use **Reserved Instances** for production workloads (20-40% savings)
+* **Right-size tier** based on actual usage metrics
+* **Scheduled scaling** for non-production environments
+
+### Self-Managed Cost Optimization
+
+* **Spot Instances** - Use for worker nodes (50-70% savings)
+* **Auto-Scaling** - Scale compute based on monitoring load
+* **Storage Tiering** - Move historical data to cheaper storage classes
+* **Multi-Tenancy** - Share Fiddler instance across multiple teams
+
+## Monitoring Infrastructure Health
+
+### Platform Metrics
+
+**AWS SageMaker Partner AI App:**
+
+* View infrastructure health in SageMaker Console
+* CloudWatch metrics for Fiddler components
+* Automatic alerting for platform issues
+* AWS Support for troubleshooting
+
+**Self-Managed:**
+
+* Prometheus metrics exported by default
+* Grafana dashboards for infrastructure monitoring
+* Health check endpoints for uptime monitoring
+* Integration with existing observability stack
+
+## Support & Resources
+
+### AWS SageMaker Partner AI App
+
+* **AWS Support** - Leverage your existing AWS support plan
+* **Fiddler Support** - Direct support channel for platform issues
+* **Documentation** - [Complete SageMaker deployment guides →](/integrations/cloud-platforms-and-deployment/aws-sagemaker.md)
+* **AWS Marketplace** - [Subscribe and get started →](https://aws.amazon.com/marketplace/pp/prodview-caia5ckldtyhs)
+
+### Self-Managed Deployments
+
+* **Enterprise Support** - 24/7 support with SLA guarantees
+* **Deployment Assistance** - Professional services for setup
+* **Training** - Platform administrator training programs
+* **Community** - [Join our Slack community](/integrations/cloud-platforms-and-deployment/cloud-platforms.md)
+
+## Related Integrations
+
+* [**Data Platforms**](/integrations/data-platforms-and-pipelines/data-platforms.md) - Connect Fiddler to S3, Snowflake, BigQuery
+* [**ML Platforms**](/integrations/ml-platforms-and-tools/ml-platforms.md) - Integrate with Databricks, MLflow
+* [**Agentic AI**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) - Monitor LangGraph and Strands Agents
+* [**Monitoring & Alerting**](/integrations/monitoring-and-alerting/monitoring-alerting.md) - Send alerts to Datadog, PagerDuty
+
+## Need Help Choosing?
+
+Not sure which deployment option is right for you? We're here to help:
+
+* **AWS SageMaker Customers** - [Get started with Partner AI App →](/integrations/cloud-platforms-and-deployment/aws-sagemaker.md)
+* **Multi-Cloud Requirements** - [Contact sales for architecture consultation →](mailto:sales@fiddler.ai)
+* **On-Premises Deployment** - [Discuss private cloud options →](mailto:sales@fiddler.ai)
+* **Migration Assistance** - [Talk to our solutions team →](mailto:solutions@fiddler.ai)
+
+***
+
+**Featured Integration:** The AWS SageMaker Partner AI App is our recommended deployment for AWS customers, offering the fastest time-to-value with zero operational overhead. [Learn more →](/integrations/cloud-platforms-and-deployment/aws-sagemaker.md)
+
+
+---

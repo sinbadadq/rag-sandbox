@@ -1,0 +1,13 @@
+# Attributes
+
+- [get\_conversation\_id](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/get-conversation-id.md): get\_conversation\_id
+- [get\_llm\_context](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/get-llm-context.md): get\_llm\_context
+- [get\_session\_attributes](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/get-session-attributes.md): get\_session\_attributes
+- [get\_span\_attributes](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/get-span-attributes.md): get\_span\_attributes
+- [set\_conversation\_id](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/set-conversation-id.md): set\_conversation\_id
+- [set\_llm\_context](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/set-llm-context.md): set\_llm\_context
+- [set\_session\_attributes](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/set-session-attributes.md): set\_session\_attributes
+- [set\_span\_attributes](https://docs.fiddler.ai/api/fiddler-strands-agents-sdk/attributes/set-span-attributes.md): set\_span\_attributes
+
+
+---

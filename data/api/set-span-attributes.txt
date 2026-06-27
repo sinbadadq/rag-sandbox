@@ -1,0 +1,24 @@
+# set\_span\_attributes
+
+Set custom attributes on a Model or AgentTool that can be accessed by logging hooks.
+
+This function stores key-value pairs as attributes on the object, making them accessible to hooks during model invocation events. Attributes are automatically scoped to async or sync contexts.
+
+## Parameters
+
+| Parameter | Type    | Required    | Default | Description |
+| --------- | ------- | ----------- | ------- | ----------- |
+| `obj`     | \`Model | AgentTool\` | ✗       | `None`      |
+
+## Example
+
+```python
+from strands.models.openai import OpenAIModel
+from fiddler_strandsagents import set_span_attributes
+
+model = OpenAIModel(api_key="...", model_id="gpt-4")
+set_span_attributes(model, model_id="gpt-4", temperature=0.7)
+```
+
+
+---

@@ -1,0 +1,36 @@
+# ImageEmbedding
+
+Represents custom features derived from image embeddings for visual content analysis.
+
+ImageEmbedding extends VectorFeature to handle image-based embeddings, providing clustering analysis specifically designed for visual content. This feature type is used to monitor image models and detect visual drift in high-dimensional embedding spaces.
+
+The feature type is automatically set to CustomFeatureType.FROM\_IMAGE\_EMBEDDING and applies clustering to image embeddings for visual pattern analysis.
+
+## Examples
+
+Creating an image embedding feature for product photos:
+
+```python
+image_feature = ImageEmbedding(
+    name="product_image_clusters",
+    column="product_embedding",
+    source_column="product_image_url",
+    n_clusters=15
+)
+```
+
+Creating a feature for medical image analysis:
+
+```python
+medical_feature = ImageEmbedding(
+    name="xray_pattern_clusters",
+    column="xray_embedding",
+    source_column="xray_image_path",
+    n_clusters=10
+)
+```
+
+## source\_column *: str*
+
+
+---

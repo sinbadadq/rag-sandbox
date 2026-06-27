@@ -1,0 +1,306 @@
+# LLM Observability Metrics Reference
+
+Fiddler provides a comprehensive set of enrichments for monitoring LLM applications in production. Enrichments augment your application data with automatically generated trust, safety, and quality metrics during model onboarding. These metrics integrate directly with Fiddler's monitoring dashboards, alerting systems, and analytics tools.
+
+Configure enrichments using the `fdl.Enrichment()` class in the Python Client SDK. For detailed configuration examples, see the [Enrichments Guide](/observability/llm/enrichments.md). For help choosing the right enrichment, see [Selecting Enrichments](/observability/llm/selecting-enrichments.md).
+
+{% hint style="info" %}
+For ML model metrics (performance, drift, data integrity), see the [ML Metrics Reference](/reference/ml-metrics-reference.md).
+{% endhint %}
+
+## Safety metrics
+
+Safety enrichments detect and flag unsafe, harmful, or policy-violating content in your LLM application's inputs and outputs.
+
+| Metric                                        | Enrichment Key       | LLM Required?     | Output Type                | Description                                                                 |
+| --------------------------------------------- | -------------------- | ----------------- | -------------------------- | --------------------------------------------------------------------------- |
+| [Fast Safety](#fast-safety)                   | `ftl_prompt_safety`  | Yes (Fiddler FTL) | bool + float per dimension | Evaluates text safety across 11 dimensions using Fiddler's Fast Trust Model |
+| [PII Detection](#pii-detection)               | `pii`                | No                | bool + matches + entities  | Detects personally identifiable information using Presidio                  |
+| [Profanity](#profanity)                       | `profanity`          | No                | bool                       | Flags offensive or inappropriate language                                   |
+| [Banned Keywords](#banned-keywords)           | `banned_keywords`    | No                | bool                       | Detects user-defined restricted terms                                       |
+| [Regex Match](#regex-match)                   | `regex_match`        | No                | category                   | Matches text against a user-defined regular expression                      |
+| [Language Detection](#language-detection)     | `language_detection` | No                | string + float             | Identifies the language of the source text                                  |
+| [Topic Classification](#topic-classification) | `topic_model`        | No                | list\[float] + string      | Classifies text into user-defined topics using zero-shot classification     |
+
+### Fast Safety
+
+The Fast Safety enrichment evaluates text safety across 11 dimensions using Fiddler's proprietary Fast Trust Model. Each dimension produces a boolean flag and a confidence probability score.
+
+**Enrichment key:** `ftl_prompt_safety`
+
+| Dimension      | Output Columns                       | Score Range | Description                               |
+| -------------- | ------------------------------------ | ----------- | ----------------------------------------- |
+| `illegal`      | `illegal`, `illegal score`           | 0.0 -- 1.0  | Content promoting illegal activities      |
+| `hateful`      | `hateful`, `hateful score`           | 0.0 -- 1.0  | Hateful or discriminatory content         |
+| `harassing`    | `harassing`, `harassing score`       | 0.0 -- 1.0  | Harassing or bullying content             |
+| `racist`       | `racist`, `racist score`             | 0.0 -- 1.0  | Racist content                            |
+| `sexist`       | `sexist`, `sexist score`             | 0.0 -- 1.0  | Sexist content                            |
+| `violent`      | `violent`, `violent score`           | 0.0 -- 1.0  | Content promoting violence                |
+| `sexual`       | `sexual`, `sexual score`             | 0.0 -- 1.0  | Sexually explicit content                 |
+| `harmful`      | `harmful`, `harmful score`           | 0.0 -- 1.0  | Generally harmful content                 |
+| `unethical`    | `unethical`, `unethical score`       | 0.0 -- 1.0  | Unethical content                         |
+| `jailbreaking` | `jailbreaking`, `jailbreaking score` | 0.0 -- 1.0  | Jailbreaking or prompt injection attempts |
+| `roleplaying`  | `roleplaying`, `roleplaying score`   | 0.0 -- 1.0  | Roleplaying attempts to bypass safety     |
+
+An aggregate `max_risk_prob` output is also generated, representing the maximum probability across all 11 dimensions.
+
+For configuration details, see [Enrichments: Fast Safety](/observability/llm/enrichments.md#fast-safety).
+
+### PII Detection
+
+Detects and flags personally identifiable information using [Presidio](https://microsoft.github.io/presidio/analyzer/languages/). Generates a boolean flag, matched text spans, and detected entity types.
+
+**Enrichment key:** `pii`
+
+**Commonly used entity types:** `CREDIT_CARD`, `CRYPTO`, `DATE_TIME`, `EMAIL_ADDRESS`, `IBAN_CODE`, `IP_ADDRESS`, `LOCATION`, `PERSON`, `PHONE_NUMBER`, `URL`, `US_SSN`, `US_DRIVER_LICENSE`, `US_ITIN`, `US_PASSPORT`
+
+Fiddler supports 32 entity types in total, including international identifiers for Australia, India, Singapore, and the UK. For the full list, see the [Presidio supported entities](https://microsoft.github.io/presidio/supported_entities/).
+
+For configuration details, see [Enrichments: PII](/observability/llm/enrichments.md#personally-identifiable-information).
+
+### Profanity
+
+Flags offensive or inappropriate language using curated word lists from SurgeAI and Google.
+
+**Enrichment key:** `profanity`
+
+For configuration details, see [Enrichments: Profanity](/observability/llm/enrichments.md#profanity).
+
+### Banned Keywords
+
+Detects user-defined restricted terms in text inputs. The list of banned keywords is specified in the enrichment configuration.
+
+**Enrichment key:** `banned_keywords`
+
+For configuration details, see [Enrichments: Banned Keywords](/observability/llm/enrichments.md#banned-keyword-detector).
+
+### Regex Match
+
+Matches text against a user-defined regular expression pattern. Produces a categorical output of "Match" or "No Match".
+
+**Enrichment key:** `regex_match`
+
+For configuration details, see [Enrichments: Regex Match](/observability/llm/enrichments.md#regex-match).
+
+### Language Detection
+
+Identifies the language of the source text using [fasttext](https://fasttext.cc/docs/en/language-identification.html) models. Produces the detected language and a confidence probability.
+
+**Enrichment key:** `language_detection`
+
+For configuration details, see [Enrichments: Language Detection](/observability/llm/enrichments.md#language-detector).
+
+### Topic Classification
+
+Classifies text into user-defined topics using a zero-shot classification model. Produces per-topic probability scores and the top-scoring topic.
+
+**Enrichment key:** `topic_model`
+
+For configuration details, see [Enrichments: Topic](/observability/llm/enrichments.md#topic).
+
+## Quality and hallucination metrics
+
+Quality enrichments assess the accuracy, groundedness, and relevance of LLM-generated responses.
+
+| Metric                                  | Enrichment Key              | LLM Required?     | Output Type  | Description                                                      |
+| --------------------------------------- | --------------------------- | ----------------- | ------------ | ---------------------------------------------------------------- |
+| [Fast Faithfulness](#fast-faithfulness) | `ftl_response_faithfulness` | Yes (Fiddler FTL) | bool + float | Evaluates factual groundedness using Fiddler's Fast Trust Model  |
+| [RAG Faithfulness](#rag-faithfulness)   | `faithfulness`              | Yes (OpenAI)      | bool         | Evaluates factual accuracy of responses against provided context |
+| [Answer Relevance](#answer-relevance)   | `answer_relevance`          | Yes (OpenAI)      | bool         | Evaluates whether responses address the input prompt             |
+| [Coherence](#coherence)                 | `coherence`                 | Yes (OpenAI)      | bool         | Assesses logical flow and clarity of responses                   |
+| [Conciseness](#conciseness)             | `conciseness`               | Yes (OpenAI)      | bool         | Evaluates brevity and clarity of responses                       |
+
+### Fast Faithfulness
+
+Evaluates the factual groundedness of AI-generated responses against provided context using Fiddler's proprietary Fast Trust Model. Produces a boolean faithfulness flag and a confidence probability score.
+
+**Enrichment key:** `ftl_response_faithfulness`
+
+{% hint style="info" %}
+The faithfulness threshold defaults to 0.5 and can be adjusted in the configuration to control scoring sensitivity. Higher thresholds result in stricter faithfulness detection (fewer responses labeled as faithful).
+{% endhint %}
+
+For configuration details, see [Enrichments: Fast Faithfulness](/observability/llm/enrichments.md#fast-faithfulness).
+
+### RAG Faithfulness
+
+Evaluates the accuracy and reliability of facts presented in AI-generated responses by checking whether the information aligns with the provided context documents. Uses an OpenAI LLM for evaluation.
+
+**Enrichment key:** `faithfulness`
+
+{% hint style="info" %}
+**RAG Faithfulness vs Fast Faithfulness:** This enrichment uses OpenAI for evaluation. [Fast Faithfulness](#fast-faithfulness) uses Fiddler's Fast Trust Model for lower latency. See [LLM-Based Metrics](/observability/llm/llm-based-metrics.md) for a detailed comparison.
+{% endhint %}
+
+For configuration details, see [Enrichments: Faithfulness](/observability/llm/enrichments.md#faithfulness).
+
+### Answer Relevance
+
+Evaluates whether AI-generated responses address the input prompt. Produces a binary relevant/not-relevant result.
+
+**Enrichment key:** `answer_relevance`
+
+For configuration details, see [Enrichments: Answer Relevance](/observability/llm/enrichments.md#answer-relevance).
+
+### Coherence
+
+Assesses the logical flow and clarity of AI-generated responses, checking whether the content maintains a consistent theme and argument structure.
+
+**Enrichment key:** `coherence`
+
+For configuration details, see [Enrichments: Coherence](/observability/llm/enrichments.md#coherence).
+
+### Conciseness
+
+Evaluates whether AI-generated responses communicate their message efficiently without unnecessary elaboration or redundancy.
+
+**Enrichment key:** `conciseness`
+
+For configuration details, see [Enrichments: Conciseness](/observability/llm/enrichments.md#conciseness).
+
+## Text statistics metrics
+
+Text statistics enrichments provide quantitative analysis of text properties, including readability, length, and n-gram-based evaluation scores.
+
+| Metric                      | Enrichment Key | LLM Required? | Output Type    | Description                                                   |
+| --------------------------- | -------------- | ------------- | -------------- | ------------------------------------------------------------- |
+| [Textstat](#textstat)       | `textstat`     | No            | float          | Generates up to 19 text readability and complexity statistics |
+| [Evaluate](#evaluate)       | `evaluate`     | No            | float          | Computes n-gram-based evaluation scores (BLEU, ROUGE, METEOR) |
+| [Sentiment](#sentiment)     | `sentiment`    | No            | float + string | Provides sentiment analysis using VADER                       |
+| [Token Count](#token-count) | `token_count`  | No            | int            | Counts the number of tokens in a string                       |
+
+### Textstat
+
+Generates text readability and complexity statistics using the [textstat](https://pypi.org/project/textstat/) library. You can select specific statistics or use all 19 available metrics.
+
+**Enrichment key:** `textstat`
+
+| Sub-metric                     | Range       | Description                                         |
+| ------------------------------ | ----------- | --------------------------------------------------- |
+| `char_count`                   | 0 -- 64,000 | Character count                                     |
+| `letter_count`                 | 0 -- 64,000 | Letter count (alphabetical characters)              |
+| `miniword_count`               | 0 -- 64,000 | Count of short words                                |
+| `words_per_sentence`           | 0 -- 1,000  | Average words per sentence                          |
+| `polysyllabcount`              | 0 -- 64,000 | Polysyllabic word count                             |
+| `lexicon_count`                | 0 -- 64,000 | Word count                                          |
+| `syllable_count`               | 0 -- 96,000 | Total syllable count                                |
+| `sentence_count`               | 0 -- 32,000 | Sentence count                                      |
+| `flesch_reading_ease`          | -100 -- 100 | Flesch Reading Ease score (higher = easier to read) |
+| `smog_index`                   | 0 -- 30     | SMOG readability index                              |
+| `flesch_kincaid_grade`         | -3.4 -- 100 | Flesch-Kincaid Grade Level                          |
+| `coleman_liau_index`           | 0 -- 20     | Coleman-Liau readability index                      |
+| `automated_readability_index`  | -3.4 -- 100 | Automated Readability Index                         |
+| `dale_chall_readability_score` | 0 -- 10     | Dale-Chall readability score                        |
+| `difficult_words`              | 0 -- 64,000 | Count of difficult words                            |
+| `linsear_write_formula`        | 0 -- 20     | Linsear Write readability formula                   |
+| `gunning_fog`                  | 0 -- 20     | Gunning Fog readability index                       |
+| `long_word_count`              | 0 -- 64,000 | Count of long words                                 |
+| `monosyllabcount`              | 0 -- 64,000 | Monosyllabic word count                             |
+
+{% hint style="info" %}
+If no statistics are specified in the configuration, the default statistic is `flesch_kincaid_grade`.
+{% endhint %}
+
+For configuration details, see [Enrichments: Textstat](/observability/llm/enrichments.md#textstat).
+
+### Evaluate
+
+Computes n-gram-based evaluation metrics for comparing two text passages, such as an AI-generated response and a reference answer. These metrics score highest when the reference and generated texts contain overlapping sequences.
+
+**Enrichment key:** `evaluate`
+
+| Sub-metric | Output Column | Score Range | Description                                                     |
+| ---------- | ------------- | ----------- | --------------------------------------------------------------- |
+| BLEU       | `bleu`        | 0.0 -- 1.0  | Precision of word n-grams between generated and reference text  |
+| ROUGE-1    | `rouge1`      | 0.0 -- 1.0  | Unigram recall between generated and reference text             |
+| ROUGE-2    | `rouge2`      | 0.0 -- 1.0  | Bigram recall between generated and reference text              |
+| ROUGE-L    | `rougeL`      | 0.0 -- 1.0  | Longest common subsequence between generated and reference text |
+| ROUGE-Lsum | `rougeLsum`   | 0.0 -- 1.0  | ROUGE-L applied at the summary level                            |
+| METEOR     | `meteor`      | 0.0 -- 1.0  | Combines precision, recall, and semantic matching               |
+
+For configuration details, see [Enrichments: Evaluate](/observability/llm/enrichments.md#evaluate).
+
+### Sentiment
+
+Provides sentiment analysis using NLTK's VADER lexicon. Produces a compound score and a categorical sentiment label.
+
+**Enrichment key:** `sentiment`
+
+| Output Column | Type   | Description                                 |
+| ------------- | ------ | ------------------------------------------- |
+| `compound`    | float  | Raw compound sentiment score                |
+| `sentiment`   | string | One of `positive`, `negative`, or `neutral` |
+
+For configuration details, see [Enrichments: Sentiment](/observability/llm/enrichments.md#sentiment).
+
+### Token Count
+
+Counts the number of tokens in a string using the [tiktoken](https://github.com/openai/tiktoken) library.
+
+**Enrichment key:** `token_count`
+
+For configuration details, see [Enrichments: Token Count](/observability/llm/enrichments.md#token-count).
+
+## Text validation metrics
+
+Text validation enrichments verify the structural correctness of generated text outputs such as SQL queries and JSON payloads.
+
+| Metric                              | Enrichment Key    | LLM Required? | Output Type   | Description                                           |
+| ----------------------------------- | ----------------- | ------------- | ------------- | ----------------------------------------------------- |
+| [SQL Validation](#sql-validation)   | `sql_validation`  | No            | bool + string | Validates SQL syntax for a specified dialect          |
+| [JSON Validation](#json-validation) | `json_validation` | No            | bool + string | Validates JSON syntax and optionally against a schema |
+
+### SQL Validation
+
+Validates SQL query syntax for a specified dialect. Supports 25+ SQL dialects including MySQL, PostgreSQL, Snowflake, BigQuery, and others.
+
+**Enrichment key:** `sql_validation`
+
+{% hint style="info" %}
+Query validation is syntax-based and does not check against any existing schema or databases for validity.
+{% endhint %}
+
+For configuration details, see [Enrichments: SQL Validation](/observability/llm/enrichments.md#sql-validation).
+
+### JSON Validation
+
+Validates JSON for correctness and optionally against a user-defined [JSON Schema](https://python-jsonschema.readthedocs.io).
+
+**Enrichment key:** `json_validation`
+
+For configuration details, see [Enrichments: JSON Validation](/observability/llm/enrichments.md#json-validation).
+
+## Embedding metrics
+
+Embedding enrichments convert text into vector representations for drift detection and visualization.
+
+| Metric                                  | Enrichment Key   | LLM Required? | Output Type    | Description                                                          |
+| --------------------------------------- | ---------------- | ------------- | -------------- | -------------------------------------------------------------------- |
+| [Text Embedding](#text-embedding)       | `TextEmbedding`  | No            | vector + float | Generates text embeddings for UMAP visualization and drift detection |
+| [Centroid Distance](#centroid-distance) | (auto-generated) | No            | float          | Distance from the nearest cluster centroid                           |
+
+### Text Embedding
+
+Converts unstructured text into high-dimensional vector representations for semantic analysis. Enables Fiddler's 3D UMAP visualizations and embedding-based drift detection.
+
+**Class:** `fdl.TextEmbedding()`
+
+{% hint style="info" %}
+TextEmbedding is configured using `fdl.TextEmbedding()` rather than `fdl.Enrichment()`. See the [Enrichments Guide](/observability/llm/enrichments.md#embedding) for usage examples.
+{% endhint %}
+
+### Centroid Distance
+
+Measures the distance between a data point's embedding and the nearest cluster centroid. This metric is automatically generated when a TextEmbedding enrichment is created.
+
+For configuration details, see [Enrichments: Centroid Distance](/observability/llm/enrichments.md#centroid-distance).
+
+## Related resources
+
+* [ML Metrics Reference](/reference/ml-metrics-reference.md) — Built-in metrics for ML model monitoring
+* [Enrichments Guide](/observability/llm/enrichments.md) — Configuration examples for all enrichments
+* [Selecting Enrichments](/observability/llm/selecting-enrichments.md) — Choosing the right enrichment for your use case
+* [LLM-Based Metrics](/observability/llm/llm-based-metrics.md) — Detailed comparison of LLM-based evaluation methods
+
+
+---

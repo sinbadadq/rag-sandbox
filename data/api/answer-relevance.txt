@@ -1,0 +1,99 @@
+# AnswerRelevance
+
+Evaluator to assess how well an answer addresses a given question with optional context.
+
+The AnswerRelevance evaluator measures whether an LLM's answer is relevant and directly addresses the question being asked. This version supports optional reference documents to provide additional context for more nuanced relevance assessment. This is ideal for RAG (Retrieval-Augmented Generation) pipelines.
+
+Key Features:
+
+* **Relevance Assessment**: Determines if the answer directly addresses the question
+* **Three-Level Scoring**: Returns high (1.0), medium (0.5), or low (0.0) relevance scores
+* **Context-Aware**: Can use retrieved documents to assess relevance more accurately
+* **Detailed Reasoning**: Provides explanation for the relevance assessment
+* **Fiddler API Integration**: Uses Fiddler's built-in relevance evaluation model
+
+Use Cases:
+
+* **RAG Systems**: Evaluating if generated answers are relevant to user queries
+* **Q\&A Systems**: Ensuring answers stay on topic
+* **Customer Support**: Verifying responses address user queries
+* **Educational Content**: Checking if explanations answer the question
+* **Research Assistance**: Validating that responses are relevant to queries
+
+Scoring Logic:
+
+* **1.0 (High)**: Answer is fully relevant and directly addresses the question
+* **0.5 (Medium)**: Answer partially addresses the question but may miss some aspects
+* **0.0 (Low)**: Answer does not address the question or is off-topic
+
+## Parameters
+
+| Parameter             | Type                  | Required | Default | Description                        |
+| --------------------- | --------------------- | -------- | ------- | ---------------------------------- |
+| `user_query`          | `str`                 | ✗        | `None`  | The question or query being asked. |
+| `rag_response`        | `str`                 | ✗        | `None`  | The `LLM`'s response to evaluate.  |
+| `retrieved_documents` | `list[str], optional` | ✗        | `None`  | Reference documents for context.   |
+
+## Returns
+
+A Score object containing: : - value: 1.0 for high, 0.5 for medium, 0.0 for low relevance
+
+* label: "high", "medium", or "low"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+## Example
+
+```python
+from fiddler_evals.evaluators import AnswerRelevance
+evaluator = AnswerRelevance(model="openai/gpt-4o")
+
+# High relevance answer
+score = evaluator.score(
+    user_query="What is the capital of France?",
+    rag_response="The capital of France is Paris."
+)
+print(f"Relevance: {score.label}")  # "high"
+print(f"Score: {score.value}")      # 1.0
+
+# With context documents
+score = evaluator.score(
+    user_query="What is our refund policy?",
+    rag_response="Our refund policy allows returns within 30 days.",
+    retrieved_documents=[
+        "Refund Policy: Customers may return items within 30 days of purchase.",
+        "All returns must include original packaging."
+    ]
+)
+```
+
+{% hint style="info" %}
+This evaluator uses Fiddler's built-in relevance assessment model and requires an active connection to the Fiddler API.
+{% endhint %}
+
+## name *= 'answer\_relevance'*
+
+## score()
+
+Score the relevance of an answer to a question.
+
+## Parameters
+
+| Parameter             | Type                  | Required | Default | Description                        |
+| --------------------- | --------------------- | -------- | ------- | ---------------------------------- |
+| `user_query`          | `str`                 | ✗        | `None`  | The question or query being asked. |
+| `rag_response`        | `str`                 | ✗        | `None`  | The `LLM`'s response to evaluate.  |
+| `retrieved_documents` | `list[str], optional` | ✗        | `None`  | Reference documents for context.   |
+
+## Returns
+
+A Score object containing: : - value: 1.0 for high, 0.5 for medium, 0.0 for low relevance
+
+* label: "high", "medium", or "low"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+
+---

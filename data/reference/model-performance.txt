@@ -1,0 +1,99 @@
+# Model Performance
+
+[Model Performance](/observability/platform/performance-tracking-platform.md) refers to the evaluation of how well a machine learning model performs its intended task by comparing its predictions against actual outcomes. It involves measuring the accuracy, reliability, and effectiveness of a model using various metrics specific to the model type (classification, regression, ranking, etc.).
+
+Model performance assessment is a critical component of the machine learning lifecycle, providing insights into a model's strengths, weaknesses, and overall utility. Poor model performance can have significant business implications, affecting decision quality, customer experience, and ultimately business outcomes. Effective performance monitoring helps detect degradation early, enabling timely interventions such as retraining or recalibration.
+
+## How Fiddler Monitors Model Performance
+
+Fiddler's AI Observability platform offers comprehensive model performance monitoring for various model types including binary classification, multi-class classification, regression, and ranking models. The platform provides out-of-the-box performance metrics suited to each model type and visualizes these metrics through charts and dashboards.
+
+For classification models, Fiddler tracks metrics such as accuracy, precision, recall, F1 score, and AUC-ROC. For regression models, it monitors metrics like MSE, MAE, and R-squared. These metrics help users understand how well their models are performing in production, detect performance degradation, and make informed decisions about model maintenance or retraining.
+
+## Why Model Performance Is Important
+
+Model performance monitoring is essential for maintaining reliable and effective AI systems. As models encounter new data in production, their performance can degrade over time due to data drift, concept drift, or other factors. Continuous monitoring of model performance helps organizations identify issues early, understand their root causes, and take appropriate corrective actions.
+
+* **Business Impact Assessment**: Model performance metrics help quantify the business impact of model predictions, enabling stakeholders to understand how well the model supports business objectives and where improvements might be needed.
+* **Early Detection of Degradation**: Regular monitoring of performance metrics allows teams to quickly identify when a model's performance starts to deteriorate, enabling proactive intervention before significant business impact occurs.
+* **Root Cause Analysis**: Performance metrics, especially when examined alongside other monitoring data like feature distributions and data integrity metrics, help pinpoint the underlying causes of performance issues.
+* **Model Comparison**: Performance metrics provide a standardized way to compare different model versions or competing models to select the best performer for a specific use case.
+* **Regulatory Compliance**: In regulated industries, monitoring and documenting model performance is often a requirement for demonstrating responsible AI practices and compliance with governance frameworks.
+* **Continuous Improvement**: Performance metrics guide the model improvement process by highlighting specific areas where the model underperforms, helping teams focus their enhancement efforts effectively.
+
+## Types of Model Performance Metrics
+
+* **Binary Classification Metrics**: Metrics for evaluating models that predict one of two possible outcomes, including accuracy, precision, recall, F1 score, AUC-ROC, and confusion matrix-based measurements that help understand different aspects of classification performance.
+* **Multi-class Classification Metrics**: Metrics for models that predict one of several classes, including accuracy, log loss, and class-specific precision and recall, often calculated using approaches like micro or macro averaging across classes.
+* **Regression Metrics**: Metrics for models that predict continuous values, including Mean Squared Error (MSE), Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R-squared, which measure different aspects of prediction accuracy and model fit.
+* **Ranking Metrics**: Metrics for models that rank items by relevance, including Mean Average Precision (MAP) for binary relevance ranking and Normalized Discounted Cumulative Gain (NDCG) for evaluating the quality of ranking results.
+* **Time-Series Performance Metrics**: Specialized metrics for time-series forecasting models, often focusing on error measurements across different time horizons and accounting for seasonal patterns in the data.
+
+## Challenges
+
+Monitoring model performance effectively presents several challenges, especially in production environments where models encounter diverse and evolving data.
+
+* **Delayed Ground Truth**: In many applications, the actual outcomes (ground truth) needed to calculate performance metrics become available only after a significant delay, making real-time performance monitoring difficult.
+* **Class Imbalance**: When the distribution of classes is heavily skewed, standard performance metrics may provide an overly optimistic view of model performance, requiring specialized metrics or approaches to properly evaluate imbalanced classification.
+* **Changing Data Distributions**: As production data distributions shift over time (data drift), performance metrics may degrade, requiring monitoring solutions that can detect and quantify distribution changes along with performance changes.
+* **Metric Selection**: Choosing the right metrics for a specific model and use case can be challenging, as different metrics emphasize different aspects of performance and may lead to different conclusions about model quality.
+* **Threshold Optimization**: For classification models, performance often depends on the chosen decision threshold, requiring methods to optimize and adjust thresholds based on business requirements and changing data patterns.
+* **Resource Constraints**: Computing performance metrics for large-scale models or high-volume data streams can be resource-intensive, requiring efficient implementation and potentially sampling strategies.
+* **Interpretability of Metrics**: Some metrics, while mathematically sound, can be difficult for non-technical stakeholders to understand, requiring careful communication and translation to business impacts.
+
+## Model Performance Monitoring How-to Guide
+
+1. **Define Performance Objectives**
+   * Identify which aspects of model performance are most critical for your specific use case.
+   * Select appropriate metrics based on your model type and business requirements.
+2. **Establish a Baseline**
+   * Measure and record the model's performance metrics during training/validation.
+   * Document the expected performance range for each metric to serve as a reference point.
+3. **Configure Monitoring**
+   * Set up regular performance metric calculations on production data.
+   * Define appropriate time windows and aggregation levels for performance analysis.
+4. **Set Up Alerting**
+   * Establish thresholds for performance metrics that would trigger alerts.
+   * Configure notification systems to alert relevant team members when performance deteriorates.
+5. **Implement Root Cause Analysis**
+   * When performance issues are detected, investigate potential causes such as data drift or integrity issues.
+   * Use tools like Fiddler's dashboards to drill down into specific segments or features contributing to performance decline.
+6. **Take Corrective Action**
+   * Based on root cause analysis, implement appropriate interventions such as model retraining, feature engineering, or data pipeline fixes.
+   * For temporary performance issues, consider adjustments like threshold tuning where appropriate.
+
+## Frequently Asked Questions
+
+**Q: How often should I monitor model performance?**
+
+The optimal monitoring frequency depends on your specific use case, data volume, and business criticality. High-stakes applications might require daily or even real-time monitoring, while less critical models might be monitored weekly or monthly. Also consider the rate of expected data drift and availability of ground truth labels when determining monitoring frequency.
+
+**Q: Which performance metrics should I prioritize?**
+
+The most relevant metrics depend on your model type and business objectives. For classification models with balanced classes, accuracy, precision, recall, and F1 score are common choices. For regression models, MSE, MAE, and R-squared are typically used. Consider the business impact of different types of errors and prioritize metrics that align with your specific goals.
+
+**Q: How do I know if my model's performance is good enough?**
+
+Good performance is context-dependent. Compare your models performance against relevant benchmarks, including baseline models (e.g., simple heuristics), previous model versions, industry standards, and business requirements. Define acceptable performance thresholds based on the criticality of the use case and the cost of errors.
+
+**Q: What should I do when model performance drops?**
+
+First, verify that the performance drop is statistically significant and not due to random variation. Then, investigate potential causes such as data drift, data quality issues, or changes in the underlying process. Depending on the root cause, solutions might include retraining the model, adjusting features, fixing data pipeline issues, or in some cases, reconsidering the modeling approach entirely.
+
+## Related Terms
+
+* [Data Drift](/reference/glossary/data-drift.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+* [Model Drift](/reference/glossary/model-drift.md)
+* [Baseline](/reference/glossary/baseline.md)
+
+## Related Resources
+
+* [Performance Tracking Platform Guide](/observability/platform/performance-tracking-platform.md)
+* [Performance Charts Creation](/observability/analytics/performance-charts-creation.md)
+* [Performance Charts Visualization](/observability/analytics/performance-charts-visualization.md)
+* [Data Drift Platform Guide](/observability/platform/data-drift-platform.md)
+* [ML Model Monitoring](https://www.fiddler.ai/ml-model-monitoring)
+
+
+---

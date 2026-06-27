@@ -1,0 +1,96 @@
+# ConnectionMixin
+
+Mixin class providing connection-related functionality to other classes.
+
+ConnectionMixin provides a standardized way for other classes to access the global Fiddler connection instance and its associated properties. This mixin enables classes throughout the Fiddler client to access connection details, HTTP client functionality, and organization context without directly managing connection state.
+
+This pattern ensures consistent access to connection resources across all client components while maintaining a clean separation of concerns.
+
+## organization\_name()
+
+Property access to organization name
+
+## organization\_id()
+
+Property access to organization UUID
+
+## get\_organization\_name()
+
+Class method to retrieve organization name
+
+**Return type:** str
+
+## get\_organization\_id()
+
+Class method to retrieve organization UUID
+
+**Return type:** *UUID*
+
+## Examples
+
+Using ConnectionMixin in a custom class:
+
+```python
+class CustomModel(ConnectionMixin):
+    def fetch_data(self):
+        # Access HTTP client through mixin
+        response = self._client().get('/api/data')
+        return response.json()
+
+        def get_org_info(self):
+            # Access organization info through mixin
+            return {
+                'name': self.organization_name,
+                'id': str(self.organization_id)
+            }
+```
+
+Using class methods without instantiation:
+
+```python
+org_name = SomeEntityClass.get_organization_name()
+org_id = SomeEntityClass.get_organization_id()
+```
+
+## *property* organization\_name *: str*
+
+Get the organization name from the connection.
+
+## Returns
+
+Name of the organization associated with the current connection.
+
+**Return type:** str
+
+## *property* organization\_id *: UUID*
+
+Get the organization UUID from the connection.
+
+## Returns
+
+Unique identifier of the organization associated with the current connection.
+
+**Return type:** UUID
+
+## *classmethod* get\_organization\_name()
+
+Get the organization name from the global connection.
+
+## Returns
+
+Name of the organization associated with the current connection.
+
+**Return type:** str
+
+## *classmethod* get\_organization\_id()
+
+Get the organization UUID from the global connection.
+
+## Returns
+
+Unique identifier of the organization associated with the current connection.
+
+**Return type:** UUID
+
+
+---

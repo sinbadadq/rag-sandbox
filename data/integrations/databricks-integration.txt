@@ -1,0 +1,159 @@
+# Databricks
+
+Fiddler allows your team to monitor, explain and analyze your models developed and deployed in [Databricks Workspace](https://docs.databricks.com/introduction/index.html) by integrating with [MLflow](https://docs.databricks.com/mlflow/index.html) for model asset management and utilizing Databricks Spark environment for data management.
+
+To validate and monitor models built on Databricks using Fiddler, you can follow these steps:
+
+1. [Create a Fiddler model](/developers/client-library-reference/model-onboarding/create-a-project-and-model.md) using sample data or model information from MLflow
+2. [Publish production data](/developers/client-library-reference/publishing-production-data.md) streaming live or in batches
+
+#### Prerequisites
+
+This guide assumes you have:
+
+* A Databricks account and valid credentials
+* A Fiddler environment with an account and valid credentials
+* Know how to [connect and use ](/developers/client-library-reference/installation-and-setup.md)the [Fiddler Python Client SDK](/api/fiddler-python-client-sdk/python-client.md)
+
+#### Begin with a Databricks Notebook
+
+Launch a [Databricks notebook](https://docs.databricks.com/notebooks/index.html) from your workspace and run the following code:
+
+```python
+!pip install -q fiddler-client
+import fiddler as fdl
+```
+
+Now that you have the Fiddler library installed, you can connect to your Fiddler environment. You will need your authentication token from the [Credentials](/reference/settings.md#credentials) tab in Application Settings.
+
+```python
+URL = ""
+AUTH_TOKEN = ""
+fdl.init(url: str, token: str)
+```
+
+Finally, you can set up a new [project](/api/fiddler-python-client-sdk/python-client.md) using:
+
+```python
+# The project.id is required when creating models
+project = fdl.Project(name='YOUR_PROJECT_NAME')
+project.create()
+```
+
+#### Creating the Fiddler Model
+
+**Quickest Option: Let Fiddler Automate Model Creation**
+
+The quickest way to onboard a Fiddler model is to get a sample of data from which Fiddler can infer model schema and metadata. Ideally you will have baseline, testing, or training data that is representative of your model schema. Fiddler can infer your model schema from this sample dataset. You can download baseline or training data from a [delta table](https://docs.databricks.com/getting-started/dataframes-python.html) and share it with Fiddler as a baseline dataset:
+
+```python
+sample_dataset = spark.read.table("YOUR_DATASET").select("*").toPandas()
+```
+
+Now that you have sample data, you can easily create a Fiddler model, as demonstrated in our [Simple Monitoring Quick Start Guide](/developers/ml-monitoring/simple-ml-monitoring.md). A rough outline of the steps follows:
+
+```py
+# Define a ModelSpec that tells Fiddler what role each column 
+# in your model schema serves.
+model_spec = fdl.ModelSpec(
+  inputs=['feature_input_column', ...],
+  outputs=['output_column'],
+  targets=['label_column'],
+  metadata=['id_column', 'data_segment_column', ...],
+)
+
+# Identify the task your ML model performs as Fiddler will use this
+# to generate the performance metrics appropriate to the task. 
+# ModelTask.NOT_SET is also an option if performance metrics are not needed.
+model_task = fdl.ModelTask.BINARY_CLASSIFICATION
+task_params = fdl.ModelTaskParams(target_class_order=['no', 'yes'])
+
+# Use Model.from_data() to define your model's ModelSchema automatically by
+# passing the sample_dataset in the source parameter for schema inference.
+model = fdl.Model.from_data(
+    name='name_for_display_in_Fiddler',
+    project_id=project.id,
+    source=sample_dataset,
+    spec=model_spec,
+    task=model_task,
+    task_params=task_params,
+    event_id_col='your_unique_event_id_column',
+    event_ts_col='event_timestamp_column'
+)
+# Create the model in Fiddler
+model.create()
+```
+
+**Option: Using the MLflow Model Registry**
+
+Another option is to manually construct your model's schema from the details contained in the MLflow registry. Using the MLflow API, you can query the model registry and get the model signature, which describes the inputs and outputs as a dictionary. You can use this dictionary to build the Model, ModelSchema, and ModelSpec objects that define the tabular schema of your model.
+
+```python
+import mlflow 
+from mlflow.tracking import MlflowClient
+
+# Initiate MLFlow Client 
+client = MlflowClient()
+
+# Get the model URI
+model_version_info = client.get_model_version(model_name, model_version)
+model_uri = client.get_model_version_download_uri(model_name, model_version_info) 
+
+#Get the Model Signature
+mlflow_model_info = mlflow.models.get_model_info(model_uri)
+model_inputs_schema = mlflow_model_info.signature.inputs.to_dict()
+model_inputs = [ sub['name'] for sub in model_inputs_schema ]
+```
+
+Refer to this [example notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/examples/create_model_from_constructor.ipynb) in GitHub, which demonstrates manually defining your Fiddler model's schema.
+
+#### Publishing Events
+
+Now you can publish all the events from your models. You can do this in two ways:
+
+**Batch Models**
+
+If your models run batch processes with your models or your aggregate model outputs over a time frame, then you can use the table change feed from Databricks to select only the new events and send them to Fiddler:
+
+```python
+import fiddler as fdl
+from pyspark.sql import SparkSession
+
+# Get the active Spark session
+spark = SparkSession.builder.getOrCreate()
+
+changes_df = (
+    spark.read.format("delta")
+    .option("readChangeFeed", "true")
+    .option("startingVersion", last_version)
+    .option("endingVersion", new_version)
+    .table("inferences")
+    .toPandas()
+)
+
+# Assumes an initialized Python client session and instantiated Model
+job = model.publish(
+    source=changes_df,
+    environment=fdl.EnvType.PRODUCTION,
+)
+print(f'Initiated Production dataset upload with Job ID = {job.id}')
+```
+
+**Live Models**
+
+For models with live predictions or real-time applications, you can add the following code snippet to your prediction pipeline and send every event to Fiddler in real-time:
+
+```python
+# Turn your model's output in a pandas dataframe
+example_event = model_output.toJSON().map(lambda x: json.loads(x)).collect()
+
+# Assumes an initialized Python client session and instantiated Model
+event_id = model.publish(
+    source=example_event,
+    environment=fdl.EnvType.PRODUCTION,
+)
+print(f'Published {event_id_list}')
+```
+
+
+---

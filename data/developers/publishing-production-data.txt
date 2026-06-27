@@ -1,0 +1,127 @@
+# Publishing Production Data
+
+### Publish Inference Events to Fiddler
+
+After you onboard an ML model or LLM application as a Fiddler Model, you can publish inference events for analysis, performance monitoring, and reporting. There are two types of inference data:
+
+* Pre-production data: Static datasets such as training or testing data that serve as Baseline references for comparison
+* Production data: Time series data from live model inferences that Fiddler monitors against your baselines
+
+#### Integration Methods
+
+Fiddler offers two ways to publish inference data:
+
+**Python Client Library**
+
+Use the Python client for Python environments. Publish both production and pre-production inference data with the Model.publish() method.
+
+For more details, see the [Python client SDK](/api/fiddler-python-client-sdk/python-client.md) documentation.
+
+**REST API**
+
+Use the [REST API](/api/rest-api/rest-api.md) for language-agnostic integration across any platform. Both production and pre-production inference data use a common interface.
+
+### Publish Pre-Production Data
+
+Publish pre-production data to Fiddler as a single dataset. You can add multiple baseline datasets to a model to create customized references for different metrics and alert rules.
+
+Fiddler accepts pre-production data in these formats:
+
+* Pandas DataFrame
+* Parquet file
+* CSV file
+
+For detailed instructions, see the [Creating a Baseline](/developers/client-library-reference/publishing-production-data/creating-a-baseline-dataset.md) guide.
+
+> **Note**:
+>
+> Pre-production datasets are immutable after publication. You can't update them or delete individual rows.
+
+#### Upload a Static Pre-Production Baseline
+
+```python
+dataset_file_path = 'path_to_your_data.parquet'
+dataset_name = 'a_unique_identifying_name'
+
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+job = model.publish(
+    source=dataset_file_path,
+    environment=fdl.EnvType.PRE_PRODUCTION,
+    dataset_name=dataset_name,
+)
+# The publish() method is asynchronous. Use the publish job's wait() method 
+# if synchronous behavior is desired.
+# job.wait() 
+```
+
+### Publish Production Data
+
+Fiddler provides several methods for publishing and editing production inference data:
+
+* Batch publishing: Send data in batches using pandas DataFrames, Parquet files, or CSV files
+* Stream publishing: Send individual events or small batches in near real-time
+* Update publishing: Modify previously published data
+* Delete publishing: Remove published data when needed
+
+Fiddler accepts production data in these formats:
+
+* Pandas DataFrames
+* Parquet files
+* CSV files
+* List of Python dictionaries (limited to stream and updates)
+
+A list of dictionaries is an additional data format on top of the three common to pre-production and production data.
+
+Choose the method that best fits your use case by reviewing the publishing guides below:
+
+* [Publish batch events](/developers/client-library-reference/publishing-production-data/publishing-batches-of-events.md)
+* [Stream live events](/developers/client-library-reference/publishing-production-data/streaming-live-events.md)
+* [Update published events](/developers/client-library-reference/publishing-production-data/updating-events.md)
+* [Delete events](/developers/client-library-reference/publishing-production-data/deleting-events.md)
+* [Publish ranking events](/developers/client-library-reference/publishing-production-data/ranking-events.md)
+
+#### Key Considerations
+
+Here are some considerations to keep in mind as you onboard models and begin publishing production data to Fiddler.
+
+**Inference Event Unique Identifier**
+
+Fiddler requires a unique identifier on each event published should you later need to update ground truth labels and/or metadata columns.
+
+* Define the unique identifier column name when onboarding a model: `Model.event_id_col`
+* A unique index on the event id column is not enforced
+* As duplicate values are allowed, events sharing the same event id value will all be used in calculating metrics
+
+**Inference Event Timestamp**
+
+Fiddler requires a timestamp for each inference event which is used as the event occurrence timestamp in time-series monitoring charts and alert rule evaluation.
+
+* Define the timestamp column name when onboarding a model: `Model.event_ts_col`
+* If not defined, Fiddler will use the time of publication as the event occurrence timestamp
+* Timestamps are stored and rendered in UTC
+* Timestamps with timezone are accepted but will be converted to UTC
+* Fiddler supports basic pandas timestamp formats by inferring from the data
+
+### Data Retention Policy
+
+Fiddler retains production inference event data for 90 days. Contact your Fiddler customer success representative if you need a different retention period.
+
+#### Raw Event Data
+
+* Retained for 90 days from publication date
+* Automatically deleted after 90 days
+* Policy applies globally
+
+#### Pre-Calculated Metrics
+
+* Standard metrics derived from raw data are retained indefinitely
+* Dashboards and charts continue to display historical trends after raw data expires
+
+#### Runtime features
+
+* Custom metrics require raw event data and aren't available for data older than 90 days
+
+
+---

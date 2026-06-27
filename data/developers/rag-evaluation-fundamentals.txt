@@ -1,0 +1,189 @@
+# RAG Evaluation Fundamentals
+
+Evaluate your RAG application's retrieval and generation quality using Fiddler's built-in evaluators. This cookbook demonstrates the direct `.score()` API for rapid iteration on test cases before scaling to full experiments.
+
+**Use this cookbook when:** You have a RAG application and want to quickly assess whether responses are faithful to retrieved documents and relevant to user queries.
+
+**Time to complete**: \~15 minutes
+
+```mermaid
+graph LR
+    A["Define Test Cases"] --> B["Score with Evaluators"]
+    B --> C{"Faithfulness?"}
+    B --> D{"Relevance?"}
+    C -->|Yes| E["Grounded"]
+    C -->|No| F["Hallucination"]
+    D -->|High| G["On-topic"]
+    D -->|Low| H["Off-topic"]
+
+    style F fill:#f96,stroke:#333
+    style H fill:#f96,stroke:#333
+    style E fill:#6f9,stroke:#333
+    style G fill:#6f9,stroke:#333
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals pandas`
+  {% endhint %}
+
+***
+
+{% stepper %}
+{% step %}
+**Connect and Initialize Evaluators**
+
+{% hint style="info" %}
+Replace `URL`, `TOKEN`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import pandas as pd
+from fiddler_evals import init
+from fiddler_evals.evaluators import RAGFaithfulness, AnswerRelevance
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+LLM_CREDENTIAL_NAME = 'your-llm-credential'   # From Settings > LLM Gateway
+LLM_MODEL_NAME = 'openai/gpt-4o'              # Or your preferred model
+
+init(url=URL, token=TOKEN)
+
+# Initialize evaluators
+faithfulness = RAGFaithfulness(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME)
+relevance = AnswerRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME)
+```
+
+{% endstep %}
+
+{% step %}
+**Create Test Cases**
+
+Define representative test cases that cover both successful and failing RAG scenarios:
+
+```python
+test_cases = pd.DataFrame(
+    [
+        {
+            'scenario': 'Perfect Match',
+            'user_query': 'What is the capital of France?',
+            'retrieved_documents': ['Paris is the capital of France.'],
+            'rag_response': 'The capital of France is Paris.',
+        },
+        {
+            'scenario': 'Hallucination',
+            'user_query': 'What are the office hours?',
+            'retrieved_documents': ['We are closed on weekends.'],
+            'rag_response': 'We are open 9 AM to 5 PM every day.',
+        },
+        {
+            'scenario': 'Irrelevant Answer',
+            'user_query': 'How do I reset my password?',
+            'retrieved_documents': ['To reset, click "Forgot Password".'],
+            'rag_response': 'Our system is very secure and uses 256-bit encryption.',
+        },
+    ]
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Evaluate Each Test Case**
+
+Use the `.score()` method to evaluate each test case directly. Each evaluator returns a `Score` object with `value`, `label`, and `reasoning`:
+
+```python
+def evaluate_row(row):
+    f_score = faithfulness.score(
+        user_query=row['user_query'],
+        rag_response=row['rag_response'],
+        retrieved_documents=row['retrieved_documents'],
+    )
+
+    r_score = relevance.score(
+        user_query=row['user_query'],
+        rag_response=row['rag_response'],
+    )
+
+    return pd.Series(
+        {
+            'Faithfulness': f_score.label,
+            'Relevance': r_score.label,
+            'Status': 'HEALTHY'
+            if f_score.label == 'yes' and r_score.value >= 0.5
+            else 'ISSUE DETECTED',
+        }
+    )
+
+results = test_cases.join(test_cases.apply(evaluate_row, axis=1))
+```
+
+{% endstep %}
+
+{% step %}
+**View Results**
+
+```python
+results[['scenario', 'Faithfulness', 'Relevance', 'Status']]
+```
+
+**Expected output:**
+
+| scenario          | Faithfulness | Relevance | Status         |
+| ----------------- | ------------ | --------- | -------------- |
+| Perfect Match     | yes          | high      | HEALTHY        |
+| Hallucination     | no           | high      | ISSUE DETECTED |
+| Irrelevant Answer | yes          | low       | ISSUE DETECTED |
+
+The hallucination case scores high on relevance (it addresses the question) but fails faithfulness (the response fabricates hours not in the context). The irrelevant answer is faithful to the context but doesn't actually answer the user's question.
+{% endstep %}
+{% endstepper %}
+
+***
+
+## Understanding the Evaluators
+
+### [RAG Faithfulness](/api/fiddler-evals-sdk/evaluators/rag-faithfulness.md)
+
+RAG Faithfulness checks whether the response is grounded in the retrieved documents.
+
+* **Inputs**: `user_query`, `rag_response`, `retrieved_documents`
+* **Scoring**: Binary — Yes (1.0) / No (0.0)
+* **Use for**: Detecting hallucinations where the LLM generates plausible but unsupported claims
+
+### [Answer Relevance](/api/fiddler-evals-sdk/evaluators/answer-relevance.md)
+
+Answer Relevance measures how well the response addresses the user's query.
+
+* **Inputs**: `user_query`, `rag_response` (+ optional `retrieved_documents`)
+* **Scoring**: Ordinal — High (1.0), Medium (0.5), Low (0.0)
+* **Use for**: Detecting off-topic responses where the LLM answers a different question
+
+{% hint style="warning" %}
+**RAG Faithfulness vs. FTL Faithfulness:** This cookbook uses `RAGFaithfulness`, an LLM-as-a-Judge evaluator. Fiddler also offers `FTLResponseFaithfulness`, a proprietary Fast Trust Model evaluator with different inputs (`context`, `response`) and probability-based scoring (`faithful_prob` 0.0–1.0). These are separate evaluators — see the [Evaluators Glossary](/reference/glossary/enrichment.md) for details.
+{% endhint %}
+
+***
+
+## Next Steps
+
+* [Running RAG Experiments at Scale](/developers/cookbooks/rag-experiments-at-scale.md) — Use Datasets and Experiments to evaluate systematically across larger test sets
+* [Detecting Hallucinations in RAG](/developers/cookbooks/hallucination-detection-pipeline.md) — Set up continuous hallucination monitoring in production
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Conceptual guide to the diagnostic triad
+
+***
+
+**Source notebook**: [Fiddler Cookbook: RAG Evaluation Fundamentals](https://github.com/fiddler-labs/fiddler-examples/blob/main/cookbooks/Fiddler_Cookbook_RAG_Evaluation_Fundamentals.ipynb)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

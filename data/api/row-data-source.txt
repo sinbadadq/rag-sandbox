@@ -1,0 +1,40 @@
+# RowDataSource
+
+Data source for explainability analysis using a single row of data.
+
+RowDataSource allows you to perform explainability analysis on a specific data row by providing the row data directly. This is useful when you want to explain a particular prediction or analyze feature importance for a specific instance without referencing stored data.
+
+This data source type is ideal for real-time explanations, ad-hoc analysis, or when you have specific data points that you want to analyze independently of your stored datasets.
+
+## Examples
+
+Creating a row data source for a loan application:
+
+```python
+row_source = RowDataSource(
+    row={
+        "age": 35,
+        "income": 75000,
+        "credit_score": 720,
+        "employment_years": 8,
+        "loan_amount": 250000
+    }
+)
+```
+
+Creating a row data source for image classification:
+
+```python
+image_row_source = RowDataSource(
+    row={
+        "image_features": [0.1, 0.5, 0.3, ...],
+        "metadata": "product_image_001.jpg",
+        "category": "electronics"
+    }
+)
+```
+
+## row *: Dict*
+
+
+---

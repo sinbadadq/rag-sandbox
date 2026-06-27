@@ -1,0 +1,270 @@
+# Microsoft Entra ID OIDC
+
+Learn how to integrate Fiddler with Microsoft Entra ID (formerly Azure AD) for seamless Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol.
+
+## Overview
+
+This integration allows your users to access Fiddler using their existing Microsoft Entra ID credentials. Users are automatically provisioned in Fiddler on their first successful login, eliminating the need for manual user invitations. This guide also covers group synchronization for automated access control.
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+* **Microsoft Entra ID Administrator Access**: Permissions to register applications and configure API permissions
+* **Fiddler Administrator Access**: "Org Owner" or "Org User Manager" role in Fiddler's authentication management console
+* **Deployment Information**: Your Fiddler deployment base URL
+* **Tenant Information**: Access to your Microsoft Entra ID tenant details
+
+## Step 1: Configure Microsoft Entra ID Application
+
+### Register Application in Entra ID
+
+1. Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com/)
+2. Navigate to **Identity > Applications > App registrations**
+3. Click **New registration**
+4. Configure the application:
+   * **Name**: Enter a descriptive name (e.g., "Fiddler SSO")
+   * **Supported account types**: Select "Accounts in this organizational directory only"
+   * **Redirect URI**: Select "Web" and enter `{base_url}/api/sso/azuread/callback` (replace `{base_url}` with your Fiddler deployment URL)
+
+![register an application - screenshot](/files/x7zSEJtWgNpOfJsD9R00)
+
+5. Click **Register** to create the application
+
+### Create Client Secret
+
+1. In your registered application, go to **Certificates & secrets**
+2. Click **New client secret**
+3. Add a description and select an expiration period (recommend 24 months maximum)
+4. Click **Add**
+5. **Important**: Copy the secret value immediately—it won't be displayed again
+
+![create a new client secret - screenshot](/files/yU81KPFXWXGHw6hScA1q)
+
+![Masked client secret value](/files/FdmSyoHlU9yK9JvEzw2y)
+
+### Configure API Permissions
+
+1. Navigate to **API permissions** in your application
+2. Click **Add a permission**
+3. Select **Microsoft Graph**
+4. Choose **Delegated permissions**
+5. Add these permissions:
+   * `openid` (Sign users in)
+   * `profile` (View users' basic profile)
+   * `email` (View users' email address)
+   * `offline_access` (Maintain access to data you have given it access to)
+   * `User.Read` (Sign in and read user profile)
+   * `GroupMember.Read.All` (Read group memberships - for group sync)
+   * `Directory.Read.All` (Read directory data - for group sync)
+
+![Configured API Permissions includes Directory.Read.All, email, GroupMember.Read.All, offline\_access, openid, profile and User.Read](/files/30k6QufqWbsvO5lppqsM)
+
+6. Click **Grant admin consent** for your organization
+
+### Configure Authentication Settings
+
+1. Go to **Authentication** in your application
+2. In **Implicit grant and hybrid flows**, enable:
+   * ✅ **Access tokens**
+   * ✅ **ID tokens**
+3. Ensure **Supported account types** is set to "Accounts in this organizational directory only"
+
+![Under Implicit Grant and Hybrid Flows, 'Access tokens' and 'ID tokens' are enabled. Under Supported Account Types, 'Accounts in this organizational directory only' is selected.](/files/0vP237xcCnLKv5pr7VCz)
+
+### Configure Token Configuration (Optional - for group sync)
+
+For group synchronization with Fiddler teams:
+
+1. Go to **Token configuration** in your application
+2. Click **Add optional claim**
+3. Select **ID** token type
+4. Add these claims:
+   * `email`
+   * `family_name`
+   * `given_name`
+   * `groups` (for group synchronization)
+
+![Configured Token Permissions includes acct, email, family\_name, given\_name and groups](/files/CX1FlnZ2CL7ehbcinvYh)
+
+### Collect Required Information
+
+From your registered application's **Overview** page, collect:
+
+* **Application (client) ID**: Found in the "Essentials" section
+* **Directory (tenant) ID**: Found in the "Essentials" section
+* **Client secret**: The secret value you created earlier
+* **OpenID Connect metadata document**: Available under **Endpoints**
+
+![OpenID Connect metadata Document can be found under Endpoints under the overview section.](/files/EaEXYMC0ojE2Sk5Yu5YP)
+
+The metadata URL format is: `https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration`
+
+## Step 2: Configure Fiddler Authentication Console
+
+### Access Authentication Management Console
+
+1. Log into the Fiddler authentication management console
+2. Select your customer organization from the dropdown
+3. Navigate to **Settings > Login and Access > Identity Providers**
+4. Click **Add Provider**
+
+### Configure Entra ID Integration
+
+**Provider Configuration**:
+
+* **Provider name**: Enter a descriptive name (e.g., "Microsoft Entra ID")
+* **Provider type**: Select Azure AD or OIDC provider type
+* **Client ID**: Enter the Application (client) ID from your Entra ID application
+* **Client Secret**: Enter the client secret value you created
+* **Metadata URL**: `https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration` (replace `{tenant-id}` with your Directory tenant ID)
+* **Tenant ID**: Enter your Directory (tenant) ID
+
+**User Provisioning Settings**:
+
+* ✅ Enable **"Automatic creation"** - Creates new users on first successful login
+* ✅ Enable **"Automatic update"** - Updates user information from Entra ID
+* ✅ Select **"Check for existing username"** - Links identities to existing accounts when appropriate
+
+### Configure Attribute Mapping
+
+Ensure proper mapping of user attributes from Entra ID to Fiddler:
+
+**Required Mappings**:
+
+* **First Name**: `given_name`
+* **Last Name**: `family_name`
+* **Email**: `email`
+
+**Optional Mappings**:
+
+* **Groups**: `groups` (for automated group-based access control)
+
+### Configure Scopes
+
+In the identity provider configuration, ensure the scope list includes:
+
+* `openid` (required for OIDC)
+* `profile` (for user profile information)
+* `email` (for email address)
+* `offline_access` (for refresh tokens)
+
+## Step 3: Test and Validate Integration
+
+### Test Authentication Flow
+
+1. Save your SSO configuration in the authentication management console
+2. Navigate to your Fiddler login page
+3. Click **"Sign in with SSO"**
+4. You should be redirected to Microsoft Entra ID for authentication
+5. After successful authentication, you should be redirected back to Fiddler
+
+### Verify User Provisioning
+
+1. Log in with a test user account
+2. Verify the user account is automatically created in Fiddler
+3. Check that user information (name, email) is properly populated
+4. If using group sync, verify group memberships are correctly mapped
+
+## Advanced Configuration
+
+### Group Synchronization
+
+To enable automatic group synchronization:
+
+**In Microsoft Entra ID**:
+
+1. Ensure the `groups` claim is configured in Token configuration (as described in Step 1)
+2. Grant `GroupMember.Read.All` and `Directory.Read.All` API permissions
+3. Verify admin consent has been granted for these permissions
+
+**In Fiddler**:
+
+1. Create corresponding teams in Fiddler that match your Entra ID group names
+2. Verify the `groups` attribute is mapped in your identity provider configuration
+3. Test with a user who belongs to mapped groups
+
+### Conditional Access Integration
+
+Microsoft Entra ID Conditional Access policies will apply to Fiddler access:
+
+* Multi-factor authentication requirements
+* Device compliance policies
+* Location-based access controls
+* Risk-based access policies
+
+### Custom Domain Configuration
+
+If using a custom domain in Microsoft Entra ID:
+
+* Update all URLs to use your custom domain
+* Ensure the metadata URL reflects your custom domain
+* Update redirect URIs accordingly
+
+## Troubleshooting
+
+### Common Issues
+
+**Authentication Failures**:
+
+* **Redirect URI Mismatch**: Verify the redirect URI in Entra ID exactly matches `{base_url}/api/sso/azuread/callback`
+* **Client Secret Expiration**: Client secrets typically expire after 6-24 months—check expiration date in Entra ID
+* **Missing Permissions**: Verify all required API permissions are granted with admin consent
+* **Token Configuration**: Ensure ID tokens are enabled in Authentication settings
+
+**User Provisioning Issues**:
+
+* **Users Not Auto-Created**: Verify "Automatic creation" is enabled in Fiddler configuration
+* **Missing User Information**: Check attribute mappings and ensure required claims are included in tokens
+* **Group Sync Not Working**: Verify Groups claim is configured and corresponding teams exist in Fiddler
+
+**Permission Issues**:
+
+* **Admin Consent Required**: Some permissions require admin consent—check API permissions page
+* **Insufficient Directory Permissions**: Ensure `Directory.Read.All` is granted for group synchronization
+
+### Common Error Messages
+
+* **AADSTS50105**: User not assigned to application - assign users/groups to the application
+* **AADSTS700016**: Application not found - verify Application ID is correct
+* **AADSTS90094**: Admin consent required - grant admin consent for API permissions
+
+### Getting Help
+
+For additional assistance:
+
+* Check authentication logs in the Fiddler authentication management console
+* Review Microsoft Entra ID sign-in logs for detailed error information
+* Verify network connectivity between Fiddler and Microsoft endpoints
+* Contact your Fiddler representative with specific error messages
+
+## Reference Documentation
+
+For detailed configuration guidance, refer to the official documentation:
+
+* [Microsoft Entra ID OIDC Configuration Guide](https://zitadel.com/docs/guides/integrate/identity-providers/azure-ad-oidc) - Group sync configuration included
+* [General SSO Authentication Guide](/reference/access-control/sso-authentication-guide.md) - Overview of SSO concepts and troubleshooting
+* [Mapping AD Groups to Fiddler Teams](/reference/access-control/mapping-ad-groups-to-fiddler-teams.md) - Group synchronization details
+* [Microsoft Entra ID App Registration Guide](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/walkthrough-register-app-azure-active-directory)
+
+## Important Notes
+
+* **Automatic User Provisioning**: Users are automatically created on first successful login—no manual invitations required
+* **Data Storage**: Fiddler stores only the user's first name, last name, email address, and OIDC token from Entra ID
+* **API Access**: For programmatic API access, users must create access tokens from the "Credentials" tab in Fiddler's Settings page
+* **Single Authentication Method**: Users can only authenticate via either SSO or email authentication, not both
+* **Client Secret Expiration**: Monitor client secret expiration dates and update before expiry to avoid service disruptions
+* **Group Sync Requirements**: Group synchronization requires additional API permissions and proper token configuration
+
+## Next Steps
+
+After successful integration:
+
+1. **Train Users**: Provide guidance on accessing Fiddler through Microsoft Entra ID SSO
+2. **Configure Teams**: Set up Fiddler teams to match your organizational structure
+3. **Test Group Sync**: Verify automatic group synchronization is working as expected
+4. **Set Up Monitoring**: Monitor authentication logs and set up alerts for client secret expiration
+5. **Review Conditional Access**: Ensure any existing Conditional Access policies work appropriately with Fiddler access
+
+
+---

@@ -1,0 +1,214 @@
+# Experiments
+
+Experiments are structured, repeatable test runs for assessing the quality, safety, and performance of Large Language Model (LLM) applications. Each experiment runs your application against a curated test dataset, using evaluators to score outputs across specific quality dimensions. Unlike ad-hoc manual review, experiments provide quantitative, reproducible assessment that scales to thousands of test cases.
+
+Experiments serve as the testing framework for generative AI systems, analogous to unit testing and integration testing in traditional software development. They enable teams to make data-driven decisions about prompt engineering, model selection, hyperparameter tuning, and safety validation by providing objective evidence of how changes impact application behavior across representative scenarios.
+
+In the context of LLM development, experiments complement observability by providing proactive quality gates before deployment, while monitoring provides reactive insights after production release. Together, they form a comprehensive quality assurance strategy for reliable AI applications.
+
+<figure><img src="/files/ARy6ENbSk6Xw7XWwMhza" alt="Diagram showing experiment workflow from datasets through experiments to results"><figcaption><p>The Experiment Lifecycle: Datasets, Experiments, and Results</p></figcaption></figure>
+
+## Core Terminology
+
+### Evaluator
+
+A function or system that assesses LLM outputs against specific quality criteria and produces a score. Evaluators can be rule-based (regex matching, length checks), model-based (embedding similarity, LLM-as-a-judge), or custom business logic. Each evaluator focuses on a specific dimension such as relevance, coherence, safety, or faithfulness.
+
+### Score
+
+The quantitative or qualitative output produced by an evaluator represents how well an LLM output meets the evaluation criteria. Scores can be binary (pass/fail), continuous (0.0 to 1.0), categorical (positive/neutral/negative), or multi-dimensional (sentiment with confidence).
+
+### Test Case
+
+A single evaluation data point containing inputs (such as a user query), optional extras (such as context for RAG systems), expected outputs (ground truth answers), and metadata. Test cases represent specific scenarios your application should handle correctly.
+
+### Dataset
+
+A structured collection of test cases used for evaluation, typically representing diverse real-world scenarios, edge cases, and everyday user interactions. Datasets enable consistent, repeatable testing across different model versions, prompts, or configurations.
+
+### Experiment
+
+A single execution of an experiment workflow where an LLM application runs against all test cases in a dataset, with evaluators scoring each output. Experiments track inputs, outputs, scores, metadata, and timing information, enabling comparison between different application versions.
+
+### Baseline
+
+A reference experiment representing current or expected performance levels. Baselines provide the comparison point for evaluating whether changes improve or degrade application quality across metrics.
+
+## How Fiddler Provides Experiments
+
+Fiddler Experiments delivers a comprehensive evaluation platform that integrates systematic testing into the LLM development lifecycle. The platform combines dataset management, experiment orchestration, built-in evaluators, and custom evaluation frameworks into a unified system accessible through both SDK and UI interfaces.
+
+**Dataset Management**: Teams create and version experiment datasets containing representative test cases with inputs, expected outputs, and contextual information. Datasets can be imported from CSV, JSONL, or constructed programmatically, with support for complex column mapping and metadata enrichment.
+
+**Built-in Evaluators**: Fiddler provides production-ready evaluators for common quality dimensions, including answer relevance, faithfulness (hallucination detection), coherence, conciseness, safety, toxicity, and sentiment. These evaluators leverage both Fast Trust Models and LLM-as-a-judge approaches for reliable assessment.
+
+**Custom Evaluation Framework**: Beyond built-in evaluators, developers can create custom evaluators using Python functions, LLM-based classification, or bring-your-own-prompt approaches. This flexibility enables domain-specific evaluation logic and business-specific quality criteria.
+
+**Experiment Tracking**: Every experiment run is tracked with a complete lineage of inputs, outputs, scores, and metadata. The platform provides side-by-side comparison of experiments, aggregate statistics by evaluator, and drill-down capabilities to individual test case results.
+
+**Integration Points**: The Fiddler Evals SDK integrates with development workflows through Python APIs, enabling CI/CD integration, automated regression testing, and programmatic analysis. The UI provides visual exploration of results, experiment comparison dashboards, and collaborative review capabilities.
+
+<figure><img src="/files/Lnva8rl6Kaa2YbqvmiGK" alt="Dashboard showing side-by-side comparison of experiments"><figcaption><p>Experiment Comparison: Analyze performance across evaluators and test cases</p></figcaption></figure>
+
+## Why Experiments Are Important
+
+Experiments transform LLM application development from subjective guesswork into objective, data-driven engineering. Without systematic evaluation, teams rely on anecdotal evidence and manual spot-checking, making it impossible to confidently assess whether changes improve or degrade quality across diverse scenarios.
+
+**Quality Assurance at Scale**: Manual review of LLM outputs doesn't scale to the thousands of scenarios production applications must handle. Evaluations automate quality assessment, enabling comprehensive testing that catches edge cases and regressions human reviewers might miss.
+
+**Objective Decision-Making**: When comparing prompts, models, or configurations, evaluations provide quantitative evidence of which option performs better across metrics that matter for your use case. This eliminates arguments based on cherry-picked examples or personal preference.
+
+**Regression Prevention**: As LLM applications evolve through prompt refinements, model updates, and feature additions, evaluations serve as quality gates that catch unintended degradation before it reaches production. Continuous evaluation prevents the "whack-a-mole" problem where fixing one issue breaks another.
+
+**Safety Validation**: For applications with safety, compliance, or ethical requirements, evaluations provide systematic verification that outputs meet organizational standards. Safety evaluators can detect toxicity, bias, harmful content, or policy violations across comprehensive test suites.
+
+**Cost Optimization**: Evaluations enable data-driven decisions about model selection and configuration. By comparing quality metrics across different models or prompts, teams can identify cost-effective configurations that meet quality requirements without over-provisioning expensive models.
+
+**Continuous Improvement**: Experiment results guide optimization efforts by revealing where applications struggle. Identifying low-performing test case categories, correlated failures, or specific evaluator weaknesses focuses development effort on meaningful improvements.
+
+## Types of Experiments
+
+### Development-Time Evaluation
+
+**Prompt A/B Testing**: Compare different prompt formulations to identify which produces better quality outputs. Run identical datasets through competing prompts and analyze score distributions across evaluators to make evidence-based prompt selection decisions.
+
+**Model Comparison**: Evaluate multiple LLM models (GPT-4, Claude, Llama) on the same tasks to balance quality, cost, and latency trade-offs. Use evaluation metrics to justify model selection for specific use cases.
+
+**Hyperparameter Tuning**: Systematically test temperature, top-p, and other configuration parameters to optimize the balance between creativity and consistency for your application.
+
+### Pre-Deployment Testing
+
+**Regression Testing**: Run comprehensive experiment suites before each deployment to ensure new changes don't degrade existing capabilities. Establish quality thresholds that must be met for deployment approval.
+
+**Quality Gates**: Implement automated checks that block deployment if experiment scores fall below acceptable baselines, preventing quality regressions from reaching production.
+
+**Version Validation**: When upgrading model versions or dependencies, run experiments to verify that improvements claimed by providers actually manifest in your specific use case.
+
+### Safety and Trust Evaluation
+
+**Toxicity Detection**: Evaluate outputs for offensive, harmful, or inappropriate content across diverse test scenarios. Ensure content moderation policies are enforced systematically.
+
+**Bias Assessment**: Test for gender, racial, political, or other biases in model responses using carefully constructed datasets that expose potential fairness issues.
+
+**Adversarial Testing**: Run experiments with jailbreak attempts, prompt injections, and other adversarial inputs to verify that safety guardrails function correctly.
+
+### RAG System Evaluation
+
+Fiddler provides a purpose-built diagnostic framework — **RAG Health Metrics** — for evaluating RAG applications. The framework consists of three evaluators that together pinpoint where RAG pipelines fail:
+
+**Answer Relevance 2.0** (Enhanced): Measures how well the response addresses the user's query using ordinal scoring (High/Medium/Low = 1.0/0.5/0.0) with detailed reasoning. Available in Agentic Monitoring, Experiments, and LLM Observability.
+
+**Context Relevance** (New): Measures whether the retrieved documents are relevant to the user's query, isolating retrieval quality from generation quality. Uses ordinal scoring (High/Medium/Low = 1.0/0.5/0.0) with reasoning. Available in Agentic Monitoring and Experiments only.
+
+**RAG Faithfulness** (Repackaged): An LLM-as-a-Judge evaluator that assesses whether the response is grounded in the retrieved documents. Returns a binary label (Yes/No = 1/0) with detailed reasoning. Available in Agentic Monitoring, Experiments, and LLM Observability.
+
+See [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) for a comprehensive guide to using these evaluators together for root cause analysis.
+
+**Source Attribution**: Verify that responses correctly attribute information to source documents when required for transparency or compliance.
+
+### Performance Benchmarking
+
+**Cross-Provider Comparison**: Evaluate the same application logic across different LLM providers to understand quality and capability differences for specific tasks.
+
+**Longitudinal Tracking**: Run standardized experiment datasets periodically to detect performance drift as models, prompts, and data distributions evolve.
+
+**Domain-Specific Benchmarking**: Create custom experiment datasets representing your specific domain, use case, and user population to benchmark against industry standards or competitors.
+
+## Challenges
+
+Implementing effective evaluation systems presents unique challenges stemming from the subjective nature of language, the complexity of assessment criteria, and the resource requirements of comprehensive testing.
+
+**Subjectivity and Context-Dependence**: Defining "good" outputs is inherently subjective and varies by use case, user population, and context. What constitutes relevant, appropriate, or high-quality content for a customer service chatbot differs dramatically from what is considered high-quality content for a creative writing assistant. Establishing evaluation criteria requires a deep understanding of user expectations and business objectives.
+
+**Ground Truth Acquisition**: Creating reference answers (ground truth) for test cases is labor-intensive and may not even be possible for open-ended generation tasks. While some scenarios have clear correct answers, creative tasks, summarization, or opinion-based queries lack a single correct response, complicating evaluator design.
+
+**Computational Cost**: Running comprehensive evaluations, especially with LLM-as-a-judge evaluators, incurs significant computational expense and latency. Balancing evaluation comprehensiveness with budget constraints requires careful selection of evaluators and potentially sampling strategies.
+
+**Test Coverage and Representativeness**: Creating datasets that adequately represent production diversity is challenging. Production systems encounter edge cases, novel user intents, and data distributions that may not be captured in experiment datasets, potentially leading to overfitting to test scenarios.
+
+**Evaluation-Production Gap**: Test performance may not predict real-world performance due to differences in user behavior, data distribution, or system context. Experiment datasets may lack the complexity, noise, or unexpected patterns present in production environments.
+
+**Metric Selection**: With dozens of available evaluators measuring different quality dimensions, choosing the proper subset for your use case requires domain expertise. Overloading evaluations with too many metrics creates noise, while missing critical evaluators can blind teams to essential failure modes.
+
+**LLM-as-Judge Reliability**: When using LLMs as evaluators, the evaluator itself may hallucinate, show bias, or produce inconsistent judgments. Ensuring evaluator quality requires meta-evaluation—validating that evaluators align with human judgment.
+
+**Maintenance Overhead**: Experiment datasets require ongoing maintenance as applications evolve, user expectations shift, and new failure modes emerge. Stale datasets provide false confidence, while keeping evaluations current demands continuous effort.
+
+## Experiments Implementation Guide
+
+1. **Define Evaluation Objectives**
+   * Identify the specific quality dimensions most critical for your use case (relevance, safety, coherence, etc.)
+   * Establish acceptable performance thresholds based on business requirements and user expectations
+   * Prioritize evaluation dimensions based on risk assessment—safety-critical applications require a different focus than creative tools
+2. **Build Representative Datasets**
+   * Start with 10-20 high-priority scenarios covering common use cases and known failure modes
+   * Expand to include edge cases, adversarial inputs, and diverse user populations
+   * Include ground truth answers where possible, or clear evaluation criteria when ground truth isn't feasible
+   * Use production data (anonymized and filtered) to ensure test cases reflect real-world distribution
+   * Version datasets and track changes to maintain evaluation consistency over time
+3. **Select Appropriate Evaluators**
+   * Begin with built-in evaluators for common quality dimensions (relevance, coherence, safety)
+   * Add domain-specific custom evaluators for business requirements not covered by standard metrics
+   * Avoid metric overload—focus on evaluators that drive actual decisions rather than collecting all possible scores
+   * Validate evaluators against human judgment on sample test cases to ensure alignment
+4. **Run Baseline Experiments**
+   * Execute evaluations on your current application to establish baseline performance
+   * Document baseline scores and acceptable ranges for each evaluator
+   * Identify problem areas and prioritize improvement efforts based on experiment results
+5. **Establish Evaluation Cycles**
+   * Integrate evaluations into development workflow—run before each pull request or deployment
+   * Set up automated experiment pipelines that block deployment when scores fall below thresholds
+   * Schedule periodic comprehensive evaluations to detect drift even when code hasn't changed
+   * Create feedback loops where evaluation insights drive prompt refinement and model tuning
+6. **Iterate and Improve**
+   * Analyze experiment results to identify patterns in failures and guide optimization
+   * Compare experiments side-by-side to validate that changes improve target metrics without regressing others
+   * Expand datasets based on newly discovered failure modes in production
+   * Refine evaluators and thresholds as understanding of quality requirements evolves
+
+## Frequently Asked Questions
+
+**Q: How many test cases do I need for reliable evaluation?**
+
+Start with 10-20 high-priority test cases covering core functionality and known edge cases. As you mature your evaluation practice, expand to 50-100+ cases for comprehensive coverage. The optimal number depends on application complexity and diversity of scenarios—simple Q\&A may require fewer cases than complex multi-turn conversations or RAG systems.
+
+**Q: How do I choose which evaluators to use?**
+
+Prioritize evaluators aligned with your specific failure modes and user expectations. Safety-critical applications need toxicity and bias evaluators; RAG systems require faithfulness; customer service chatbots benefit from relevance and coherence. Start with 3-5 core evaluators and expand based on observed gaps rather than trying to measure everything from day one.
+
+**Q: Should I use LLM-as-a-judge or rule-based evaluators?**
+
+Use both strategically. Rule-based evaluators (length checks, regex matching, keyword presence) are fast, deterministic, and cheap but limited to surface-level criteria. LLM-as-a-judge provides a nuanced semantic assessment but incurs cost and latency. Combine rule-based evaluators for quick sanity checks with LLM-based evaluators for quality assessment.
+
+**Q: How often should I run experiments?**
+
+Run experiments before every deployment for regression testing, and schedule comprehensive experiments weekly or monthly, even without code changes, to detect drift. For active development, run experiments on every pull request. Balance frequency with computational cost—use smaller, quick-check datasets for frequent testing and comprehensive datasets for periodic deep evaluation.
+
+**Q: What's the difference between evaluation and monitoring?**
+
+Evaluation involves proactive testing with curated test datasets before deployment, while monitoring is the reactive observation of production behavior. Evaluation provides control over test scenarios and ground truth, but may not capture production complexity. Monitoring reflects real-world usage but lacks controlled testing. Use evaluation for pre-deployment quality gates and monitoring for production health.
+
+**Q: Can evaluations replace human review?**
+
+Evaluations complement rather than replace human review. Automated evaluations scale to comprehensive testing, which is impossible for humans, but humans provide nuanced judgment on edge cases, ethical considerations, and subjective quality that automated systems may miss. Use evaluations for systematic coverage and humans for final judgment on critical or ambiguous cases.
+
+## Related Terms
+
+* [LLM Observability](/reference/glossary/llm-observability.md) - Production monitoring complementing pre-deployment evaluation
+* [Agentic Observability](/reference/glossary/agentic-observability.md) - Monitoring multi-agent systems with evaluation capabilities
+* [Guardrails](/reference/glossary/guardrails.md) - Real-time safety controls often validated through evaluation
+* [Trust Score](/reference/glossary/trust-score.md) - Metrics measuring trustworthiness, often used as evaluators
+* [Enrichment](/reference/glossary/enrichment.md) - Automated metrics generation similar to evaluation, but for production data
+* [Model Performance](/reference/glossary/model-performance.md) - Traditional ML metrics complementing LLM evaluation
+
+## Related Resources
+
+* [Getting Started with Fiddler Experiments](/getting-started/experiments.md)
+* [Fiddler Evals SDK Reference](/api/fiddler-evals-sdk/evals.md)
+* [Evals SDK Quick Start](/evaluate-and-test/evals-sdk-quick-start.md)
+* [Evals SDK Advanced Guide](/developers/tutorials/experiments/evals-sdk-advanced.md)
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Conceptual guide to RAG pipeline diagnostics
+* [RAG Health Metrics Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md) — Step-by-step RAG evaluation guide
+
+
+---

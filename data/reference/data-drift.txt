@@ -1,0 +1,89 @@
+# Data Drift
+
+Data drift refers to the change in the statistical properties of input data over time, which can impact a model's performance and predictions. It occurs when the distribution of data in production differs significantly from the distribution of the baseline data (often the training dataset) that the model was trained on.
+
+Model performance can be poor if models trained on a specific dataset encounter different data in production. Data drift serves as a great proxy metric for performance decline, especially in cases where there is a delay in getting labels for production events (e.g., in a credit lending use case, an actual default may happen after months or years).
+
+## How Fiddler Uses Data Drift
+
+Fiddler's monitoring platform uses data drift metrics to help users identify what data is drifting, when it's drifting, and how it's drifting. This is a crucial first step in identifying potential model performance issues. Fiddler calculates drift between the distribution of a field in the baseline dataset and that same distribution for the time period of interest using metrics like [Jensen-Shannon Divergence](https://www.fiddler.ai/ml-guides/how-to-measure-ml-model-drift) (JSD) and [Population Stability Index](https://www.fiddler.ai/blog/measuring-data-drift-population-stability-index) (PSI).
+
+## Why Data Drift Is Important
+
+Monitoring data drift helps you stay informed about distributional shifts in the data for features of interest, which could have business implications even if there is no immediate decline in model performance. High drift can occur as a result of data integrity issues (bugs in the data pipeline), or as a result of an actual change in the distribution of data due to external factors (e.g., a dip in income due to economic changes).
+
+* **Early Warning System**: Data drift serves as an early warning mechanism for potential model performance degradation before it significantly impacts business outcomes.
+* **Delayed Ground Truth**: In many real-world scenarios, ground truth labels are delayed or expensive to obtain, making drift detection essential for timely model management.
+* **Data Pipeline Validation**: Detecting drift can help identify issues in data pipelines, such as bugs or data quality problems that might otherwise go unnoticed.
+* **Business Insight**: Changes in data distributions can provide valuable business insights about changing customer behaviors or market conditions, even when model performance remains stable.
+* **Efficiency in Retraining**: Monitoring data drift helps teams make informed decisions about when to retrain models, optimizing the use of resources.
+
+## Types of Data Drift
+
+* **Feature Drift**: Changes in the statistical properties of input features that may affect model performance, such as shifts in customer demographics or behavior patterns.
+* **Prediction Drift**: Changes in the distribution of model outputs or predictions over time, which may indicate underlying issues even when feature distributions appear stable.
+* **Concept Drift**: Changes in the relationship between input features and target variables, where the statistical properties of the target variable change in relation to the features.
+* **Virtual Drift**: Changes in data that don't affect the target concept but may still impact model performance, such as the introduction of new feature values.
+
+## Challenges
+
+Managing data drift effectively presents several challenges for data science and MLOps teams.
+
+* **Determining Threshold Levels**: Setting appropriate thresholds for what constitutes significant drift requires careful consideration of business context and model sensitivity.
+* **Root Cause Analysis**: Identifying which specific features are contributing most to observed drift and understanding their business implications can be complex.
+* **Distinguishing Natural Variation**: Differentiating between normal seasonal or cyclic patterns and problematic drift requires domain expertise and historical context.
+* **Handling Multivariate Relationships**: Drift may occur in complex relationships between variables rather than in individual features, making detection more challenging.
+* **Balancing Sensitivity**: Drift detection systems must be sensitive enough to catch important changes while avoiding false alarms from minor fluctuations.
+* **Delayed Response**: Determining how quickly to respond to detected drift requires balancing the costs of model retraining against the risks of performance degradation.
+
+## Data Drift Monitoring Implementation Guide
+
+1. **Establish a Baseline**
+   * Define a representative baseline dataset, typically the training data used to build the model.
+   * Analyze and document the statistical properties of this baseline for future comparison.
+2. **Select Appropriate Drift Metrics**
+   * Choose appropriate statistical metrics such as JSD or PSI to quantify distribution differences.
+   * Consider the data types and distributions when selecting metrics (e.g., categorical vs. continuous variables).
+3. **Set Drift Thresholds**
+   * Establish thresholds for acceptable levels of drift based on business impact and model sensitivity.
+   * Consider variable importance when setting thresholds, as drift in critical features may be more impactful.
+4. **Implement Monitoring Systems**
+   * Set up automated monitoring to compare production data distributions against the baseline.
+   * Configure alerts for when drift exceeds predefined thresholds.
+5. **Analyze and Respond to Drift**
+   * Investigate the root causes of detected drift using drill-down analysis.
+   * Determine appropriate responses, which may include model retraining, feature engineering adjustments, or addressing data pipeline issues.
+
+## Frequently Asked Questions
+
+**Q: How is data drift different from concept drift?**
+
+Data drift refers to changes in the statistical properties of input data, while concept drift refers to changes in the relationship between inputs and the target variable. Data drift focuses on feature distributions, while concept drift involves the underlying prediction problem changing over time.
+
+**Q: How often should I check for data drift?**
+
+The frequency depends on your use case and how quickly your data environment changes. Critical applications may require daily or even hourly monitoring, while more stable models might be monitored weekly or monthly.
+
+**Q: What actions should I take when data drift is detected?**
+
+When significant drift is detected, first investigate the root cause through drill-down analysis. Depending on the cause, actions may include retraining the model, engineering new features, fixing data pipeline issues, or adjusting business processes to account for the new data reality.
+
+**Q: Can data drift occur without affecting model performance?**
+
+Yes, data drift can occur without immediately affecting model performance if the changes happen in areas that don't significantly impact the model's predictions or if the model is robust to the specific type of drift occurring.
+
+## Related Terms
+
+* [ML Observability](/reference/glossary/ml-observability.md)
+* [Baseline](/reference/glossary/baseline.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+
+## Related Resources
+
+* [Data Drift Monitoring Platform](/observability/platform/data-drift-platform.md)
+* [How to Detect Model Drift in ML Monitoring](https://www.fiddler.ai/blog/how-to-detect-data-drift)
+* [Alerts](/observability/platform/alerts-platform.md)
+* [Monitoring Charts](/observability/platform/monitoring-charts-platform.md)
+
+
+---

@@ -1,0 +1,218 @@
+# Fiddler LangGraph SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-langgraph)](https://pypi.org/project/fiddler-langgraph/)
+
+## Deprecation notices
+
+### Re-exported `fiddler-otel` symbols
+
+Importing core `fiddler-otel` symbols directly from `fiddler_langgraph` is deprecated and will be removed in a future major release. This affects the following imports:
+
+```python
+# Deprecated — will be removed in a future release
+from fiddler_langgraph import FiddlerClient
+from fiddler_langgraph import FiddlerSpan, FiddlerGeneration, FiddlerChain, FiddlerTool
+from fiddler_langgraph import trace, get_current_span, get_client, set_conversation_id
+```
+
+**Recommended migration:** Import these symbols from `fiddler_otel` directly:
+
+```python
+# Correct — import from fiddler_otel
+from fiddler_otel import FiddlerClient
+from fiddler_otel import FiddlerSpan, FiddlerGeneration, FiddlerChain, FiddlerTool
+from fiddler_otel import trace, get_current_span, get_client, set_conversation_id
+```
+
+`LangGraphInstrumentor`, `add_session_attributes`, `add_span_attributes`, and `set_llm_context` remain in `fiddler_langgraph` and are not affected.
+
+***
+
+## 1.4
+
+### **1.4.2**
+
+*April 2026*
+
+{% hint style="warning" %}
+**Breaking change released as a patch version.** If you are upgrading from 1.4.1 or earlier, see the migration steps below.
+{% endhint %}
+
+* **Breaking Changes**
+  * **Module restructure — `fiddler_langgraph.tracing` removed and instrumentor class renamed**: The internal `tracing` sub-package has been removed and the instrumentor class has been renamed from `FiddlerLangChainInstrumentor` to `LangGraphInstrumentor`. All existing code using the old import path must be updated.
+
+    **Old import (1.4.1 and earlier):**
+
+    ```python
+    from fiddler_langgraph.tracing.instrumentation import FiddlerLangChainInstrumentor
+
+    instrumentor = FiddlerLangChainInstrumentor(client=client)
+    instrumentor.instrument()
+    ```
+
+    **New import (1.4.2+):**
+
+    ```python
+    from fiddler_langgraph import LangGraphInstrumentor
+
+    instrumentor = LangGraphInstrumentor(client=client)
+    instrumentor.instrument()
+    ```
+
+    **Migration:** Update the import path and rename `FiddlerLangChainInstrumentor` to `LangGraphInstrumentor`. The constructor signature and all methods (`instrument()`, `uninstrument()`) are identical — no other code changes required.
+
+    **Impact:** Upgrading to 1.4.2 without updating the import raises `ModuleNotFoundError: No module named 'fiddler_langgraph.tracing'`. If you cannot upgrade immediately, pin to `fiddler-langgraph==1.4.1`.
+  * **Other functions relocated from `fiddler_langgraph.tracing.instrumentation`**: The following utility functions were also in the removed `tracing` sub-package. They are now importable directly from `fiddler_langgraph`:
+
+    | Function                 | Old import (1.4.1 and earlier)                                                 | New import (1.4.2+)                                    |
+    | ------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+    | `add_session_attributes` | `from fiddler_langgraph.tracing.instrumentation import add_session_attributes` | `from fiddler_langgraph import add_session_attributes` |
+    | `add_span_attributes`    | `from fiddler_langgraph.tracing.instrumentation import add_span_attributes`    | `from fiddler_langgraph import add_span_attributes`    |
+    | `set_llm_context`        | `from fiddler_langgraph.tracing.instrumentation import set_llm_context`        | `from fiddler_langgraph import set_llm_context`        |
+    | `set_conversation_id`    | `from fiddler_langgraph.tracing.instrumentation import set_conversation_id`    | `from fiddler_otel import set_conversation_id`         |
+
+    **Impact:** Any of these imports using the `fiddler_langgraph.tracing.instrumentation` path will raise `ModuleNotFoundError: No module named 'fiddler_langgraph.tracing'` when upgrading to 1.4.2.
+  * **`is_fiddler_span` utility relocated to `fiddler_otel.utils`**: The `is_fiddler_span()` function has moved from `fiddler_langgraph.core.utils` to `fiddler_otel.utils`. Update the import if you are using this utility directly.
+
+    **Old import (1.4.1 and earlier):**
+
+    ```python
+    from fiddler_langgraph.core.utils import is_fiddler_span
+    ```
+
+    **New import (1.4.2+):**
+
+    ```python
+    from fiddler_otel.utils import is_fiddler_span
+    ```
+
+    **Impact:** Upgrading to 1.4.2 without updating the import raises `ModuleNotFoundError: No module named 'fiddler_langgraph.core'`.
+* **New features** (via `fiddler-otel 1.1.0`)
+  * **Offline / S3 routing mode**: `FiddlerClient` now accepts two new parameters for writing traces to local files instead of sending them directly to Fiddler. This enables deployments where security or network policies require data to pass through a controlled intermediary (such as Amazon S3) before reaching Fiddler.
+
+    | Parameter                   | Type   | Default            | Description                                                                                                                                                     |
+    | --------------------------- | ------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `otlp_enabled`              | `bool` | `True`             | Set to `False` to disable direct OTLP export. `api_key` and `url` are not required when `False`.                                                                |
+    | `otlp_json_capture_enabled` | `bool` | `False`            | When `True`, writes traces to local `.json` files in standard OTLP JSON format (`ExportTraceServiceRequest` envelope) compatible with the Fiddler S3 connector. |
+    | `otlp_json_output_dir`      | `str`  | `'fiddler_traces'` | Output directory for OTLP JSON files. Created automatically if it does not exist. Each span batch is written to a separate timestamped file.                    |
+
+    ```python
+    from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+    # No api_key or url needed — traces written to local files only
+    client = FiddlerClient(
+        application_id='YOUR_APPLICATION_ID',  # Required — used by S3 connector to route traces
+        otlp_enabled=False,
+        otlp_json_capture_enabled=True,
+        otlp_json_output_dir='./fiddler_traces',
+    )
+
+    instrumentor = LangGraphInstrumentor(client=client)
+    instrumentor.instrument()
+    # Traces are written to ./fiddler_traces/*.json — upload these files to S3
+    ```
+
+    See [Offline / S3 Routing Mode](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md#offline--s3-routing-mode) in the integration guide and [OTel SDK 1.1.0](/changelog/release-notes/otel-sdk.md#110) for full details.
+* **Documentation**
+  * Updated the [LangGraph SDK integration guide](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/langgraph-sdk.md) to use `LangGraphInstrumentor` throughout — all code examples, quick start, configuration, and troubleshooting sections now reflect the new import path.
+
+***
+
+### **1.4.1**
+
+*March 20, 2026*
+
+* **Bug Fixes**
+  * **Fixed `set_conversation_id()` ignored after first LangGraph invocation**: When using `LangGraphInstrumentor`, calling `set_conversation_id()` between agent invocations had no effect — every span after the first run carried the conversation ID from the initial call. The root cause was a `@cached_property` on the internal `_CallbackHandler` that read the conversation ID contextvar once on first access and froze that value for the lifetime of the `_CallbackHandler` instance. The cached property has been replaced with a direct contextvar read on every span, matching the behaviour of `FiddlerSpanProcessor`. `set_conversation_id()` now takes effect immediately for all subsequent invocations.
+
+### **1.4.0**
+
+*February 18, 2026*
+
+* **Added**
+  * **Decorator-based instrumentation**: New `@trace()` decorator for automatic function instrumentation.
+    * `@trace()` decorator for instrumenting any Python function with minimal boilerplate.
+    * `get_current_span()` to access the current span inside decorated functions.
+    * Support for span types: `span`, `generation`, `chain`, `tool`, with type-specific wrappers and helpers (e.g. `set_user_prompt()`, `set_tool_input()`).
+    * Automatic parent-child relationship from call stack.
+    * Decorator arguments for metadata: `model`, `system`, `user_id`, `version`.
+    * `capture_input` and `capture_output` arguments for controlling automatic argument/return value capture.
+    * Automatic async function detection — `@trace()` works with both sync and async functions.
+  * **Manual instrumentation**: Context managers and explicit control.
+    * `client.start_as_current_span(name, as_type=...)` for context-manager usage with automatic lifecycle and exception recording.
+    * `client.start_span(name, as_type=...)` for explicit control; caller must call `span.end()`.
+    * Support for all span types with both patterns.
+  * **Span wrapper classes**: Typed wrappers with semantic convention helpers.
+    * `FiddlerSpan` (base), `FiddlerGeneration`, `FiddlerChain`, `FiddlerTool` — returned by `start_as_current_span()`, `start_span()`, and `get_current_span()`.
+    * `FiddlerGeneration` helpers: `set_model()`, `set_system()`, `set_user_prompt()`, `set_completion()`, `set_usage()`, `set_messages()`, `set_output_messages()`, `set_tool_definitions()`.
+    * `FiddlerTool` helpers: `set_tool_name()`, `set_tool_input()`, `set_tool_output()`.
+    * Common helpers on all wrappers: `set_input()`, `set_output()`, `set_attribute()`, `set_agent_name()`, `set_conversation_id()`.
+  * **Global client accessor**: `get_client()` retrieves the active `FiddlerClient` singleton for use in decorators and utility functions.
+  * **Context isolation**: Isolation from other OpenTelemetry tracers.
+    * Each `FiddlerClient` uses its own isolated `Context`.
+    * `is_fiddler_span()` utility to verify span ownership.
+
+## 1.3
+
+### **1.3.1**
+
+*February 5, 2026*
+
+* **Enhancements**
+  * **Automatic Span Flush on Exit**: `FiddlerClient` now registers an `atexit` handler to automatically flush and shut down the tracer provider when the process exits, reducing span loss from in-memory buffering.
+  * **Explicit Flush and Shutdown Methods**: New `force_flush(timeout_millis)` and `shutdown()` methods on `FiddlerClient` for explicit control over span export. `shutdown()` is idempotent and safe to call multiple times.
+  * **Asyncio Support**: New `aflush()` and `ashutdown()` async methods run flush and shutdown in a thread pool, avoiding event loop blocking in asyncio applications.
+  * **Context Manager Support**: `FiddlerClient` can now be used as a context manager (`with FiddlerClient(...) as client:`) to ensure automatic shutdown on exit.
+* **Bug Fixes**
+  * **Fixed Pydantic Double-Encoding**: Corrected JSON serialization of Pydantic models to use `model_dump()` instead of `model_dump_json()`, preventing double-encoded JSON strings in span attributes.
+  * **Deduplicated Retriever Span Attributes**: Removed duplicate `TYPE` and `TOOL_NAME` attribute assignments in the `on_retriever_start` callback.
+  * **Replaced `print()` with `logging`**: All `print()` calls in `jsonl_capture.py` now use the standard `logging` module for proper log management.
+
+### **1.3.0**
+
+*January 21, 2026*
+
+* **Enhancements**
+  * **OpenTelemetry Version Upgrade**: Updated OpenTelemetry dependencies to version 1.39.1/0.60b1 for improved performance and compatibility:
+    * `opentelemetry-api`: now supports up to 1.39.1
+    * `opentelemetry-sdk`: now supports up to 1.39.1
+    * `opentelemetry-instrumentation`: now supports up to 0.60b1
+    * `opentelemetry-exporter-otlp-proto-http`: now supports up to 1.39.1
+
+## 1.2
+
+### **1.2.0**
+
+*January 14, 2026*
+
+* **Enhancements**
+  * **Removed Hardcoded OpenTelemetry Limits**: Removed hardcoded default values for span limits and batch span processor configuration. The SDK now relies on OpenTelemetry SDK's built-in defaults, simplifying configuration and ensuring consistency with standard OpenTelemetry defaults.
+  * **Enhanced LangGraph Tracing with Full Message History**: Introduced comprehensive message lifecycle tracking with two new span attributes:
+    * `gen_ai.input.messages`: Captures the complete message history provided as input to the LLM, including system, user, assistant, and tool messages
+    * `gen_ai.output.messages`: Captures the output messages generated by the LLM, including tool calls and finish\_reason when available
+    * Both attributes are aligned with GenAI semantic conventions for standardized observability
+  * **Extracted Message History from Strands Span Events**: Added support for extracting `gen_ai.input.messages` and `gen_ai.output.messages` from Strands span events (emitted as events rather than attributes) and storing them as span-level attributes in ClickHouse for unified querying and analysis.
+
+## 1.0
+
+### **1.0.0**
+
+*December 6, 2025*
+
+* **Breaking Changes**
+  * **Moved `add_session_attributes` to Tracing Module**: The `add_session_attributes()` method has been relocated from the Core module to the Tracing module to co-locate session management functions with related tracing utilities.
+    * **Old import**: `from fiddler_langgraph.core.attributes import add_session_attributes`
+    * **New import**: `from fiddler_langgraph.tracing.instrumentation import add_session_attributes`
+    * **Migration**: Update import statements in your code. No functional changes—all behavior remains identical.
+    * **Impact**: Existing code using the old import path will fail with ImportError
+
+## 0.1
+
+### **0.1.1**
+
+*Previous Release*
+
+Initial release of Fiddler LangGraph SDK.
+
+
+---

@@ -1,0 +1,241 @@
+# Overview
+
+Fiddler Protect provides comprehensive AI safety through real-time guardrails, continuous monitoring, and intelligent alerting—all powered by the Fiddler Trust Service. Built on purpose-optimized evaluation models that are 10-100x faster than general-purpose LLMs, Fiddler Protect helps you prevent harmful outputs, detect privacy violations, ensure factual accuracy, and maintain compliance across your AI applications.
+
+## Protection Layers
+
+Fiddler Protect operates through multiple complementary layers of defense:
+
+```mermaid
+graph TB
+    Input[User Input] --> RTG[Real-Time Guardrails]
+
+    RTG --> Safety{Safety Check}
+    RTG --> PII{PII Detection}
+    RTG --> Faith{Faithfulness}
+
+    Safety -->|Pass| LLM[LLM Processing]
+    PII -->|Pass| LLM
+    Faith -->|Pass| LLM
+
+    Safety -->|Fail| Block[Blocked/Filtered]
+    PII -->|Fail| Block
+    Faith -->|Fail| Block
+
+    LLM --> Output[AI Response]
+    Output --> Monitor[Continuous Monitoring]
+
+    Monitor --> Enrich[Safety Enrichments]
+    Monitor --> Drift[Data Integrity & Drift]
+
+    Enrich --> Alert{Alert Threshold?}
+    Drift --> Alert
+
+    Alert -->|Yes| Notify[Send Notifications]
+    Alert -->|No| Log[Audit Log]
+
+    Notify --> Log
+
+    style RTG fill:#e1f5ff
+    style Monitor fill:#fff4e6
+    style Alert fill:#ffe6e6
+    style Block fill:#ffcccc
+    style Output fill:#e6ffe6
+```
+
+### Real-Time Guardrails
+
+Fast, pre-deployment protection that evaluates and filters AI inputs and outputs before they reach users.
+
+#### Safety Guardrails
+
+Detect and prevent harmful content across 11 safety dimensions:
+
+* **Harmful Behaviors**: Jailbreaking attempts, prompt injection, illegal content promotion
+* **Offensive Content**: Hate speech, harassment, racism, sexism
+* **Inappropriate Content**: Violence, explicit sexual content, unethical scenarios
+* **Risk Categories**: Toxic language, dangerous information, inappropriate roleplaying
+
+The Fast Safety Model provides real-time evaluation with sub-second latency, making it practical for high-volume production deployments. Each dimension returns a confidence score (0-1 range) allowing you to set custom thresholds based on your risk tolerance.
+
+#### PII/PHI Detection
+
+Protect user privacy by automatically detecting sensitive information in model inputs and outputs:
+
+* **Personal Identifiers**: Names, dates of birth, email addresses, phone numbers
+* **Financial Data**: Credit card numbers, bank accounts, tax IDs
+* **Government IDs**: Social security numbers, passport numbers, driver's licenses
+* **Healthcare Information**: Medical record numbers, health insurance IDs (HIPAA compliance)
+* **Custom Entities**: Organization-specific sensitive patterns (employee IDs, API keys, internal codes)
+
+The Fast PII Model identifies 35+ PII entity types and 7 PHI entity types, returning exact positions and confidence scores for each detected instance.
+
+#### Faithfulness & Accuracy
+
+Prevent hallucinations and ensure AI responses stay grounded in source material:
+
+* **Hallucination Detection**: Evaluate whether AI responses are factually consistent with provided context
+* **RAG Validation**: Verify that generated content accurately reflects retrieved documents
+* **Source Grounding**: Ensure answers don't introduce information not present in reference materials
+
+The Fast Faithfulness Model compares AI-generated responses against source documents to detect when models fabricate information or misrepresent facts.
+
+#### Performance Advantage
+
+All guardrail models are **10-100x faster** than general-purpose LLMs like GPT-4 for evaluation tasks, enabling:
+
+* Real-time filtering without noticeable latency
+* High-volume production deployment
+* Cost-effective safety at scale
+* No external API dependencies for enhanced security
+
+### Continuous Monitoring
+
+Post-deployment protection through ongoing analysis of production traffic.
+
+#### Safety Enrichments
+
+Monitor your production AI systems for safety and quality issues:
+
+* **Toxicity Detection**: Identify toxic language patterns using advanced classification models
+* **Profanity Filtering**: Detect offensive language in both inputs and outputs
+* **PII Monitoring**: Continuously scan for privacy violations in production data
+* **Sentiment Analysis**: Track emotional tone and user experience signals
+* **Custom Classification**: Apply organization-specific categorization rules
+
+These enrichments run automatically on your production traffic, providing visibility into safety issues that may emerge over time or in specific contexts.
+
+#### Data Integrity & Drift
+
+Protect against data quality issues and distribution changes:
+
+* **Missing Value Detection**: Identify incomplete inputs that may cause unpredictable behavior
+* **Type Validation**: Catch data type mismatches (e.g., strings where numbers expected)
+* **Range Monitoring**: Detect out-of-range values that violate expected constraints
+* **Distribution Drift**: Track when production data diverges from training or baseline data
+* **Embedding Visualization**: Use 3D UMAP plots to visually identify anomalies in high-dimensional data
+
+### Alerting & Response
+
+Automated notification system for proactive risk management:
+
+* **Drift Alerts**: Detect when production data or model behavior changes significantly
+* **Data Integrity Alerts**: Flag missing values, type mismatches, or range violations
+* **Performance Alerts**: Monitor for model accuracy degradation over time
+* **Custom Metric Alerts**: Define formula-based alerts for business-specific KPIs
+* **Traffic Alerts**: Track system volume for capacity planning and anomaly detection
+
+Configure alerts with warning and critical thresholds, and route notifications to your team via email, Slack, PagerDuty, or custom webhooks. All alerts include triggered revisions that update in real-time as new data arrives.
+
+## Fiddler Trust Service
+
+All protection capabilities are powered by the Fiddler Trust Service—a platform of purpose-built evaluation models optimized for safety, quality, and accuracy assessment. Unlike general-purpose LLMs repurposed for evaluation, Trust Service models are specifically designed for these tasks, delivering:
+
+* **Speed**: 10-100x faster evaluation than GPT-4
+* **Security**: Air-gapped deployment options with no external API dependencies
+* **Privacy**: Full data sovereignty for GDPR, HIPAA, and CCPA compliance
+* **Reliability**: Consistent, deterministic evaluation at scale
+
+```mermaid
+graph LR
+    subgraph Trust[Fiddler Trust Service]
+        Fast1[Fast Safety Model<br/>11 Dimensions]
+        Fast2[Fast PII Model<br/>35+ Entities]
+        Fast3[Fast Faithfulness Model<br/>Hallucination Detection]
+    end
+
+    App[Your Application] --> Fast1
+    App --> Fast2
+    App --> Fast3
+
+    Fast1 --> Score1[Safety Scores<br/>0-1 per dimension]
+    Fast2 --> Score2[Entity Detection<br/>+ Positions]
+    Fast3 --> Score3[Faithfulness Score<br/>0-1 range]
+
+    Score1 --> Decision{Policy<br/>Enforcement}
+    Score2 --> Decision
+    Score3 --> Decision
+
+    Decision -->|Safe| Allow[✓ Allow Response]
+    Decision -->|Unsafe| Block[✗ Block Response]
+
+    style Trust fill:#f0f0f0
+    style Fast1 fill:#e1f5ff
+    style Fast2 fill:#e1f5ff
+    style Fast3 fill:#e1f5ff
+    style Allow fill:#e6ffe6
+    style Block fill:#ffcccc
+```
+
+## Key Use Cases
+
+### Content Safety
+
+Prevent your AI applications from generating harmful, offensive, or inappropriate content:
+
+* Filter toxic language and hate speech in real-time
+* Block jailbreaking attempts and prompt injection attacks
+* Detect violent, sexual, or otherwise inappropriate outputs before they reach users
+* Maintain brand reputation by ensuring responsible AI behavior
+
+### Privacy Protection
+
+Safeguard user privacy and maintain compliance with data protection regulations:
+
+* Automatically detect and redact PII in both inputs and outputs
+* Support HIPAA compliance through PHI detection
+* Configure custom entity detection for organization-specific sensitive data
+* Monitor for privacy violations in production traffic
+
+### Accuracy & Truthfulness
+
+Ensure your AI systems provide accurate, grounded information:
+
+* Detect hallucinations in RAG applications before presenting to users
+* Validate that generated content reflects source documents accurately
+* Monitor for factual consistency across your AI responses
+* Maintain trust by preventing fabricated or misleading information
+
+### Regulatory Compliance
+
+Meet compliance requirements while maintaining comprehensive audit trails:
+
+* GDPR compliance through PII detection and data sovereignty options
+* HIPAA compliance with PHI detection and air-gapped deployment
+* Complete audit logging of all safety events and policy enforcement
+* Bias and fairness monitoring for regulatory reporting
+
+## Getting Started
+
+### Quick Start Guides
+
+Get up and running with Fiddler Protect in minutes:
+
+* [**Guardrails Quick Start**](/protect-and-guardrails/guardrails-quick-start.md) - Set up real-time protection
+* [**Safety Guardrails Quick Start**](/developers/tutorials/guardrails/guardrails-safety.md) - Implement content safety filters
+* [**PII Detection Quick Start**](/developers/tutorials/guardrails/guardrails-pii.md) - Protect user privacy
+* [**Faithfulness Quick Start**](/developers/tutorials/guardrails/guardrails-faithfulness.md) - Prevent hallucinations
+
+### Documentation & References
+
+Dive deeper into Fiddler Protect capabilities:
+
+* [**Guardrails API Reference**](/api/rest-api/guardrails-api-reference.md) - Complete API documentation
+* [**LLM-Based Metrics**](/observability/llm/llm-based-metrics.md) - Quality and safety metrics
+* [**Enrichments Guide**](/observability/llm/enrichments.md) - Continuous monitoring enrichments
+* [**Alerts Platform**](/observability/platform/alerts-platform.md) - Configure alerting and notifications
+* [**Guardrails FAQ**](/protect-and-guardrails/guardrails-faq.md) - Common questions and answers
+
+### Additional Resources
+
+Learn more about the underlying technology:
+
+* [**Trust Service Overview**](/reference/glossary/trust-service.md) - Learn about the evaluation platform
+* [**Guardrails Glossary**](/reference/glossary/guardrails.md) - Key concepts and terminology
+
+***
+
+**Ready to get started?** Try the [Guardrails Quick Start](/protect-and-guardrails/guardrails-quick-start.md) to implement your first safety guardrail in minutes.
+
+
+---

@@ -1,0 +1,27 @@
+# Guardrails Quick Start
+
+## Follow these steps to begin using Fiddler Guardrails:
+
+1. **Sign up for the Free Guardrails**: Go to[ fiddler.ai/guardrails-trial](https://fiddler.ai/free-guardrails) to register for access.
+2. **Create your account**: Check your email for an invitation from Fiddler. Click the "Activate" button to create your account, then sign in. After activation, you can log in using the provided link.
+
+   <figure><img src="/files/xb6yGyEY9Z2MsmRkMBOk" alt=""><figcaption><p>Fiddler Free Guardrails email confirmation</p></figcaption></figure>
+3. **Generate your API key**: After signing in, you'll see the Getting Started page. Select Generate your API key to create the authentication key for Guardrails.
+
+   <figure><img src="/files/bI1FvSrpBWLUsJHeamTZ" alt=""><figcaption><p>Generate your API key for access to Fiddler Guardrails</p></figcaption></figure>
+4. **Explore implementation examples**: Choose any language or framework from the sidebar to view sample code. You can use these examples or any HTTP client of your choice.
+
+   <figure><img src="/files/6pc5i2eXwtzh7OJHveV5" alt=""><figcaption><p>Code examples in multiple languages</p></figcaption></figure>
+
+Review complete documentation: For API specifications and model details, see the [**Guardrails API Reference**](/api/rest-api/guardrails-api-reference.md).
+
+### Explore Fiddler Guardrails Features
+
+* [Frequently Asked Questions](/protect-and-guardrails/guardrails-faq.md)
+* Notebook Tutorials:
+  * [**Safety Guardrails Quick Start**](/developers/tutorials/guardrails/guardrails-safety.md)
+  * [**PII Detection Quick Start**](/developers/tutorials/guardrails/guardrails-pii.md)
+  * [**Faithfulness Quick Start**](/developers/tutorials/guardrails/guardrails-faithfulness.md)
+
+
+---

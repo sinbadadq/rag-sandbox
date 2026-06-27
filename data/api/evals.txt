@@ -1,0 +1,64 @@
+# Introduction
+
+**Version:** 0.3.0
+
+## Overview
+
+Complete API reference documentation for the fiddler-evals package.
+
+## Components
+
+### Connection
+
+Connection management and initialization
+
+* [Connection](/api/fiddler-evals-sdk/connection/connection.md)
+* [init](/api/fiddler-evals-sdk/connection/init.md)
+
+### Entities
+
+Core entity classes for interacting with the platform
+
+* [Application](/api/fiddler-evals-sdk/entities/application.md)
+* [Dataset](/api/fiddler-evals-sdk/entities/dataset.md)
+* [Experiment](/api/fiddler-evals-sdk/entities/experiment.md)
+* [ExperimentItemStatus](/api/fiddler-evals-sdk/entities/experiment-item-status.md)
+* [ExperimentStatus](/api/fiddler-evals-sdk/entities/experiment-status.md)
+* [Project](/api/fiddler-evals-sdk/entities/project.md)
+
+### Evaluators
+
+Built-in and custom evaluators for LLM assessment
+
+* [AnswerRelevance](/api/fiddler-evals-sdk/evaluators/answer-relevance.md)
+* [Evaluator](/api/fiddler-evals-sdk/evaluators/evaluator.md)
+* [Coherence](/api/fiddler-evals-sdk/evaluators/coherence.md)
+* [Conciseness](/api/fiddler-evals-sdk/evaluators/conciseness.md)
+* [ContextRelevance](/api/fiddler-evals-sdk/evaluators/context-relevance.md)
+* [CustomJudge](/api/fiddler-evals-sdk/evaluators/custom-judge.md)
+* [EvalFn](/api/fiddler-evals-sdk/evaluators/eval-fn.md)
+* [FTLPromptSafety](/api/fiddler-evals-sdk/evaluators/ftl-prompt-safety.md)
+* [FTLResponseFaithfulness](/api/fiddler-evals-sdk/evaluators/ftl-response-faithfulness.md)
+* [RAGFaithfulness](/api/fiddler-evals-sdk/evaluators/rag-faithfulness.md)
+* [RegexMatch](/api/fiddler-evals-sdk/evaluators/regex-match.md)
+* [RegexSearch](/api/fiddler-evals-sdk/evaluators/regex-search.md)
+* [Sentiment](/api/fiddler-evals-sdk/evaluators/sentiment.md)
+* [TopicClassification](/api/fiddler-evals-sdk/evaluators/topic-classification.md)
+
+### Pydantic Models
+
+Pydantic data models and validation schemas
+
+* [DatasetItem](/api/fiddler-evals-sdk/pydantic-models/dataset-item.md)
+* [NewDatasetItem](/api/fiddler-evals-sdk/pydantic-models/new-dataset-item.md)
+* [Score](/api/fiddler-evals-sdk/pydantic-models/score.md)
+* [ScoreStatus](/api/fiddler-evals-sdk/pydantic-models/score-status.md)
+
+### Runner
+
+Evaluation execution and orchestration
+
+* [evaluate](/api/fiddler-evals-sdk/evaluate.md)
+
+
+---

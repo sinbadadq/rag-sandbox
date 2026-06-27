@@ -1,0 +1,957 @@
+# Quick Setup Script
+
+### Introduction
+
+This quick setup script automates the complex IAM configuration required to deploy and use the Fiddler Partner AI App on Amazon SageMaker. Setting up Partner AI Apps involves creating multiple IAM roles, configuring over 20 individual permissions across different AWS services, and establishing proper identity propagation—a process that can take hours to complete manually. This script reduces the setup time to minutes, ensuring all general security best practices are followed.
+
+#### What This Script Does
+
+The script automates the complete setup process, including:
+
+* Configuring your existing AWS admin role with Partner AI App permissions
+* Creating all required IAM roles (execution, user access, and domain roles)
+* Setting up a SageMaker domain with shared collaboration spaces (if needed)
+* Generating helper scripts for user access and SDK configuration
+* Validating each step to ensure successful completion
+
+#### Prerequisites
+
+Before running this script, ensure you have:
+
+* AWS CLI installed and configured with appropriate credentials
+* An AWS account with permissions to create IAM roles and SageMaker domains
+* Your AWS account ID and preferred region
+* An existing VPC and subnet IDs if using VPC mode
+
+#### Important Security Considerations
+
+* The script creates roles with specific permissions following AWS's principle of least privilege
+* All credentials are handled securely and cleaned up after use
+* External IDs are used for role assumption to prevent confused deputy attacks
+* Review all created IAM policies to ensure they meet your organization's security requirements
+
+#### Time Estimate
+
+* **With an existing SageMaker domain**: \~5 minutes
+* **Creating new SageMaker domain**: \~15-20 minutes (includes domain provisioning time)
+
+#### Post-Script Steps
+
+After the script completes successfully, you'll still need to:
+
+1. Subscribe to Fiddler in the AWS Marketplace
+2. Deploy the Fiddler Partner AI App through the SageMaker console
+3. Configure admin users during the deployment process
+
+The script will provide detailed instructions for these remaining manual steps upon completion.
+
+```bash
+#!/bin/bash
+
+# =============================================================================
+# COMPLETE FIDDLER PARTNER AI APP & SAGEMAKER SETUP FROM SCRATCH
+# =============================================================================
+# This script follows AWS documentation to:
+# 1. Set up admin permissions for Fiddler Partner AI App
+# 2. Create Partner AI App execution role
+# 3. Create SageMaker Domain with shared space support
+# 4. Configure shared space for collaboration
+# 5. Create shared user profile for all AWS users
+# 6. Set up non-admin user access to Fiddler Partner AI App and SDK
+#
+# References:
+# - https://docs.aws.amazon.com/sagemaker/latest/dg/partner-app-onboard.html
+# - https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps-sdk.html
+# =============================================================================
+
+# CONFIGURATION - UPDATE THESE VALUES BEFORE RUNNING
+export AWS_ACCOUNT_ID="<AWS ACCOUNT ID>"
+export AWS_REGION="<AWS REGION>"
+
+# SageMaker Domain Configuration: Choose your own naming convention
+export DOMAIN_NAME="fiddler-paa-domain"
+export SHARED_SPACE_NAME="fiddler-collaboration-space"
+export SHARED_USER_PROFILE_NAME="fiddler-shared-profile"
+export VPC_ID="vpc-xxxxxxxxxxxxxxxxxx"   # UPDATE: Your VPC ID and Subnet IDs
+export SUBNET_IDS=(
+    "subnet-xxxxxxxxxxxxxxxxx"
+    "subnet-xxxxxxxxxxxxxxxxx"
+    "subnet-xxxxxxxxxxxxxxxxx"
+ )
+
+export EXISTING_ADMIN_ROLE_NAME="<YOUR ADMIN ROLE>"     # Existing AWS admin role
+export PARTNER_APP_EXECUTION_ROLE_NAME="FiddlerPartnerAppExecutionRole" # Choose your own naming convention
+export USER_EXECUTION_ROLE_NAME="FiddlerUserExecutionRole" # Choose your own naming convention
+export USER_ACCESS_ROLE_NAME="FiddlerUserAccessRole" # Choose your own naming convention
+
+echo "=== Fiddler Partner AI App & SageMaker Complete Setup ==="
+echo ""
+echo "This script will create:"
+echo "  • Partner AI Apps permissions for existing admin role: $EXISTING_ADMIN_ROLE_NAME"
+echo "  • Fiddler Partner AI App execution role"
+echo "  • SageMaker Domain (optionally): $DOMAIN_NAME"
+echo "  • Shared Space: $SHARED_SPACE_NAME"
+echo "  • Shared User Profile: $SHARED_USER_PROFILE_NAME"
+echo "  • User access roles and permissions"
+echo ""
+
+read -p "Continue with setup? (y/n): " CONFIRM
+if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+    echo "Setup cancelled."
+    exit 0
+fi
+
+# =============================================================================
+# STEP 1: ADD PARTNER AI APPS PERMISSIONS TO EXISTING ADMIN ROLE
+# =============================================================================
+
+echo ""
+echo "=== STEP 1: Adding Partner AI Apps Permissions to Existing Admin Role ==="
+
+# Verify existing admin role exists
+echo "Checking existing admin role: $EXISTING_ADMIN_ROLE_NAME"
+aws iam get-role --role-name "$EXISTING_ADMIN_ROLE_NAME" --query 'Role.RoleName' --output text >/dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "❌ Admin role not found: $EXISTING_ADMIN_ROLE_NAME"
+    echo ""
+    echo "Please update EXISTING_ADMIN_ROLE_NAME variable with your actual admin role name."
+    echo "To list your roles, run:"
+    echo "aws iam list-roles --query 'Roles[*].RoleName' --output table"
+    exit 1
+fi
+
+echo "✅ Found existing admin role: $EXISTING_ADMIN_ROLE_NAME"
+
+# Check if AWS Marketplace permissions are already attached
+echo "Checking AWS Marketplace permissions..."
+MARKETPLACE_ATTACHED=$(aws iam list-attached-role-policies --role-name "$EXISTING_ADMIN_ROLE_NAME" --query 'AttachedPolicies[?PolicyArn==`arn:aws:iam::aws:policy/AWSMarketplaceManageSubscriptions`].PolicyName' --output text 2>/dev/null)
+
+if [[ -n "$MARKETPLACE_ATTACHED" ]]; then
+    echo "✅ AWS Marketplace permissions already attached"
+else
+    echo "Adding AWS Marketplace permissions..."
+    aws iam attach-role-policy \
+        --role-name "$EXISTING_ADMIN_ROLE_NAME" \
+        --policy-arn "arn:aws:iam::aws:policy/AWSMarketplaceManageSubscriptions"
+    echo "✅ AWS Marketplace permissions attached"
+fi
+
+Create Partner AI Apps admin permissions policy
+echo "Adding Partner AI Apps admin permissions..."
+cat > partner-ai-admin-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:CreatePartnerApp",
+                "sagemaker:DeletePartnerApp",
+                "sagemaker:UpdatePartnerApp",
+                "sagemaker:DescribePartnerApp",
+                "sagemaker:ListPartnerApps",
+                "sagemaker:CreatePartnerAppPresignedUrl",
+                "sagemaker:AddTags",
+                "sagemaker:ListTags",
+                "sagemaker:DeleteTags"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": "arn:aws:iam::*:role/*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "sagemaker.amazonaws.com"
+                }
+            }
+        }
+    ]
+}
+EOF
+
+# Check if Partner AI Apps policy already exists
+EXISTING_POLICY=$(aws iam get-role-policy --role-name "$EXISTING_ADMIN_ROLE_NAME" --policy-name "PartnerAIAppsAdminPolicy" --query 'PolicyName' --output text 2>/dev/null)
+
+if [[ "$EXISTING_POLICY" == "PartnerAIAppsAdminPolicy" ]]; then
+    echo "Partner AI Apps policy already exists, updating..."
+    aws iam put-role-policy \
+        --role-name "$EXISTING_ADMIN_ROLE_NAME" \
+        --policy-name "PartnerAIAppsAdminPolicy" \
+        --policy-document file://partner-ai-admin-policy.json
+    echo "✅ Partner AI Apps policy updated"
+else
+    echo "Adding new Partner AI Apps policy..."
+    aws iam put-role-policy \
+        --role-name "$EXISTING_ADMIN_ROLE_NAME" \
+        --policy-name "PartnerAIAppsAdminPolicy" \
+        --policy-document file://partner-ai-admin-policy.json
+    echo "✅ Partner AI Apps policy added"
+fi
+
+echo "✅ Existing admin role configured with Partner AI Apps permissions"
+
+# =============================================================================
+# STEP 2: CREATE FIDDLER PARTNER AI APP EXECUTION ROLE
+# =============================================================================
+
+echo ""
+echo "=== STEP 2: Creating Fiddler Partner AI App Execution Role ==="
+
+# Create Partner AI App execution role trust policy
+cat > partner-app-execution-trust-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "sagemaker.amazonaws.com"
+            },
+            "Action": [
+                "sts:AssumeRole",
+                "sts:TagSession"
+            ]
+        }
+    ]
+}
+EOF
+
+# Create Partner AI App execution role
+echo "Creating Partner AI App execution role..."
+aws iam create-role \
+    --role-name "$PARTNER_APP_EXECUTION_ROLE_NAME" \
+    --assume-role-policy-document file://partner-app-execution-trust-policy.json \
+    --description "Execution role for Fiddler Partner AI App"
+
+# Create AWS License Manager permissions policy (required for Fiddler)
+echo "Adding AWS License Manager permissions..."
+cat > license-manager-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Effect": "Allow",
+        "Action": [
+            "license-manager:CheckoutLicense",
+            "license-manager:CheckInLicense",
+            "license-manager:ExtendLicenseConsumption",
+            "license-manager:GetLicense",
+            "license-manager:GetLicenseUsage"
+        ],
+        "Resource": "*"
+    }
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name "$PARTNER_APP_EXECUTION_ROLE_NAME" \
+    --policy-name "LicenseManagerPolicy" \
+    --policy-document file://license-manager-policy.json
+
+# Add S3 permissions for Fiddler data access
+echo "Adding S3 permissions for Fiddler..."
+cat > fiddler-s3-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "FiddlerS3Access",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sagemaker-*",
+                "arn:aws:s3:::sagemaker-*/*"
+            ]
+        },
+        {
+            "Sid": "FiddlerCloudWatchLogs",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "arn:aws:logs:*:*:log-group:/aws/sagemaker/*"
+        }
+    ]
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name "$PARTNER_APP_EXECUTION_ROLE_NAME" \
+    --policy-name "FiddlerS3Policy" \
+    --policy-document file://fiddler-s3-policy.json
+
+# Attach SageMaker execution policy
+echo "Attaching SageMaker execution permissions..."
+aws iam attach-role-policy \
+    --role-name "$PARTNER_APP_EXECUTION_ROLE_NAME" \
+    --policy-arn "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+
+echo "✅ Fiddler Partner AI App execution role created with all required permissions"
+
+# =============================================================================
+# STEP 3: CREATE USER EXECUTION ROLE
+# =============================================================================
+
+echo ""
+echo "=== STEP 3: Creating User Execution Role ==="
+
+# Create user execution role trust policy
+cat > user-execution-trust-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "sagemaker.amazonaws.com"
+            },
+            "Action": [
+                "sts:AssumeRole",
+                "sts:TagSession"
+            ]
+        }
+    ]
+}
+EOF
+
+# Create user execution role
+echo "Creating user execution role..."
+aws iam create-role \
+    --role-name "$USER_EXECUTION_ROLE_NAME" \
+    --assume-role-policy-document file://user-execution-trust-policy.json \
+    --description "Execution role for SageMaker domain users"
+
+# Create user permissions policy
+cat > user-execution-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PartnerAIAppsUserAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:DescribePartnerApp",
+                "sagemaker:ListPartnerApps",
+                "sagemaker:CreatePartnerAppPresignedUrl",
+                "sagemaker:CallPartnerAppApi"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SageMakerStudioAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:CreateApp",
+                "sagemaker:DeleteApp",
+                "sagemaker:DescribeApp",
+                "sagemaker:ListApps",
+                "sagemaker:CreateSpace",
+                "sagemaker:DeleteSpace",
+                "sagemaker:DescribeSpace",
+                "sagemaker:ListSpaces",
+                "sagemaker:UpdateSpace",
+                "sagemaker:DescribeDomain",
+                "sagemaker:DescribeUserProfile",
+                "sagemaker:CreatePresignedDomainUrl"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3AccessForML",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sagemaker-*",
+                "arn:aws:s3:::sagemaker-*/*"
+            ]
+        }
+    ]
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name "$USER_EXECUTION_ROLE_NAME" \
+    --policy-name "UserExecutionPolicy" \
+    --policy-document file://user-execution-policy.json
+
+# Attach basic SageMaker policy
+aws iam attach-role-policy \
+    --role-name "$USER_EXECUTION_ROLE_NAME" \
+    --policy-arn "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
+
+echo "✅ User execution role created"
+
+# =============================================================================
+# STEP 4: CREATE USER ACCESS ROLE
+# =============================================================================
+
+echo ""
+echo "=== STEP 4: Creating User Access Role ==="
+
+# Create user access role trust policy
+cat > user-access-trust-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:root"
+            },
+            "Action": [
+                "sts:AssumeRole",
+                "sts:TagSession"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "fiddler-user-access"
+                }
+            }
+        }
+    ]
+}
+EOF
+
+# Create user access role
+echo "Creating user access role..."
+aws iam create-role \
+    --role-name "$USER_ACCESS_ROLE_NAME" \
+    --assume-role-policy-document file://user-access-trust-policy.json \
+    --description "Access role for users to assume for SageMaker and Fiddler access"
+
+# Create user access permissions policy
+cat > user-access-policy.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sagemaker:CreatePresignedDomainUrl",
+                "sagemaker:DescribeDomain",
+                "sagemaker:DescribeUserProfile",
+                "sagemaker:DescribeSpace",
+                "sagemaker:ListSpaces",
+                "sagemaker:CreatePartnerAppPresignedUrl",
+                "sagemaker:DescribePartnerApp",
+                "sagemaker:ListPartnerApps"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name "$USER_ACCESS_ROLE_NAME" \
+    --policy-name "UserAccessPolicy" \
+    --policy-document file://user-access-policy.json
+
+echo "✅ User access role created"
+
+# =============================================================================
+# STEP 5: CREATE SAGEMAKER DOMAIN (Optional)
+# =============================================================================
+
+echo ""
+echo "=== STEP 5: Creating SageMaker Domain ==="
+
+# Determine network configuration
+NETWORK_CONFIG="PublicInternetOnly" # or "VpcOnly"
+VPC_CONFIG="--vpc-id $VPC_ID --subnet-ids ${SUBNET_IDS[@]}"
+echo "Using network configuration: $NETWORK_CONFIG with VPC $VPC_ID"
+
+# Create the domain
+echo "Creating SageMaker domain..."
+DOMAIN_ARN=$(aws sagemaker create-domain \
+    --domain-name "$DOMAIN_NAME" \
+    --auth-mode "IAM" \
+    --default-user-settings '{
+        "ExecutionRole": "arn:aws:iam::'$AWS_ACCOUNT_ID':role/'$USER_EXECUTION_ROLE_NAME'",
+        "SharingSettings": {
+            "NotebookOutputOption": "Allowed"
+        },
+        "JupyterServerAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "system"
+            }
+        },
+        "JupyterLabAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "ml.t3.medium"
+            }
+        },
+        "DefaultLandingUri": "studio::",
+        "StudioWebPortal": "ENABLED"
+    }' \
+    --default-space-settings '{
+        "ExecutionRole": "arn:aws:iam::'$AWS_ACCOUNT_ID':role/'$USER_EXECUTION_ROLE_NAME'",
+        "JupyterServerAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "system"
+            }
+        },
+        "JupyterLabAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "ml.t3.medium"
+            }
+        },
+        "SpaceStorageSettings": {
+            "DefaultEbsStorageSettings": {
+                "DefaultEbsVolumeSizeInGb": 20,
+                "MaximumEbsVolumeSizeInGb": 100
+            }
+        }
+    }' \
+    --domain-settings '{
+        "ExecutionRoleIdentityConfig": "USER_PROFILE_NAME"
+    }' \
+    --app-network-access-type "$NETWORK_CONFIG" \
+    $VPC_CONFIG \
+    --region "$AWS_REGION" \
+    --query 'DomainArn' \
+    --output text)
+
+# Extract the Domain ID from the full ARN. This is more portable than sed.
+DOMAIN_ID=${DOMAIN_ARN##*/}
+
+if [[ -z "$DOMAIN_ID" ]]; then
+    echo "❌ Failed to create domain"
+    exit 1
+fi
+
+echo "Domain created with ID: $DOMAIN_ID"
+
+# Wait for domain to be in service
+echo "Waiting for domain to be ready..."
+while true; do
+    DOMAIN_STATUS=$(aws sagemaker describe-domain \
+        --domain-id "$DOMAIN_ID" \
+        --region "$AWS_REGION" \
+        --query 'Status' --output text)
+    
+    if [[ "$DOMAIN_STATUS" == "InService" ]]; then
+        echo "✅ Domain is ready"
+        break
+    elif [[ "$DOMAIN_STATUS" == "Failed" ]]; then
+        echo "❌ Domain creation failed"
+        exit 1
+    else
+        echo "Domain status: $DOMAIN_STATUS, waiting..."
+        sleep 30
+    fi
+done
+
+# Check if domain has DefaultSpaceSettings
+echo "Verifying domain has shared space settings..."
+DOMAIN_SPACE_SETTINGS=$(aws sagemaker describe-domain \
+    --domain-id "$DOMAIN_ID" \
+    --region "$AWS_REGION" \
+    --query 'DefaultSpaceSettings' --output text 2>/dev/null)
+
+if [[ "$DOMAIN_SPACE_SETTINGS" == "None" || -z "$DOMAIN_SPACE_SETTINGS" ]]; then
+    echo "Domain missing shared space settings, updating domain..."
+    
+    aws sagemaker update-domain \
+        --domain-id "$DOMAIN_ID" \
+        --default-space-settings '{
+            "ExecutionRole": "arn:aws:iam::'$AWS_ACCOUNT_ID':role/'$USER_EXECUTION_ROLE_NAME'",
+            "JupyterServerAppSettings": {
+                "DefaultResourceSpec": {
+                    "InstanceType": "system"
+                }
+            },
+            "JupyterLabAppSettings": {
+                "DefaultResourceSpec": {
+                    "InstanceType": "ml.t3.medium"
+                }
+            },
+            "SpaceStorageSettings": {
+                "DefaultEbsStorageSettings": {
+                    "DefaultEbsVolumeSizeInGb": 20,
+                    "MaximumEbsVolumeSizeInGb": 100
+                }
+            }
+        }' \
+        --region "$AWS_REGION"
+    
+    echo "Waiting for domain update to complete..."
+    while true; do
+        DOMAIN_STATUS=$(aws sagemaker describe-domain \
+            --domain-id "$DOMAIN_ID" \
+            --region "$AWS_REGION" \
+            --query 'Status' --output text)
+        
+        if [[ "$DOMAIN_STATUS" == "InService" ]]; then
+            echo "✅ Domain updated with shared space settings"
+            break
+        elif [[ "$DOMAIN_STATUS" == "Failed" ]]; then
+            echo "❌ Domain update failed"
+            exit 1
+        else
+            echo "Domain update status: $DOMAIN_STATUS, waiting..."
+            sleep 15
+        fi
+    done
+else
+    echo "✅ Domain already has shared space settings configured"
+fi
+
+# =============================================================================
+# STEP 6: CREATE SHARED USER PROFILE
+# =============================================================================
+
+echo ""
+echo "=== STEP 6: Creating Shared User Profile ==="
+
+echo "Creating shared user profile..."
+aws sagemaker create-user-profile \
+    --domain-id "$DOMAIN_ID" \
+    --user-profile-name "$SHARED_USER_PROFILE_NAME" \
+    --user-settings '{
+        "ExecutionRole": "arn:aws:iam::'$AWS_ACCOUNT_ID':role/'$USER_EXECUTION_ROLE_NAME'",
+        "SharingSettings": {
+            "NotebookOutputOption": "Allowed"
+        },
+        "JupyterServerAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "system"
+            }
+        },
+        "JupyterLabAppSettings": {
+            "DefaultResourceSpec": {
+                "InstanceType": "ml.t3.medium"
+            }
+        }
+    }' \
+    --region "$AWS_REGION"
+
+# Wait for user profile to be ready
+echo "Waiting for user profile to be ready..."
+while true; do
+    PROFILE_STATUS=$(aws sagemaker describe-user-profile \
+        --domain-id "$DOMAIN_ID" \
+        --user-profile-name "$SHARED_USER_PROFILE_NAME" \
+        --region "$AWS_REGION" \
+        --query 'Status' --output text)
+    
+    if [[ "$PROFILE_STATUS" == "InService" ]]; then
+        echo "✅ User profile is ready"
+        break
+    elif [[ "$PROFILE_STATUS" == "Failed" ]]; then
+        echo "❌ User profile creation failed"
+        exit 1
+    else
+        echo "Profile status: $PROFILE_STATUS, waiting..."
+        sleep 15
+    fi
+done
+
+# =============================================================================
+# STEP 7: CREATE SHARED SPACE
+# =============================================================================
+
+echo ""
+echo "=== STEP 7: Creating Shared Space ==="
+
+echo "Creating shared space for collaboration..."
+aws sagemaker create-space \
+    --domain-id "$DOMAIN_ID" \
+    --space-name "$SHARED_SPACE_NAME" \
+    --region "$AWS_REGION"
+
+# Wait for shared space to be ready
+echo "Waiting for shared space to be ready..."
+while true; do
+    SPACE_STATUS=$(aws sagemaker describe-space \
+        --domain-id "$DOMAIN_ID" \
+        --space-name "$SHARED_SPACE_NAME" \
+        --region "$AWS_REGION" \
+        --query 'Status' --output text)
+    
+    if [[ "$SPACE_STATUS" == "InService" ]]; then
+        echo "✅ Shared space is ready"
+        break
+    elif [[ "$SPACE_STATUS" == "Failed" ]]; then
+        echo "❌ Shared space creation failed"
+        exit 1
+    else
+        echo "Space status: $SPACE_STATUS, waiting..."
+        sleep 15
+    fi
+done
+
+# =============================================================================
+# STEP 8: CREATE USER ACCESS SCRIPTS
+# =============================================================================
+
+echo ""
+echo "=== STEP 8: Creating User Access Scripts ==="
+
+# Create user access script
+cat > fiddler-user-access.sh << 'EOF'
+#!/bin/bash
+
+# =============================================================================
+# FIDDLER USER ACCESS SCRIPT
+# =============================================================================
+
+# Configuration - UPDATE THESE VALUES
+export AWS_ACCOUNT_ID="<AWS ACCOUNT ID>"
+export AWS_REGION="<AWS REGION>"
+export DOMAIN_ID="PLACEHOLDER_DOMAIN_ID" 
+export USER_PROFILE_NAME="fiddler-shared-profile"
+export USER_ACCESS_ROLE_NAME="FiddlerUserAccessRole"
+
+# Get username for identity propagation
+CALLER_ARN=$(aws sts get-caller-identity --query 'Arn' --output text)
+USERNAME=${CALLER_ARN##*/}
+
+echo "=== Fiddler Partner AI App & SageMaker Access ==="
+echo "Setting up access for user: $USERNAME"
+
+# Assume role with session tags for identity propagation
+echo "1. Assuming user access role with identity tags..."
+TEMP_CREDENTIALS=$(aws sts assume-role \
+    --role-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:role/${USER_ACCESS_ROLE_NAME}" \
+    --role-session-name "${USERNAME}-fiddler-session" \
+    --external-id "fiddler-user-access" \
+    --tags Key=SageMakerPartnerAppUser,Value="$USERNAME" \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text)
+
+if [[ $? -ne 0 ]]; then
+    echo "❌ Failed to assume role. Please check your permissions."
+    exit 1
+fi
+
+# Extract credentials
+export AWS_ACCESS_KEY_ID=$(echo $TEMP_CREDENTIALS | cut -d' ' -f1)
+export AWS_SECRET_ACCESS_KEY=$(echo $TEMP_CREDENTIALS | cut -d' ' -f2)
+export AWS_SESSION_TOKEN=$(echo $TEMP_CREDENTIALS | cut -d' ' -f3)
+
+echo "✅ Successfully assumed role with user identity: $USERNAME"
+
+# Generate Studio access URL
+echo "2. Generating SageMaker Studio access URL..."
+STUDIO_URL=$(aws sagemaker create-presigned-domain-url \
+    --domain-id "$DOMAIN_ID" \
+    --user-profile-name "$USER_PROFILE_NAME" \
+    --session-expiration-duration-in-seconds 3600 \
+    --region "$AWS_REGION" \
+    --query 'AuthorizedUrl' --output text)
+
+if [[ $? -ne 0 ]]; then
+    echo "❌ Failed to generate Studio URL"
+    exit 1
+fi
+
+echo ""
+echo "=== ACCESS INFORMATION ==="
+echo "🔗 SageMaker Studio URL (valid for 1 hour):"
+echo "$STUDIO_URL"
+echo ""
+echo "👤 User Identity: $USERNAME"
+echo "🏠 Domain: $DOMAIN_ID"
+echo "👥 Shared Profile: $USER_PROFILE_NAME"
+echo ""
+echo "=== WHAT YOU CAN ACCESS ==="
+echo "✅ SageMaker Studio - Full development environment"
+echo "✅ Shared Space - 'fiddler-collaboration-space' for team collaboration"
+echo "✅ Fiddler Partner AI Apps - AI observability platform"
+echo "✅ Jupyter notebooks with Fiddler SDK support"
+echo ""
+echo "=== INSTRUCTIONS ==="
+echo "1. Copy and paste the Studio URL above into your browser"
+echo "2. In Studio, access:"
+echo "   • Partner AI Apps from the Studio interface"
+echo "   • Shared space: 'fiddler-collaboration-space'"
+echo "   • Personal spaces for individual work"
+echo "3. Your identity ($USERNAME) is properly configured for all services"
+
+# Clean up credentials
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
+unset AWS_SESSION_TOKEN
+
+echo ""
+echo "✅ Session credentials cleaned up for security"
+EOF
+
+# Update the user access script with the actual domain ID, using OS-specific sed syntax
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    # macOS (BSD) sed requires an empty string argument for in-place editing
+    sed -i '' "s/PLACEHOLDER_DOMAIN_ID/$DOMAIN_ID/g" fiddler-user-access.sh
+else
+    # Linux (GNU) sed does not require an argument for in-place editing
+    sed -i "s/PLACEHOLDER_DOMAIN_ID/$DOMAIN_ID/g" fiddler-user-access.sh
+fi
+chmod +x fiddler-user-access.sh
+
+# Create Fiddler SDK setup script
+cat > setup-fiddler-sdk.sh << 'EOF'
+#!/bin/bash
+
+# =============================================================================
+# FIDDLER SDK SETUP SCRIPT
+# =============================================================================
+
+echo "=== Setting up Fiddler SDK Environment ==="
+
+# Check if running in SageMaker Studio
+if [[ -n "$SAGEMAKER_APP_TYPE" ]]; then
+    echo "✅ Running in SageMaker Studio environment"
+else
+    echo "⚠️  Not running in SageMaker Studio - some features may not work"
+fi
+
+# Install compatible SageMaker Python SDK
+echo "1. Installing compatible SageMaker Python SDK..."
+pip install "sagemaker>=2.237.0" --upgrade
+
+# Install Fiddler Python Client
+echo "2. Installing Fiddler Python Client..."
+pip install fiddler-client --upgrade
+
+# Set up environment variables for Fiddler SDK
+echo "3. Setting up Fiddler environment variables..."
+
+# Create environment setup
+cat > setup_fiddler_env.py << 'PYTHON_EOF'
+import os
+import boto3
+
+def setup_fiddler_environment():
+    """Set up environment variables for Fiddler SDK integration with SageMaker Partner AI Apps"""
+    
+    # Get SageMaker session information
+    try:
+        # These environment variables are automatically set in SageMaker Studio
+        domain_id = os.environ.get('SAGEMAKER_DOMAIN_ID')
+        region = os.environ.get('AWS_DEFAULT_REGION', 'us-east-1')
+        
+        print(f"SageMaker Domain ID: {domain_id}")
+        print(f"AWS Region: {region}")
+        
+        # Set up Fiddler-specific environment variables
+        # These will be used by the Fiddler Python Client to connect to the Partner AI App
+        
+        # Note: The actual Fiddler API endpoint will be provided by the Partner AI App
+        # when it's deployed. Users will need to get this from the Fiddler UI.
+        
+        print("\n✅ Environment setup complete!")
+        print("\n📝 Next steps:")
+        print("1. Deploy Fiddler Partner AI App from SageMaker Studio")
+        print("2. Get API key from Fiddler Partner AI App UI")
+        print("3. Set FIDDLER_API_KEY environment variable:")
+        print("   os.environ['FIDDLER_API_KEY'] = 'your-api-key'")
+        print("4. Get Fiddler URL from Partner AI App and set:")
+        print("   os.environ['FIDDLER_URL'] = 'your-fiddler-app-url'")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error setting up environment: {e}")
+        return False
+
+if __name__ == "__main__":
+    setup_fiddler_environment()
+PYTHON_EOF
+
+# Run the environment setup
+python setup_fiddler_env.py
+
+echo ""
+echo "✅ Fiddler SDK setup complete!"
+echo ""
+echo "📋 SDK Usage Instructions:"
+echo "1. Run this script in a SageMaker Studio Jupyter notebook"
+echo "2. Deploy Fiddler Partner AI App from Studio interface"
+echo "3. Get API credentials from Fiddler Partner AI App"
+echo "4. Use Fiddler Python Client to connect to your models"
+echo ""
+echo "📖 For detailed Fiddler SDK documentation, visit:"
+echo "   https://docs.fiddler.ai/"
+EOF
+
+chmod +x setup-fiddler-sdk.sh
+
+echo "✅ User access scripts created"
+
+# =============================================================================
+# STEP 9: CLEAN UP TEMPORARY FILES
+# =============================================================================
+
+echo ""
+echo "=== STEP 9: Cleaning up temporary files ==="
+
+rm -f partner-ai-admin-policy.json
+rm -f partner-app-execution-trust-policy.json
+rm -f license-manager-policy.json
+rm -f fiddler-s3-policy.json
+rm -f user-execution-trust-policy.json
+rm -f user-execution-policy.json
+rm -f user-access-trust-policy.json
+rm -f user-access-policy.json
+
+echo "✅ Temporary files cleaned up"
+
+# =============================================================================
+# SETUP COMPLETE - SUMMARY
+# =============================================================================
+
+echo ""
+echo "🎉 FIDDLER PARTNER AI APP & SAGEMAKER SETUP COMPLETE!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📋 CREATED RESOURCES:"
+echo "✅ Existing Admin Role Enhanced: $EXISTING_ADMIN_ROLE_NAME"
+echo "✅ Partner AI App Execution Role: $PARTNER_APP_EXECUTION_ROLE_NAME"
+echo "✅ User Execution Role: $USER_EXECUTION_ROLE_NAME"
+echo "✅ User Access Role: $USER_ACCESS_ROLE_NAME"
+echo "✅ SageMaker Domain: $DOMAIN_NAME (ID: $DOMAIN_ID)"
+echo "✅ Shared User Profile: $SHARED_USER_PROFILE_NAME"
+echo "✅ Shared Space: $SHARED_SPACE_NAME"
+echo "✅ User Access Script: fiddler-user-access.sh"
+echo "✅ Fiddler SDK Setup Script: setup-fiddler-sdk.sh"
+echo ""
+echo "🚀 NEXT STEPS:"
+echo ""
+echo "1. SUBSCRIBE TO FIDDLER IN AWS MARKETPLACE:"
+echo "   • Use your existing admin role: $EXISTING_ADMIN_ROLE_NAME"
+echo "   • Go to AWS Marketplace and subscribe to Fiddler AI Observability"
+echo "   • Follow the subscription process"
+echo ""
+echo "2. DEPLOY FIDDLER PARTNER AI APP:"
+echo "   • Use SageMaker Console or AWS CLI to create Partner AI App"
+echo "   • Specify root admin IAM username for: $EXISTING_ADMIN_ROLE_NAME"
+echo "   • Use execution role: $PARTNER_APP_EXECUTION_ROLE_NAME"
+echo ""
+echo "📖 DOCUMENTATION REFERENCES:"
+echo "• Partner AI Apps: https://docs.aws.amazon.com/sagemaker/latest/dg/partner-app-onboard.html"
+echo "• Fiddler SDK: https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps-sdk.html"
+echo "• SageMaker Domains: https://docs.aws.amazon.com/sagemaker/latest/dg/gs-studio-onboard.html"
+echo ""
+echo "✨ Your team can now collaborate using Fiddler for AI observability in SageMaker!"
+```
+
+
+---

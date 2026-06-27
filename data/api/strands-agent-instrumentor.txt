@@ -1,0 +1,133 @@
+# StrandsAgentInstrumentor
+
+OpenTelemetry instrumentor for Strands AI agents.
+
+This instrumentor automatically injects FiddlerInstrumentationHook into all Strands Agent instances, enabling automatic observability without manual hook configuration. It also registers a FiddlerSpanProcessor for attribute denormalization.
+
+The instrumentor follows the OpenTelemetry instrumentation pattern and can be enabled/disabled dynamically.
+
+## Example
+
+```python
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+telemetry = StrandsTelemetry()
+telemetry.setup_otlp_exporter()
+
+# Enable instrumentation
+instrumentor = StrandsAgentInstrumentor(telemetry)
+instrumentor.instrument()
+
+# Create agents - hooks are automatically injected
+agent = Agent(model=model, system_prompt="...")
+```
+
+Initialize the Strands Agent instrumentor.
+
+## Parameters
+
+| Parameter           | Type               | Required | Default | Description                                               |
+| ------------------- | ------------------ | -------- | ------- | --------------------------------------------------------- |
+| `strands_telemetry` | `StrandsTelemetry` | ✗        | `None`  | StrandsTelemetry instance for configuring trace exporters |
+
+## instrumentation\_dependencies()
+
+Return the list of packages required for instrumentation.
+
+## Returns
+
+Collection of package names with version constraints
+
+**Return type:** *Collection*\[str]
+
+## instrument()
+
+Enable automatic instrumentation of Strands agents.
+
+Activates the instrumentor by registering the FiddlerSpanProcessor with the tracer provider and patching Agent.**init** to automatically inject FiddlerInstrumentationHook into all agent instances.
+
+This method is idempotent - calling it multiple times has the same effect as calling it once. After activation, all newly created agents will automatically include Fiddler's instrumentation hook.
+
+## Parameters
+
+**\*\*kwargs** -- Additional instrumentation configuration (currently unused)
+
+## Example
+
+```python
+from strands import Agent
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+# Set up telemetry
+telemetry = StrandsTelemetry()
+telemetry.setup_otlp_exporter()
+
+# Activate instrumentation
+instrumentor = StrandsAgentInstrumentor(telemetry)
+instrumentor.instrument()
+
+# Agents created after this point are automatically instrumented
+agent = Agent(model=model, system_prompt="...")
+
+# Check if instrumentation is active
+if instrumentor.is_instrumented_by_opentelemetry:
+    print("Instrumentation is active")
+```
+
+## uninstrument()
+
+Disable automatic instrumentation and restore original behavior.
+
+Deactivates the instrumentor by restoring the original Agent.**init** method. Agents created after calling this method will no longer have FiddlerInstrumentationHook automatically injected.
+
+Note: This does not affect agents that were already created while instrumentation was active - those will retain their hooks.
+
+## Parameters
+
+**\*\*kwargs** -- Additional uninstrumentation configuration (currently unused)
+
+## Example
+
+```python
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+instrumentor = StrandsAgentInstrumentor(telemetry)
+instrumentor.instrument()
+
+# Create some agents (automatically instrumented)
+agent1 = Agent(model=model, system_prompt="...")
+
+# Deactivate instrumentation
+instrumentor.uninstrument()
+
+# New agents won't be instrumented
+agent2 = Agent(model=model, system_prompt="...")
+
+# agent1 still has the hook, agent2 does not
+```
+
+## *property* is\_instrumented\_by\_opentelemetry *: bool*
+
+Check whether instrumentation is currently active.
+
+## Returns
+
+True if the instrumentor has been activated via instrument() and not yet deactivated via uninstrument(), False otherwise
+
+## Example
+
+```python
+instrumentor = StrandsAgentInstrumentor(telemetry)
+print(instrumentor.is_instrumented_by_opentelemetry)  # False
+
+instrumentor.instrument()
+print(instrumentor.is_instrumented_by_opentelemetry)  # True
+
+instrumentor.uninstrument()
+print(instrumentor.is_instrumented_by_opentelemetry)  # False
+```
+
+
+---

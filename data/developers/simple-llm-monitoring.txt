@@ -1,0 +1,12 @@
+# Simple LLM Monitoring
+
+This guide will walk you through the basic onboarding steps required to use Fiddler for monitoring of LLM applications, **using sample data provided by Fiddler**.
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Chatbot.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Chatbot.ipynb).
+
+
+---

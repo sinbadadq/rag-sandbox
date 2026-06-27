@@ -1,0 +1,12 @@
+# ExperimentStatus
+
+**Values:**
+
+* `PENDING` - PENDING
+* `IN_PROGRESS` - IN\_PROGRESS
+* `COMPLETED` - COMPLETED
+* `FAILED` - FAILED
+* `CANCELLED` - CANCELLED
+
+
+---

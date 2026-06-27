@@ -1,0 +1,263 @@
+# Okta Integration
+
+Learn how to integrate Fiddler with Okta for seamless Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol.
+
+### Overview
+
+This integration allows your users to access Fiddler using their existing Okta credentials. Users are automatically provisioned in Fiddler on their first successful login, eliminating the need for manual user invitations.
+
+### Prerequisites
+
+Before starting, ensure you have:
+
+* **Okta Administrator Access**: Permissions to create and configure applications in your Okta organization
+* **Fiddler AuthN Administrator Access**: "Org Owner" role in Fiddler's AuthN management console
+* **Deployment Information**: Your Fiddler deployment base URL
+
+## Configuring Okta
+
+{% hint style="info" %}
+Fiddler requires two Redirect URIs when creating the Okta application and follow these patterns:
+
+* `https://authn-{base_url}/ui/login/login/externalidp/callback`
+* `https://authn-{base_url}/idps/callback`
+
+where your Fiddler base URL is the URL of your Fiddler deployment.
+{% endhint %}
+
+{% stepper %}
+{% step %}
+**Create New Okta Application Integration**
+
+1. On the Okta admin console, navigate to *Applications* and select the *Create App Integration* button:
+
+   <figure><img src="/files/z9gc3RdxlQfQb1GLuWtQ" alt="Okta admin console applications list"><figcaption></figcaption></figure>
+2. Select *OIDC - OpenID Connect* for the Sign-in method, select *Web Application* for the Application type, and then select the *Next* button to create the new application:
+
+   <figure><img src="/files/RR6kirF1HvE19wnevdXm" alt="Okta admin console create a new app and set type"><figcaption></figcaption></figure>
+3. Assign a name for your application integration in the *App integration name* text box
+   1. Enter the first Redirect URI into the *Sign-in redirect URIs* text box, e.g. `https://authn-example2.dev.fiddler.ai/ui/login/login/externalidp/callback`
+   2. Select the *+ Add URI* button and add the second Redirect URI, e.g. `https://authn-example2.dev.fiddler.ai/idps/callback`
+   3. Enter your base Fiddler URL into the *Sign-out redirect URIs* text box, e.g. https\://`example2.dev.fiddler.ai` :
+
+      <figure><img src="/files/0CabxD1KoNnA1HZeNF5Y" alt="Okta admin console application page with sign-in and sign-out URLs"><figcaption></figcaption></figure>
+4. Select the *Save* button to create the application
+5. With the application integration created, copy the following values to use in configuring the identity provider in the Fiddler AuthN console:
+   1. On the *General* tab, copy the *Client ID* and *Secret values:*
+
+      <figure><img src="/files/XOCLs2SazCxfT62qr4bw" alt="Okta admin console application page with client id and secret"><figcaption></figcaption></figure>
+   2. On the *Sign On* tab, copy the *Issuer* URL:
+
+      <figure><img src="/files/GNzCe9bmRPtTpw6QOu3n" alt="Okta admin console application page with client id and secret"><figcaption></figcaption></figure>
+
+{% endstep %}
+{% endstepper %}
+
+## Configuring Fiddler
+
+{% stepper %}
+{% step %}
+**Fiddler AuthN Console Sign-in**
+
+{% hint style="info" %}
+The URL to the Fiddler AuthN management console is your Fiddler instance base URL prepended with `authn-`. For example, if your Fiddler base URL is `https://acme.cloud.fiddler.ai` then you will access the AuthN management console at `https://authn-acme.cloud.fiddler.ai`.
+{% endhint %}
+
+Sign in using the AuthN Console Org Owner user account credentials provided by your Fiddler representative:
+
+<figure><img src="/files/mMu6x7yETayqnOGOEnxb" alt="Fiddler AuthN console sign in page"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Select Your Organization**
+
+Ensure your organization is selected in the dropdown. You may see the *fiddler* organization, but this is reserved for system use and should not be edited. Here we are using the *example1* organization:
+
+<figure><img src="/files/XffOhJOdSxqA7nkhYxUk" alt="Fiddler AuthN console home page"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Navigate to Identity Providers in Settings**
+
+Select *Settings* tab from the top menu and then select *Identity Providers* from the left navigation menu:
+
+<figure><img src="/files/1dhZNVWr3m8YhJMLD7VV" alt="Fiddler AuthN console add provider page"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Add and Configure New OIDC Provider**
+
+1. Select the Generic OIDC option in the *Add provider* section which brings up the OIDC Provider form.
+2. Copy the Callback URL and then navigate to your Okta admin console
+
+<figure><img src="/files/1ovTz2fwETpNPUwaMEin" alt="Fiddler AuthN console add new OIDC provider form with callback URL"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Configure the Identity Provider in Fiddler**
+
+1. Return to the Fiddler AuthN console where we left off and enter the following values:
+   1. Assign a name and enter it in the *Name* text box. Note that this name will be displayed on the SSO login button on the Fiddler sign-in page so choose a name your users will recognize.
+   2. In the *Issuer* text box, paste the Issuer URL copied from the Okta admin console
+   3. In the *Client ID* and *Client Secret*, past those values copied from the Okta admin console:
+
+      <figure><img src="/files/Of5wnEYyAa7egQLeRmmi" alt="Okta admin console application page with client id and secret"><figcaption></figcaption></figure>
+
+{% endstep %}
+
+{% step %}
+**Configure Additional Parameters**
+
+1. Expand the *optional* section
+2. Add the text `groups` to the *Scopes List* text box and ensure it is listed along with `openid`, `profile`, and `email`
+3. Ensure the *Automatic create* and *Automatic update* checkboxes are selected
+4. Set the *Determines whether an identity will be prompted to be linked to an existing account* dropdown to *Check for existing Username*
+5. Select the *Create* button and the select the *Save* button
+
+<figure><img src="/files/dkG2kXlR5i1MOOuugTIB" alt="Fiddler AuthN console additional required settings"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Save the Configuration Changes**
+
+Select the *Create* button and then select the *Save* button. You will be returned to the Organization Settings page:
+
+<figure><img src="/files/DIjYA0xnK1Bp7Gc1EIKI" alt="Fiddler AuthN console with newly created Okta OIDC IdP"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Activate the Okta OIDC IdP**
+
+1. Select your IdP from the list and select the *Activate* button on the identity provider settings page:
+
+   <figure><img src="/files/B7XsRpiYGLKO2BWyQVoM" alt="Fiddler AuthN console activate new Okta OIDC IdP"><figcaption></figcaption></figure>
+2. Close the settings and then select *Login Behavior and Security* from the left nav menu and ensure the *External login allowed* checkbox is selected.
+3. Select the *Save* button
+
+   <figure><img src="/files/7i7uU4ZlFmssx02KSRfj" alt="Fiddler AuthN console allow external login behavior"><figcaption></figcaption></figure>
+
+{% endstep %}
+
+{% step %}
+**Create a Custom Action**
+
+Select the *Actions* tab from the top menu
+
+<figure><img src="/files/fmKjAkFrSbKnL6teA094" alt="Fiddler AuthN console new custom Action script"><figcaption></figcaption></figure>
+
+1. Select the *New* button in the *Scripts* section to create a new action script
+2. Copy the *Okta OIDC Action Script* below and paste it into the script text area
+3. Enter `setAttributesOnOktaOIDCAuth` in the Name text box
+4. Select the *Add* button
+
+{% code title="Okta OIDC Action Script" %}
+
+```javascript
+function setAttributesOnOktaOIDCAuth(ctx, api) {  
+    let firstName = ctx.v1.providerInfo.given_name;
+    let lastName = ctx.v1.providerInfo.family_name;
+    let email = ctx.v1.providerInfo.email;
+    let groups = ctx.getClaim('groups');
+    
+    let nameParts = [firstName, lastName];
+    let filteredParts = nameParts.filter(part => part);
+	  let displayName = filteredParts.join(' ');
+  
+    if (firstName != undefined) {
+      api.setFirstName(firstName);
+    }
+    if (lastName != undefined) {
+      api.setLastName(lastName);
+    }
+    if (email != undefined) {
+      email = email.toLowerCase();
+      api.setEmail(email);
+      api.setEmailVerified(true);
+      api.setPreferredUsername(email);
+    }
+
+    api.v1.user.appendMetadata('fiddler_authentication_type', 'SSO:OKTA:OIDC');
+    if (groups === null || groups === undefined){
+      groups = []
+    }
+    api.v1.user.appendMetadata('fiddler_groups', groups);
+}
+```
+
+{% endcode %}
+{% endstep %}
+
+{% step %}
+**Configure the Action Trigger**
+
+Scroll down to the *Flows* section
+
+<figure><img src="/files/FsvYyKjh3sXZhSbQzxFs" alt="Fiddler AuthN console new Action trigger creation"><figcaption></figcaption></figure>
+
+1. Select the *+ Add trigger* button
+2. Select the *Post Authentication* option for the *Trigger Type* dropdown
+3. Select the *setAttributesOnOktaOIDCAuth* option for the *Actions* dropdown
+4. Select the *Save* button
+   {% endstep %}
+
+{% step %}
+**Validate the Integration**
+
+1. Enter your Fiddler URL. This is [https://example2.dev.fiddler.ai ](https://example2.dev.fiddler.ai/)in our example. Your Fiddler URL will vary according to your company name and the Fiddler deployment type.
+2. Ensure you see the Fiddler Sign-on page and that the page displays the *SSO Login - Okta OIDC* button:
+
+   <figure><img src="/files/83F3FkMO4QmmHepFOPIt" alt="Fiddler application homepage displaying the new SSO login method in addition to the email sign-in form"><figcaption></figcaption></figure>
+3. Select the button and confirm that the Fiddler application loads:
+
+   <figure><img src="/files/n6KamEm8MOw0mImNIwLL" alt="Fiddler application landing page"><figcaption></figcaption></figure>
+
+{% hint style="info" %}
+The first user to sign in to the Fiddler Applicatin is automatically assigned the Fiddler Org Admin role: subsequent members are Org Members by default
+{% endhint %}
+
+{% hint style="info" %}
+Ensure your Okta user account is assigned to the new Okta application you created.
+{% endhint %}
+{% endstep %}
+{% endstepper %}
+
+### Getting Help
+
+For additional assistance:
+
+* Review Okta system logs for authentication attempts
+* Verify network connectivity between Fiddler and Okta
+* Contact your Fiddler representative with specific error messages
+
+## Reference Documentation
+
+For detailed configuration guidance, refer to the official documentation:
+
+* [Okta OIDC Configuration Guide](https://zitadel.com/docs/guides/integrate/identity-providers/okta-oidc) - Comprehensive setup instructions
+* [General SSO Authentication Guide](/reference/access-control/sso-authentication-guide.md) - Overview of SSO concepts and troubleshooting
+* [Mapping AD Groups to Fiddler Teams](/reference/access-control/mapping-ad-groups-to-fiddler-teams.md) - Group synchronization details
+
+## Important Notes
+
+* **Automatic User Provisioning**: Users are automatically created on first successful login—no manual invitations required
+* **Data Storage**: Fiddler stores only the user's first name, last name, email address, and SAML token from Okta
+* **API Access**: For programmatic API access, users must create access tokens from the "Credentials" tab in Fiddler's Settings page
+* **Single Authentication Method**: Users can only authenticate via either SSO or email authentication, not both
+
+## Next Steps
+
+After successful integration:
+
+1. **Train Users**: Provide guidance on accessing Fiddler through Okta SSO
+2. **Configure Teams**: Set up Fiddler teams to match your organizational structure
+3. **Test Group Sync**: Verify automatic group synchronization is working as expected
+4. **Monitor Usage**: Review authentication logs and user access patterns
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

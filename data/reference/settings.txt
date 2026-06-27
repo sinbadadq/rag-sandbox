@@ -1,0 +1,267 @@
+# Administration
+
+## Overview
+
+The Settings page provides centralized management for your organization's configuration, user access, and integrations. Access the **Settings** page from the left navigation bar in the Fiddler UI.
+
+<figure><img src="/files/LcozLLf5cFaI8V7id86o" alt="Fiddler home page showing the user menu open and highlighting the Settings link."><figcaption></figcaption></figure>
+
+## Settings Tabs
+
+The Settings page is organized into the following tabs:
+
+* **General** - Organization information and user details
+* **Access** - User and team management
+* **Credentials** - Personal access token management
+* **LLM Gateway** - LLM provider and API credential management
+* **Email Configuration** - Email notification settings
+* **PagerDuty Integration** - PagerDuty alert configuration
+* **Webhook Integration** - Webhook service management
+
+## General
+
+The **General** tab displays your organization's configuration and current user information.
+
+<figure><img src="/files/M6oCq4k73dajjELin3SB" alt="General tab of the Settings page."><figcaption></figcaption></figure>
+
+### Organization Information
+
+* **Organization Name** - Your organization's display name in Fiddler
+* **Organization ID** - Unique identifier for your organization
+* **Version** - Current Fiddler platform version
+
+### User Information
+
+* **User Name** - Your display name in the system
+* **Email** - Email address associated with your account
+
+## Access
+
+The **Access** tab provides centralized management for users and teams within your organization.
+
+### Users
+
+The **Users** sub-tab displays all users who are members of your organization.
+
+<figure><img src="/files/5oNk4g4MKLhUBCEoqBAy" alt="Users sub-tab of the Access tab on the Settings page showing a list of users."><figcaption></figcaption></figure>
+
+This view shows:
+
+* User names and email addresses
+* Organization roles (Org Admin or Org Member)
+* Account status (Active/Inactive)
+* Last login information
+
+> **Note**
+>
+> User invitations are managed through the Fiddler AuthN console:
+>
+> * Email authentication users must be invited by AuthN Org Owners or Org User Managers
+> * SSO users are automatically created upon first login to Fiddler
+
+### Teams
+
+The **Teams** sub-tab displays all teams defined within your organization. Teams provide a way to organize users and manage project-level access controls.
+
+<figure><img src="/files/Qf50JpLHcOH7IRjLkyl7" alt="Teams sub-tab of the Access tab on the Settings page showing a list of teams"><figcaption></figcaption></figure>
+
+#### Creating Teams
+
+Create a new team by clicking the plus (**`+`**) icon in the top-right corner.
+
+> **Important**
+>
+> Only users with the Org Admin role can create teams. The plus (**`+`**) icon will not be visible for Org Members.
+
+When creating a team:
+
+1. Enter a unique team name
+   1. Team names may not include spaces, but mixed-case alphanumeric characters are valid
+2. Add team members from existing users
+3. Assign appropriate project permissions
+4. Click **Create** to save the team
+
+#### Team Synchronization
+
+If your organization uses SSO with group synchronization enabled, teams can be automatically created and managed based on your identity provider groups. See [Mapping Identity Provider Groups to Fiddler Teams](/reference/access-control/mapping-ad-groups-to-fiddler-teams.md) for configuration details.
+
+## Credentials
+
+The **Credentials** tab manages personal access tokens used for programmatic access to Fiddler through the Fiddler Python client, Fiddler SDKs, and REST APIs.
+
+> **Note**
+>
+> The Fiddler UI labels personal access tokens as **Access Keys**. Both terms refer to the same credential.
+
+<figure><img src="/files/Qy8SSBfKtwiVKu2yZd3O" alt="Credentials tab showing the list of named access keys."><figcaption></figcaption></figure>
+
+### Creating Personal Access Tokens
+
+Fiddler supports two key-creation flows. Named access keys are the recommended approach for deployments running 26.9 or later.
+
+#### Named Access Keys (recommended, 26.9+)
+
+1. Click **Create Key** to open the create dialog.
+2. Provide a descriptive **name** for the key (for example, the integration or environment it will be used for).
+
+   > Key names must start with a letter and may contain letters, digits, spaces, hyphens, and underscores (1–128 characters). Names must be unique within your own keys.
+
+   <figure><img src="/files/u28UMuXdsq8klAdiYJyG" alt="Create access key modal."><figcaption></figcaption></figure>
+3. Click **Create Key**. The token is displayed once — copy it immediately and store it securely. Fiddler cannot retrieve it again.
+
+   <figure><img src="/files/LBU4zRlWxo76kbNMnksd" alt="One-time token displayed after creating a named access key."><figcaption></figcaption></figure>
+
+Use the token for authentication in the Fiddler Python client, Fiddler SDKs, and REST APIs.
+
+#### Legacy Single-Key Flow
+
+If your deployment was created before Release 26.9, you may see the legacy single-key view instead. Legacy keys continue to work alongside named access keys — creating a named key does not affect your existing legacy key. We recommend using named access keys for any new integrations.
+
+<figure><img src="/files/nqDEWBLvXyPrXcYgvMb3" alt="Legacy access key view for older deployments."><figcaption></figcaption></figure>
+
+To use the legacy flow:
+
+1. Click **Create Key** to generate your token.
+2. Once created, the **Create Key** button is hidden — only one token can exist at a time.
+3. To generate a new token, delete the existing token first. The **Create Key** button will reappear.
+
+### Managing Personal Access Tokens
+
+* **Named access keys**: You can create up to 5 per user. On Fiddler Cloud, contact Fiddler Support if you need a higher limit. Self-hosted admins can raise the cap with the `MAX_ACCESS_KEYS_PER_USER` environment variable. Legacy single-key tokens do not count toward this limit.
+* **Revoking named access keys**: Use the **⋮** (more options) menu in the named keys list view. Revocation takes effect immediately; allow up to 5 minutes for all active sessions to reflect the change.
+* **Revoking a legacy key**: Delete the existing token. The **Create Key** button will reappear when ready.
+* Each personal access token inherits the permissions of the user who created it.
+
+{% hint style="info" %}
+**Security Best Practice:** Treat personal access tokens like passwords. Never share them or commit them to version control. Copy and store the token immediately at creation — Fiddler cannot retrieve it again. Rotate tokens regularly and revoke unused or compromised tokens immediately.
+{% endhint %}
+
+## LLM Gateway
+
+The **LLM Gateway** tab allows you to configure and manage LLM provider credentials for AI-powered features throughout the Fiddler platform.
+
+Configure LLM providers to enable:
+
+* **Custom Evaluators** - Use your preferred LLM to evaluate model outputs
+* **Content Analysis** - Assess response quality and monitor trust metrics
+
+Supported providers include OpenAI, Anthropic, Gemini, and Fiddler. You can add multiple API credentials per provider for redundancy, load balancing, and key rotation.
+
+For detailed configuration instructions, see [LLM Gateway Configuration](/reference/settings/llm-gateway.md).
+
+## Email Configuration
+
+The **Email Configuration** tab manages the email provider for your organization.
+
+<figure><img src="/files/HblgzOAAOQbj0JtdSHCC" alt=""><figcaption></figcaption></figure>
+
+Configure:
+
+* Selecting SES or SMTP for email delivery
+* Fiddler Cloud customers leverage AWS SES
+* You may choose to use your own SMTP server by entering your own SMTP connection and credentials details
+
+## PagerDuty Integration
+
+The **PagerDuty Integration** tab enables configuration of PagerDuty services for alert escalation.
+
+Setup includes:
+
+* PagerDuty service integration keys
+* Severity mapping for alerts
+* Escalation policy configuration
+* Test alert functionality
+
+## Webhook Integration
+
+The **Webhook Integration** tab manages webhook configurations for connecting Fiddler alerts to your notification and communication platforms.
+
+### Supported Webhook Types
+
+Fiddler supports three webhook provider types:
+
+* **Slack** - Direct integration with Slack channels
+* **Microsoft Teams** - Native Teams channel integration
+* **Other** - Custom webhook endpoints for any platform
+
+### Creating a Webhook
+
+Click the plus (**`+`**) icon to configure a new webhook:
+
+![Create Webhook Service modal dialog](/files/7cEqfE1KcozNfvL3XxHI)
+
+#### Slack Webhook Configuration
+
+1. Enter a unique name in the **Service Name** field
+2. Select **Slack** from the **Provider** dropdown
+3. Enter your Slack webhook URL (format: `https://hooks.slack.com/services/...`)
+4. Click **Test** to verify the connection
+5. Click **Create** once the test succeeds
+
+> **Reference**
+>
+> See [Slack's webhook documentation](https://api.slack.com/messaging/webhooks) for creating webhook URLs.
+
+#### Microsoft Teams Webhook Configuration
+
+1. Enter a unique name in the **Service Name** field
+2. Select **MS Teams** from the **Provider** dropdown
+3. Enter your Teams webhook URL provided by your administrator
+4. Click **Test** to verify the connection
+5. Click **Create** once the test succeeds
+
+> **Reference**
+>
+> See [Microsoft Teams webhook documentation](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=newteams%2Cdotnet#create-an-incoming-webhook) for setup instructions.
+
+#### Custom Webhook Configuration
+
+1. Enter a unique name in the **Service Name** field
+2. Select **Other** from the **Provider** dropdown
+3. Enter your platform's webhook URL
+4. Click **Test** to verify the endpoint
+5. Click **Create** once the test succeeds
+
+### Managing Webhooks
+
+Edit or delete existing webhooks using the menu (**...**) icon for each webhook:
+
+1. Select the webhook's menu icon
+2. Choose **Edit Webhook** to modify configuration
+3. Choose **Delete Webhook** to remove the webhook
+
+> **Important**
+>
+> You cannot delete webhooks that are currently linked to active alerts. Remove the webhook from all alerts before deletion.
+
+## Access Requirements
+
+Different settings require specific permissions:
+
+| Setting                       | Org Admin | Org Member |
+| ----------------------------- | --------- | ---------- |
+| View General tab              | ✓         | ✓          |
+| View Access > Users           | ✓         | ✓          |
+| View Access > Teams           | ✓         | ✓          |
+| Create/Edit Teams             | ✓         | ✗          |
+| Create Personal Access Tokens | ✓         | ✓          |
+| Configure LLM Gateway         | ✓         | ✗          |
+| Configure Email Settings      | ✓         | ✗          |
+| Configure PagerDuty           | ✓         | ✗          |
+| Create/Edit Webhooks          | ✓         | ✗          |
+
+## Related Documentation
+
+* [Role-Based Access Control](/reference/access-control/role-based-access.md) - Understanding user roles and permissions
+* [Single Sign-On Configuration](/reference/access-control/sso-authentication-guide.md) - Setting up SSO authentication
+* [Inviting Users](/reference/access-control/email-login.md#adding-users-to-fiddler) - Adding users through the AuthN console
+* [Alert Configuration](/observability/platform/alerts-platform.md) - Using webhooks and integrations for alerts
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

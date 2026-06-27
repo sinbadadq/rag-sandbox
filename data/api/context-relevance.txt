@@ -1,0 +1,99 @@
+# ContextRelevance
+
+Evaluator to assess how relevant retrieved documents are to a user query.
+
+The ContextRelevance evaluator measures whether retrieved documents provide sufficient context to answer a given question. This is a critical metric for RAG (Retrieval-Augmented Generation) pipelines to ensure the retrieval step is fetching useful information.
+
+Key Features:
+
+* **Retrieval Assessment**: Determines if retrieved documents support the query
+* **Three-Level Scoring**: Returns high (1.0), medium (0.5), or low (0.0) relevance scores
+* **RAG Pipeline Evaluation**: Specifically designed for evaluating retrieval quality
+* **Detailed Reasoning**: Provides explanation for the relevance assessment
+* **Fiddler API Integration**: Uses Fiddler's built-in context relevance model
+
+Use Cases:
+
+* **RAG Systems**: Evaluating retrieval quality in RAG pipelines
+* **Search Systems**: Assessing if search results are relevant to queries
+* **Document Q\&A**: Verifying retrieved context supports the question
+* **Knowledge Base Evaluation**: Testing retrieval effectiveness
+
+Scoring Logic:
+
+* **1.0 (High)**: Retrieved documents provide all necessary information to answer the query
+* **0.5 (Medium)**: Retrieved documents are on topic but don't fully support a complete answer
+* **0.0 (Low)**: Retrieved documents are not relevant to the query
+
+## Parameters
+
+| Parameter             | Type        | Required | Default | Description                         |
+| --------------------- | ----------- | -------- | ------- | ----------------------------------- |
+| `user_query`          | `str`       | ✗        | `None`  | The question or query being asked.  |
+| `retrieved_documents` | `list[str]` | ✗        | `None`  | The documents retrieved as context. |
+
+## Returns
+
+A Score object containing: : - value: 1.0 for high, 0.5 for medium, 0.0 for low relevance
+
+* label: "high", "medium", or "low"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+## Example
+
+```python
+from fiddler_evals.evaluators import ContextRelevance
+evaluator = ContextRelevance(model="openai/gpt-4o")
+
+# High context relevance
+score = evaluator.score(
+    user_query="What is the capital of France?",
+    retrieved_documents=[
+        "France is a country in Western Europe.",
+        "Paris is the capital and largest city of France."
+    ]
+)
+print(f"Context Relevance: {score.label}")  # "high"
+print(f"Score: {score.value}")              # 1.0
+
+# Low context relevance
+score = evaluator.score(
+    user_query="What is the capital of France?",
+    retrieved_documents=[
+        "Pizza is a popular Italian dish.",
+        "The weather is nice today."
+    ]
+)
+print(f"Context Relevance: {score.label}")  # "low"
+```
+
+{% hint style="info" %}
+This evaluator uses Fiddler's built-in context relevance assessment model and requires an active connection to the Fiddler API.
+{% endhint %}
+
+## name *= 'context\_relevance'*
+
+## score()
+
+Score the relevance of retrieved documents to a query.
+
+## Parameters
+
+| Parameter             | Type        | Required | Default | Description                         |
+| --------------------- | ----------- | -------- | ------- | ----------------------------------- |
+| `user_query`          | `str`       | ✗        | `None`  | The question or query being asked.  |
+| `retrieved_documents` | `list[str]` | ✗        | `None`  | The documents retrieved as context. |
+
+## Returns
+
+A Score object containing: : - value: 1.0 for high, 0.5 for medium, 0.0 for low relevance
+
+* label: "high", "medium", or "low"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+
+---

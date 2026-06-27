@@ -1,0 +1,194 @@
+{
+  "experiment": "Structural vs. Fixed-Token Chunking",
+  "run_timestamp": "2026-06-26T23:59:38.216200+00:00",
+  "results": [
+    {
+      "strategy": "SentenceSplitter 512 (baseline)",
+      "num_nodes": 1491,
+      "avg_node_chars": 1899.6170355466131,
+      "min_node_chars": 3,
+      "max_node_chars": 7278,
+      "results": [
+        {
+          "query": "How does Fiddler detect data drift, and what drift metrics does it support?",
+          "response_text": "Based on the provided information, here's how Fiddler detects data drift and the metrics it supports:\n\n## How Fiddler Detects Data Drift\n\nFiddler detects data drift by comparing the statistical distribution of input data in production against a baseline dataset (typically the training data). The platform calculates drift between the distribution of a field in the baseline dataset and that same distribution for the time period of interest.\n\nThe monitoring system helps users identify:\n- **What data is drifting** - which specific features or fields are experiencing distributional changes\n- **When it's drifting** - the timing of when drift occurs\n- **How it's drifting** - the nature and magnitude of the distributional changes\n\n## Supported Drift Metrics\n\nFiddler supports two primary drift metrics:\n\n1. **Jensen-Shannon Divergence (JSD)** - A statistical measure that quantifies the difference between two probability distributions\n\n2. **Population Stability Index (PSI)** - Another metric for measuring distributional shifts in data\n\n## Multi-Dimensional Drift Detection\n\nFiddler provides a comprehensive approach to distinguishing different types of drift by simultaneously tracking:\n- Data drift metrics\n- Performance metrics\n- Feature importance\n- Segment-specific analyses\n\nThis multi-faceted monitoring approach enables users to triangulate the likely causes of detected drift and distinguish between data quality issues, concept drift, or other factors, helping guide more targeted remediation strategies.",
+          "source_files": [
+            "metric.txt",
+            "data-drift.txt",
+            "ml-observability.txt",
+            "model-drift.txt",
+            "platform.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 4.0,
+            "specificity": 4.0,
+            "analysis": "The response directly addresses how Fiddler detects data drift (comparing production data distributions to baseline) and names the two specific drift metrics supported (JSD and PSI). It provides good context about what/when/how drift is identified and mentions multi-dimensional monitoring, though it could benefit from more technical details about thresholds, binning methods, or implementation specifics."
+          }
+        },
+        {
+          "query": "How does Fiddler use SHAP values to explain model predictions?",
+          "response_text": "Based on the provided context, Fiddler uses SHAP (SHapley Additive exPlanations) values to explain model predictions through multiple implementation options:\n\n## SHAP Implementation Methods\n\nFiddler offers two SHAP-based approaches:\n\n1. **Standard SHAP**: The original algorithm that computes feature importance based on game theory, providing globally consistent and locally accurate feature attributions that sum to the difference between model output and expected output.\n\n2. **FIDDLER_SHAP** (Recommended): Fiddler's optimized version that provides the same theoretical guarantees as standard SHAP but with significant performance improvements and optimizations for production use cases.\n\n## How It Works\n\nSHAP values in Fiddler:\n- Provide feature importance scores that explain individual predictions\n- Satisfy key theoretical properties including efficiency, symmetry, dummy, and additivity axioms\n- Work with any machine learning model\n- Generate explanations that show how each feature contributes to a specific prediction\n\n## Usage\n\nUsers can generate SHAP explanations through the model's explain method:\n\n```python\n# Using Fiddler's optimized SHAP (recommended)\nfast_explanations = model.explain(\n    data_source=fdl.RowDataSource(row=sample_data),\n    explain_method=fdl.ExplainMethod.FIDDLER_SHAP\n)\n```\n\nFIDDLER_SHAP is recommended for most use cases due to its performance optimizations, making it particularly suitable for production explainability workflows, high-volume explanation generation, and real-time explanation requirements.",
+          "source_files": [
+            "explain-method.txt",
+            "explain-method.txt",
+            "ml-observability.txt",
+            "artifact-status.txt",
+            "agentic-document-extraction.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 4.0,
+            "specificity": 5.0,
+            "analysis": "The response directly addresses how Fiddler uses SHAP values with concrete implementation details, methods, and code examples. It covers the key aspects including the two SHAP variants offered, theoretical properties, and practical usage, though it could provide more detail on the actual computation process or visualization of results."
+          }
+        },
+        {
+          "query": "What metrics does Fiddler track for LLM monitoring, such as faithfulness or toxicity?",
+          "response_text": "Based on the provided information, Fiddler tracks a comprehensive set of metrics for LLM monitoring across multiple dimensions:\n\n## Safety and Risk Metrics:\n- **Toxicity detection** and harmful content identification\n- **Jailbreak attempt recognition** and prompt injection detection\n- **Personally identifiable information (PII)** exposure assessment\n- **Profanity** and inappropriate content filtering\n\n## Quality and Accuracy Metrics:\n- **FTL Faithfulness** \u2014 proprietary Fast Trust Model for groundedness evaluation against source material (uses context and response inputs)\n- **Answer relevance** and context relevance scoring\n- **Coherence** and logical consistency assessment\n- **Conciseness** and response appropriateness\n\n## Specialized Assessments:\n- **Sentiment analysis** and emotional tone evaluation\n- **Topic classification** and content categorization\n- **Language detection** and multilingual support\n- **Custom regex matching** and banned keyword detection\n\n## RAG Health Metrics:\nIn addition to Fast Trust Model-based metrics, Fiddler provides RAG Health Metrics \u2014 a diagnostic triad of LLM-as-a-Judge evaluators including:\n- Answer Relevance 2.0\n- Context Relevance\n- RAG Faithfulness\n\n## Operational Metrics:\n- **Latency** tracking\n- **Hallucination** detection\n- **Drift detection** for prompts and responses\n- **Retrieval quality** and source relevance (for RAG applications)\n\nThese metrics enable organizations to monitor LLM applications against specific quality standards and risk tolerance levels, covering over 14 evaluation dimensions in total.",
+          "source_files": [
+            "trust-service.txt",
+            "llm-monitoring.txt",
+            "trust-service.txt",
+            "metric.txt",
+            "guardrails-faithfulness.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 5.0,
+            "specificity": 5.0,
+            "analysis": "The response directly addresses the question by listing faithfulness and toxicity as requested, along with a comprehensive categorization of other LLM monitoring metrics that Fiddler tracks. It provides specific metric names, concrete examples, and organized categories covering safety, quality, specialized assessments, RAG-specific metrics, and operational dimensions."
+          }
+        },
+        {
+          "query": "How do I set up an alert in Fiddler and what notification channels are supported?",
+          "response_text": "# Setting Up Alerts in Fiddler\n\n## Alert Setup Methods\n\nYou can set up alerts in Fiddler using two methods:\n\n### 1. **Using the Fiddler User Interface (UI)**\n\n1. Navigate to the **Projects** page and select your model\n2. Go to **Monitor** \u2192 **Alerts** \u2192 **Add Alert**\n3. Configure your alert conditions (thresholds, metrics, etc.)\n4. Select your notification channels\n5. Click **Save**\n\n### 2. **Using the Fiddler Client SDK**\n\nYou can programmatically create alerts using the Fiddler Python client. Here's an example:\n\n```python\nalert_rule = AlertRule(\n    name='Your Alert Name',\n    model_id=MODEL_ID,\n    metric_id='your_metric',\n    priority=Priority.HIGH,\n    compare_to=CompareTo.RAW_VALUE,\n    condition=AlertCondition.GREATER,\n    bin_size=BinSize.DAY,\n    critical_threshold=10,\n    warning_threshold=5,\n    columns=['your_column'],\n).create()\n```\n\n## Supported Notification Channels\n\nFiddler supports **four notification channels**:\n\n1. **Email** - Send alerts to one or more email addresses\n2. **PagerDuty** - Trigger PagerDuty incidents with configurable severity levels\n3. **Slack webhooks** - Send notifications to Slack channels\n4. **Custom webhooks** - Integrate with custom endpoints\n\n### Configuring Notifications\n\nYou can configure multiple notification types simultaneously:\n\n```python\nrule.set_notification_config(\n    emails=['your.email@example.com', 'alerts.group@example.com'],\n    webhooks=['webhook_uuid'],\n    pagerduty_services=['pagerduty_service_1', 'pagerduty_service_2'],\n    pagerduty_severity='critical',\n)\n```\n\n**Note:** PagerDuty, Slack webhooks, and custom webhooks must be pre-configured by your Fiddler administrator before they can be used in alerts.",
+          "source_files": [
+            "alerts-platform.txt",
+            "alerts-with-fiddler-client.txt",
+            "alerts-with-fiddler-client.txt",
+            "pagerduty.txt",
+            "pagerduty.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 5.0,
+            "specificity": 5.0,
+            "analysis": "The response directly answers both parts of the question with clear setup instructions via UI and SDK, and explicitly lists all four supported notification channels with configuration examples. It provides concrete code samples and specific steps, though slightly more detail on UI navigation or webhook setup could enhance completeness."
+          }
+        },
+        {
+          "query": "What data integrity checks does Fiddler perform on model inputs?",
+          "response_text": "Based on the provided information, Fiddler performs data integrity checks to ensure models receive valid, properly formatted data that meets expectations. However, the specific details of what these integrity checks entail are not elaborated in the given context.\n\nThe platform's data integrity capabilities are mentioned as part of its comprehensive monitoring features, working alongside performance tracking, data drift detection, and vector monitoring to maintain model health in production environments.",
+          "source_files": [
+            "agentic-document-extraction.txt",
+            "ml-observability.txt",
+            "agentic-document-extraction.txt",
+            "trust-service.txt",
+            "mcp-server.txt"
+          ],
+          "eval_scores": {
+            "relevance": 3.0,
+            "completeness": 2.0,
+            "specificity": 1.0,
+            "analysis": "The response acknowledges that Fiddler performs data integrity checks but explicitly states that specific details are not provided in the source material. It mentions the checks exist within a broader monitoring context but provides no concrete examples of what checks are actually performed."
+          }
+        }
+      ]
+    },
+    {
+      "strategy": "Markdown (structural)",
+      "num_nodes": 3552,
+      "avg_node_chars": 721.2074887387388,
+      "min_node_chars": 6,
+      "max_node_chars": 14675,
+      "results": [
+        {
+          "query": "How does Fiddler detect data drift, and what drift metrics does it support?",
+          "response_text": "Fiddler detects data drift by comparing the distribution of fields between a baseline dataset and the same distribution for a specific time period of interest. This comparison helps identify what data is drifting, when it's drifting, and how it's drifting, which serves as a crucial first step in identifying potential model performance issues.\n\n## Supported Drift Metrics\n\nFiddler supports the following drift metrics:\n\n1. **Jensen-Shannon Divergence (JSD)** - A statistical measure used to calculate the difference between the baseline and current data distributions\n\n2. **Population Stability Index (PSI)** - Another metric used to measure shifts in data distributions over time\n\nThese metrics are calculated as part of Fiddler's quantitative measurements and calculations performed on inference data published to the platform. The data drift detection capabilities are integrated into Fiddler's comprehensive monitoring approach, working alongside performance tracking and root cause analysis to provide complete visibility into model health and stability.",
+          "source_files": [
+            "data-drift.txt",
+            "model-drift.txt",
+            "metric.txt",
+            "model-drift.txt",
+            "data-drift-platform.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 4.0,
+            "specificity": 4.0,
+            "analysis": "The response directly answers how Fiddler detects drift (comparing baseline vs. current distributions) and lists two specific drift metrics (JSD and PSI). However, it lacks detail on the technical implementation, thresholds, visualization methods, or whether additional metrics are supported beyond the two mentioned."
+          }
+        },
+        {
+          "query": "How does Fiddler use SHAP values to explain model predictions?",
+          "response_text": "Fiddler uses SHAP values to explain model predictions by offering two SHAP-based explanation methods:\n\n1. **Standard SHAP**: The traditional SHAP implementation that provides model explanations based on Shapley values from game theory.\n\n2. **FIDDLER_SHAP (Recommended)**: Fiddler's optimized SHAP implementation that provides the same theoretical guarantees as standard SHAP but with significant performance improvements. This enhanced version maintains the same theoretical properties while offering:\n   - Significant performance optimizations\n   - Better suitability for production environments\n   - Optimization for Fiddler's infrastructure\n   - Support for high-volume explanation generation\n   - Real-time explanation capabilities\n\nTo generate SHAP explanations in Fiddler, you can use the `model.explain()` method with your chosen SHAP approach:\n\n```python\n# Using standard SHAP\nshap_explanations = model.explain(\n    data_source=fdl.RowDataSource(row=sample_data),\n    explain_method=fdl.ExplainMethod.SHAP\n)\n\n# Using Fiddler's optimized SHAP (recommended)\nfast_explanations = model.explain(\n    data_source=fdl.RowDataSource(row=sample_data),\n    explain_method=fdl.ExplainMethod.FIDDLER_SHAP\n)\n```\n\nFIDDLER_SHAP is recommended for most general-purpose use cases, particularly in production explainability workflows where performance is critical.",
+          "source_files": [
+            "explain-method.txt",
+            "explain-method.txt",
+            "ml-observability.txt",
+            "model-drift.txt",
+            "databricks-integration.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 4.0,
+            "specificity": 5.0,
+            "analysis": "The response directly addresses how Fiddler uses SHAP values with concrete implementation details, including two specific methods and code examples. It covers the key aspects of both standard and optimized SHAP implementations with specific method names, parameters, and use cases, though it could provide more detail on how SHAP values are actually computed or visualized."
+          }
+        },
+        {
+          "query": "What metrics does Fiddler track for LLM monitoring, such as faithfulness or toxicity?",
+          "response_text": "Fiddler tracks a comprehensive set of metrics for LLM monitoring, including:\n\n**Safety and Risk Metrics:**\n- Toxicity detection and harmful content identification\n- Jailbreak attempt recognition and prompt injection detection\n- Personally identifiable information (PII) exposure assessment\n- Profanity and inappropriate content filtering\n\n**Quality and Accuracy Metrics:**\n- FTL Faithfulness \u2014 a proprietary Fast Trust Model for groundedness evaluation against source material\n- Answer relevance and context relevance scoring\n- Coherence and logical consistency assessment\n- Conciseness and response appropriateness\n- Hallucination detection\n\n**RAG-Specific Metrics:**\n- RAG Health Metrics including Answer Relevance 2.0, Context Relevance, and RAG Faithfulness\n- Retrieval quality analysis\n- Source relevance assessment\n\n**Specialized Assessments:**\n- Sentiment analysis and emotional tone evaluation\n- Topic classification and content categorization\n- Language detection and multilingual support\n- Custom regex matching and banned keyword detection\n\n**Performance Metrics:**\n- Latency tracking\n- Drift detection for prompts and responses\n\nIn total, Fiddler provides 14+ evaluation dimensions covering safety, quality, and accuracy metrics with customizable thresholds to monitor LLM applications against specific quality standards and risk tolerance levels.",
+          "source_files": [
+            "llm-monitoring.txt",
+            "trust-service.txt",
+            "llm.txt",
+            "metric.txt",
+            "llm-observability.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 5.0,
+            "specificity": 4.0,
+            "analysis": "The response directly addresses the question by listing faithfulness and toxicity as requested, along with many other specific metrics Fiddler tracks. It provides concrete metric names, categories, and examples, though some descriptions could be more detailed about how certain metrics work."
+          }
+        },
+        {
+          "query": "How do I set up an alert in Fiddler and what notification channels are supported?",
+          "response_text": "# Setting Up Alerts in Fiddler\n\n## Creating Alerts via UI\n\nTo set up an alert in the Fiddler UI:\n\n1. Navigate to the **Alerts tab** and click **Add Alert**\n2. Fill in the **Alert Rule form** with:\n   - Alert name\n   - Project\n   - Model\n3. Choose an **Alert Type** from:\n   - Traffic\n   - Data Drift\n   - Data Integrity\n   - Performance\n   - Statistic\n   - Custom Metric\n4. Configure specific metrics, bin size, and columns\n5. Define comparison methods, thresholds, and notification preferences\n6. Click **Add Alert Rule** to finish\n\n## Creating Alerts via Python Client SDK\n\nYou can also create and configure alerts programmatically using the Fiddler Python client SDK. The client supports creating various alert rule types including:\n- Data Drift\n- Performance\n- Data Integrity\n- Service Metrics\n- Custom Metrics\n\nFor detailed SDK implementation, refer to the Alert Configuration with Fiddler Client documentation.\n\n## Managing Notifications\n\nYou can pause and resume alert notifications without affecting the alert evaluation:\n\n**Via UI:**\n- Locate the alert in the alert rule table\n- Click the notification bell icon to toggle notifications\n- The icon updates to show the current state (paused/resumed)\n\n**Via SDK:**\n- Use the alert-rules method with the `enable_notification` argument\n\n**Note:** Pausing notifications doesn't stop alert evaluation - alerts continue to assess conditions and trigger as usual.\n\nHowever, the specific notification channels supported (such as email, Slack, webhooks, etc.) are not detailed in the provided documentation.",
+          "source_files": [
+            "alerts-platform.txt",
+            "alerts-platform.txt",
+            "alerts-platform.txt",
+            "alerts-with-fiddler-client.txt",
+            "alerts-with-fiddler-client.txt"
+          ],
+          "eval_scores": {
+            "relevance": 4.0,
+            "completeness": 3.0,
+            "specificity": 4.0,
+            "analysis": "The response thoroughly covers how to set up alerts in Fiddler through both UI and SDK methods with specific steps and alert types, but explicitly acknowledges it cannot answer what notification channels are supported, which is half of the question."
+          }
+        },
+        {
+          "query": "What data integrity checks does Fiddler perform on model inputs?",
+          "response_text": "Based on the provided information, Fiddler performs three types of data integrity checks on model inputs:\n\n1. **Missing values** - Detects when expected data values are absent\n2. **Type mismatches** - Identifies when data types don't match the established schema\n3. **Range violations** - Flags when values fall outside expected ranges\n\nThese violations are detected by comparing production data against the schema that was established during model onboarding. Fiddler tracks both raw counts and percentages for each of these violation types, allowing teams to monitor the quality and consistency of incoming data to their models.",
+          "source_files": [
+            "ml-metrics-reference.txt",
+            "model-drift.txt",
+            "ml-observability.txt",
+            "model-performance.txt",
+            "databricks-integration.txt"
+          ],
+          "eval_scores": {
+            "relevance": 5.0,
+            "completeness": 4.0,
+            "specificity": 4.0,
+            "analysis": "The response directly answers the question by identifying three specific types of data integrity checks (missing values, type mismatches, range violations) and explains how they work through schema comparison. It provides concrete check types and mentions tracking mechanisms, though it could benefit from more implementation details or examples."
+          }
+        }
+      ]
+    }
+  ]
+}

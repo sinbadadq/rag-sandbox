@@ -1,0 +1,238 @@
+# RAG Health Metrics Tutorial
+
+Evaluate your RAG application using the RAG Health Metrics diagnostic triad to pinpoint whether issues originate in retrieval, generation, or query understanding.
+
+**Time to complete**: \~30 minutes
+
+## What You'll Learn
+
+* Set up a RAG experiment pipeline with the Fiddler Evals SDK
+* Use Answer Relevance, Context Relevance, and RAG Faithfulness together
+* Interpret diagnostic results to identify pipeline failures
+* Distinguish between retrieval and generation problems
+
+## Prerequisites
+
+* **Fiddler Account**: Active account with API access
+* **Python 3.10+**
+* **Fiddler Evals SDK**: `pip install fiddler-evals`
+* **Familiarity with**: [Experiments Getting Started](/getting-started/experiments.md)
+
+***
+
+## Step 1: Connect and Set Up
+
+```python
+from fiddler_evals import init, Project, Application, Dataset
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+# Initialize connection
+init(
+    url='https://your-org.fiddler.ai',
+    token='your-access-token'
+)
+
+# Create organizational structure
+project = Project.get_or_create(name='rag_health_experiments')
+application = Application.get_or_create(
+    name='my_rag_app',
+    project_id=project.id
+)
+```
+
+## Step 2: Create a RAG Experiment Dataset
+
+Create test cases that include user queries and retrieved documents. The quality of your evaluation depends on realistic, representative test cases.
+
+```python
+dataset = Dataset.create(
+    name='rag_health_test_cases',
+    application_id=application.id,
+    description='RAG Health Metrics experiment dataset'
+)
+
+test_cases = [
+    # Scenario 1: Good RAG response
+    NewDatasetItem(
+        inputs={
+            "user_query": "What are the benefits of renewable energy?",
+            "retrieved_documents": "Renewable energy sources like solar and wind reduce "
+                "greenhouse gas emissions, decrease dependence on fossil fuels, and can "
+                "lower long-term energy costs. Solar panel costs have dropped 89% since 2010."
+        },
+        metadata={"scenario": "good_response"}
+    ),
+    # Scenario 2: Irrelevant retrieval
+    NewDatasetItem(
+        inputs={
+            "user_query": "What are the benefits of renewable energy?",
+            "retrieved_documents": "The history of the automobile dates back to the 15th "
+                "century. Karl Benz patented the first true automobile in 1886."
+        },
+        metadata={"scenario": "bad_retrieval"}
+    ),
+    # Scenario 3: Hallucination risk
+    NewDatasetItem(
+        inputs={
+            "user_query": "What is the current price of solar panels?",
+            "retrieved_documents": "Solar energy adoption has grown significantly worldwide. "
+                "Many countries now have solar incentive programs."
+        },
+        metadata={"scenario": "insufficient_context"}
+    ),
+]
+
+dataset.insert(test_cases)
+print(f"Added {len(test_cases)} test cases")
+```
+
+## Step 3: Define Your RAG Task
+
+The task function represents your RAG application. It receives inputs and returns the generated response.
+
+```python
+def my_rag_task(inputs, extras, metadata):
+    """Your RAG application logic.
+
+    Replace this with your actual RAG pipeline:
+    1. Take the user query
+    2. Use the retrieved documents as context
+    3. Generate a response
+    """
+    user_query = inputs["user_query"]
+    context = inputs["retrieved_documents"]
+
+    # Call your LLM with the query and retrieved context
+    # Example: response = my_llm.generate(query=user_query, context=context)
+    response = generate_rag_response(user_query, context)
+
+    return {
+        "rag_response": response,
+        "retrieved_documents": context,
+    }
+```
+
+## Step 4: Run the RAG Health Experiment
+
+Use all three evaluators together for comprehensive diagnostics:
+
+```python
+from fiddler_evals import evaluate
+from fiddler_evals.evaluators import AnswerRelevance, ContextRelevance, RAGFaithfulness
+
+results = evaluate(
+    dataset=dataset,
+    task=my_rag_task,
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),      # Is the response relevant? (High/Medium/Low)
+        ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),     # Are retrieved docs relevant? (High/Medium/Low)
+        RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential"),      # Is the response grounded? (Yes/No)
+    ],
+    name_prefix="rag_health_baseline",
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["user_query"],
+        "rag_response": "rag_response",
+        "retrieved_documents": "retrieved_documents",
+    }
+)
+
+print(f"Evaluated {len(results.results)} test cases")
+```
+
+## Step 5: Analyze Diagnostic Results
+
+Examine the results to identify which pipeline stage is causing issues:
+
+```python
+for result in results.results:
+    print(f"\nScenario: {result.dataset_item.metadata.get('scenario', 'unknown')}")
+
+    scores = {score.name: score for score in result.scores}
+
+    # Extract scores
+    ar_score = scores.get("answer_relevance")
+    cr_score = scores.get("context_relevance")
+    rf_score = scores.get("rag_faithfulness")
+
+    if ar_score:
+        print(f"  Answer Relevance: {ar_score.label} ({ar_score.value})")
+        print(f"    Reasoning: {ar_score.reasoning}")
+
+    if cr_score:
+        print(f"  Context Relevance: {cr_score.label} ({cr_score.value})")
+        print(f"    Reasoning: {cr_score.reasoning}")
+
+    if rf_score:
+        print(f"  RAG Faithfulness: {rf_score.label} ({rf_score.value})")
+        print(f"    Reasoning: {rf_score.reasoning}")
+
+    # Diagnostic interpretation
+    if ar_score and cr_score and rf_score:
+        if ar_score.value >= 0.5 and rf_score.value == 0:
+            print("  Diagnosis: HALLUCINATION — response is relevant but not grounded")
+        elif rf_score.value == 1 and ar_score.value < 0.5:
+            print("  Diagnosis: OFF-TOPIC — response is grounded but doesn't answer the query")
+        elif cr_score.value < 0.5:
+            print("  Diagnosis: BAD RETRIEVAL — retrieved documents are not relevant")
+        elif ar_score.value >= 0.5 and rf_score.value == 1 and cr_score.value >= 0.5:
+            print("  Diagnosis: HEALTHY — all metrics indicate good RAG performance")
+```
+
+## Step 6: Compare RAG Configurations
+
+Use experiments to compare different RAG configurations:
+
+```python
+# Evaluate with a different retrieval strategy
+results_v2 = evaluate(
+    dataset=dataset,
+    task=my_improved_rag_task,  # Different retrieval or generation config
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+        ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+        RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential"),
+    ],
+    name_prefix="rag_health_improved",
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["user_query"],
+        "rag_response": "rag_response",
+        "retrieved_documents": "retrieved_documents",
+    }
+)
+
+# Compare results side-by-side in the Fiddler UI
+print("Compare experiments in your Fiddler dashboard")
+```
+
+***
+
+## Understanding the Results
+
+### Score Interpretation
+
+| Evaluator         | High Score                            | Low Score                                 |
+| ----------------- | ------------------------------------- | ----------------------------------------- |
+| Answer Relevance  | Response directly addresses the query | Response misses the point or is off-topic |
+| Context Relevance | Retrieved documents support the query | Retrieved documents are irrelevant        |
+| RAG Faithfulness  | Response is grounded in context       | Response contains unsupported claims      |
+
+### Common Diagnostic Patterns
+
+| Answer Relevance | Context Relevance | RAG Faithfulness | Diagnosis                               |
+| ---------------- | ----------------- | ---------------- | --------------------------------------- |
+| High             | High              | Yes              | Healthy RAG pipeline                    |
+| High             | High              | No               | Hallucination — fix generation          |
+| Low              | High              | Yes              | Query misunderstanding — fix prompt     |
+| Low              | Low               | -                | Bad retrieval — fix retrieval           |
+| High             | Low               | Yes              | Lucky generation — retrieval needs work |
+
+***
+
+## Next Steps
+
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Conceptual deep-dive into the diagnostic framework
+* [Evals SDK Advanced Guide](/developers/tutorials/experiments/evals-sdk-advanced.md) — Advanced evaluation patterns
+* [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) — Set up continuous RAG monitoring in production
+
+
+---

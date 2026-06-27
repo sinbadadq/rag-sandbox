@@ -1,0 +1,128 @@
+# User Guide
+
+### Introduction
+
+The Fiddler Partner AI App for Amazon SageMaker brings enterprise-grade AI observability directly into your SageMaker environment. As a fully integrated Partner AI App, Fiddler enables data scientists and ML engineers to monitor, explain, and analyze their AI applications without leaving the SageMaker ecosystem. This seamless integration allows you to leverage Fiddler's powerful monitoring capabilities—including drift detection, performance tracking, and explainability features—while maintaining your existing SageMaker workflows and security boundaries.
+
+### Prerequisites
+
+Before using the Fiddler Partner AI App, ensure you have:
+
+* Access to an AWS account with the Fiddler Partner AI App deployed by your administrator
+* A SageMaker Studio user profile with appropriate permissions configured by your administrator, OR a similar role to assume when creating direct links to the Fiddler UI
+* Basic familiarity with SageMaker Studio navigation and notebooks
+
+### Using Fiddler in SageMaker Studio
+
+#### Accessing the Fiddler Partner AI App
+
+The Fiddler Partner AI App integrates seamlessly with SageMaker Studio, providing multiple access points for your model monitoring workflows.
+
+**From SageMaker Studio**
+
+1. Open SageMaker Studio and navigate to the **Applications** section in the left navigation panel
+2. Under **Partner AI apps**, locate and select **Fiddler**
+3. Click **Open app** to launch the Fiddler interface in a new tab
+4. The application will automatically authenticate using your SageMaker credentials
+
+**Direct Link Using the AWS CLI**
+
+* AWS provides a CLI function to generate the Fiddler UI URL: `create-partner-app-presigned-url`
+* Along with the appropriate role and permissions, you also need:
+  * The Fiddler Partner AI App ARN
+  * The AWS Region
+
+<details>
+
+<summary>Creating a direct link to the Fiddler UI</summary>
+
+```bash
+AWS_REGION="us-west-2"
+
+# Use this command to get the partner app ARN:
+aws sagemaker list-partner-apps --region "$AWS_REGION" --output table
+
+# Create the URL
+aws sagemaker create-partner-app-presigned-url \
+    --arn "$FIDDLER_PAA_ARN" \
+    --expires-in-seconds 300 \
+    --session-expiration-duration-in-seconds 1800 \
+    --region "$AWS_REGION" \
+    --query 'Url' \
+    --output text
+```
+
+</details>
+
+#### Navigating the Fiddler Interface
+
+For users new to the Fiddler AI platform, our [Getting Started with ML Model Observability](/getting-started/ml-observability.md) guide provides a thorough introduction to the model or application onboarding process, event publishing, and Fiddler features.
+
+### Using the Fiddler Python Client SDK
+
+The Fiddler Python client enables programmatic access to Fiddler's capabilities directly from your SageMaker notebooks and code editors.
+
+* Getting started with the [Fiddler Python Client SDK](/api/fiddler-python-client-sdk/python-client.md)
+
+#### Prerequisites
+
+* The AWS SageMaker Partner App ARN. This is the unique identifier of your SageMaker Fiddler Partner AI App
+* The AWS SageMaker Partner App URL. This is the fully qualified domain of the Fiddler UI launched from Studio
+* The Fiddler user authentication token, which you can find on the [Credentials](/reference/settings.md#credentials) tab in the Fiddler UI
+
+If you are using SageMaker Studio to access Fiddler, the SageMaker Partner App ARN and URL can be found by launching Studio and clicking on the Fiddler icon in the Applications list as show below:
+
+<figure><img src="/files/s2BiTMJWKdLHdhQUoL2i" alt=""><figcaption></figcaption></figure>
+
+#### Setting Up the SDK Connection
+
+To connect to Fiddler from a SageMaker notebook, code editor, or similar:
+
+1. **Install the latest version of the Fiddler client** (if not pre-installed) and at least 2.237.0 of the SageMaker Python SDK:
+
+   ```sh
+   pip install fiddler-client "sagemaker>=2.237.0"
+   ```
+2. **Configure the connection using SageMaker's built-in authentication**:
+
+   ```python
+   import os
+   import fiddler as fdl
+
+   # Edit the values in this section!
+   APP_URL = '' # the SageMaker App URL
+   APP_ARN = '' # the SageMaker App ARN
+   TOKEN = '' # the Fiddler User API Key
+
+   # Enable Partner AI App authentication
+   os.environ['AWS_PARTNER_APP_AUTH'] = 'true'
+   os.environ['AWS_PARTNER_APP_ARN'] = APP_ARN
+   os.environ['AWS_PARTNER_APP_URL'] = APP_URL
+   ```
+3. **Initialize the Fiddler client**:
+
+   ```python
+   # Initialize the Fiddler client
+   fdl.init(url=APP_URL, token=TOKEN)
+   ```
+
+#### Common SDK Operations
+
+The [Python Client Guides](/developers/client-library-reference/installation-and-setup.md) section of Fiddler's documentation contains many examples of everyday use cases and tasks.
+
+#### Best Practices for SDK Usage
+
+* **Notebook Organization**: Keep your Fiddler monitoring code in dedicated sections or separate notebooks for clarity
+* **Environment Variables**: Store the Partner App environment variables at the beginning of your notebooks for consistent access
+* **Batch Operations**: Use batch methods when publishing large volumes of data to optimize performance
+
+#### Troubleshooting SDK Connections
+
+If you encounter connection issues:
+
+1. **Verify that environment variables** are correctly set
+2. **Check your IAM permissions** include `sagemaker:CallPartnerAppApi`
+3. **Ensure the Fiddler app is deployed** and in "Deployed" status
+
+
+---

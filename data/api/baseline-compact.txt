@@ -1,0 +1,10 @@
+# BaselineCompact
+
+## fetch()
+
+Fetch baseline instance
+
+**Return type:** *Baseline*
+
+
+---

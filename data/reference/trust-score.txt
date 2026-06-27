@@ -1,0 +1,156 @@
+# Trust Score
+
+[Trust Scores](/observability/llm/enrichments.md) are quantitative measurements that result from Fiddler's enrichment processes, providing numerical assessments of LLM output quality, safety, and reliability. These scores translate complex qualitative judgments about generative AI content into measurable metrics that can be monitored over time, used in alerting systems, and leveraged for real-time content filtering decisions.
+
+When [enrichments](/reference/glossary/enrichment.md) process LLM inputs and outputs through Fiddler's platform, they generate Trust Scores that evaluate dimensions such as safety, toxicity, faithfulness, relevance, and coherence. Each score represents a quantified assessment that enables systematic monitoring and governance of LLM applications at scale.
+
+Trust Scores serve as the critical link between automated evaluation and actionable insights, transforming the output of sophisticated evaluation models into interpretable metrics that teams can use to understand model behavior, set thresholds, configure alerts, and make real-time filtering decisions through Fiddler Guardrails.
+
+## How Fiddler Uses Trust Scores
+
+Trust Scores function as the primary interface between Fiddler's evaluation infrastructure and its monitoring and governance capabilities. Once enrichments generate these scores, they appear as additional data columns alongside original inference data, creating a comprehensive view of both model behavior and output quality.
+
+**Monitoring and Analytics**: Trust Scores populate monitoring dashboards where teams can track quality trends over time, compare performance across different model versions, and identify degradation patterns. The scores enable sophisticated analytics that help organizations understand when and why their LLM applications produce lower-quality outputs.
+
+**Alerting and Notifications**: Organizations configure alert rules based on Trust Score thresholds, enabling proactive notification when scores indicate potential quality or safety issues. These alerts can trigger various responses, from simple notifications to automated escalation procedures.
+
+**Real-time Decision Making**: In Fiddler Guardrails, Trust Scores serve as the evaluation signals that determine whether content should be allowed or filtered. When scores indicate safety violations or quality concerns, Guardrails can automatically block problematic outputs or provide detailed explanations of detected issues.
+
+**Threshold Management**: Trust Scores enable organizations to establish quantitative governance policies by setting acceptable score ranges for different use cases, risk profiles, and compliance requirements.
+
+## Why Trust Scores Are Important
+
+Trust Scores address the fundamental challenge of making subjective content quality assessments scalable and consistent. While human evaluators might assess LLM outputs differently based on context, experience, or interpretation, Trust Scores provide standardized measurements that enable reliable, automated governance at production scale.
+
+**Objective Quality Assessment**: Trust Scores transform qualitative judgments into quantitative metrics, enabling systematic comparison of output quality across time periods, model versions, and different segments of user interactions.
+
+**Operational Scalability**: Manual review of LLM outputs doesn't scale to production volumes. Trust Scores enable automated quality assessment of millions of interactions while maintaining consistent evaluation criteria.
+
+**Risk Management**: By providing numerical thresholds for acceptable content quality and safety, Trust Scores enable proactive risk management that can prevent problematic outputs from reaching users.
+
+**Compliance and Auditability**: Trust Scores create quantitative evidence of content evaluation that supports compliance reporting and provides auditable records of AI governance practices.
+
+**Performance Optimization**: Score patterns reveal insights about model behavior that guide optimization efforts, helping teams identify when prompts, training data, or model configurations need adjustment.
+
+## Types of Trust Scores
+
+### Safety and Content Moderation Scores
+
+**Safety Scores**: Numerical assessments indicating the likelihood that content contains harmful, inappropriate, or policy-violating material across multiple safety dimensions including violence, hate speech, and explicit content.
+
+**Toxicity Scores**: Specialized measurements focusing specifically on offensive, toxic, or harmful language, often broken down into subcategories for more granular content moderation decisions.
+
+**Bias Scores**: Quantitative indicators of potential bias in content, including gender, racial, political, or other forms of bias that might impact fairness and inclusivity.
+
+### Quality and Accuracy Scores
+
+**Faithfulness Scores**: Measurements of factual accuracy and reliability, indicating the likelihood that content contains hallucinations, fabrications, or factual inconsistencies relative to provided context. Fiddler provides two faithfulness approaches: FTL Faithfulness (proprietary Fast Trust Model, probability score 0.0–1.0) for real-time guardrails, and RAG Faithfulness (LLM-as-a-Judge, binary Yes/No with reasoning) for diagnostic evaluation.
+
+**Coherence Scores**: Numerical assessments of logical flow, consistency, and readability, identifying content that may be disjointed, confusing, or poorly structured.
+
+**Relevance Scores**: Metrics indicating how well content addresses the specific query or prompt, detecting off-topic or tangential responses. Includes Answer Relevance 2.0 (ordinal: High/Medium/Low) and Context Relevance (ordinal: High/Medium/Low) for RAG-specific evaluation.
+
+### Contextual and Behavioral Scores
+
+**Sentiment Scores**: Measurements of emotional tone and sentiment expressed in content, useful for detecting inappropriately negative or emotional responses in specific contexts.
+
+**Confidence Scores**: Indicators of how certain the evaluation model is about its assessment, helping teams understand when scores may be less reliable.
+
+**Custom Domain Scores**: Application-specific measurements that evaluate content against custom business logic or domain-specific quality criteria.
+
+## Score Interpretation and Thresholds
+
+### Understanding Score Ranges
+
+Most Trust Scores use standardized ranges (typically 0-1 or 0-100) where higher scores generally indicate greater concern or lower quality, though specific interpretation depends on the score type:
+
+* **Safety Scores**: Higher scores indicate greater safety risk
+* **Faithfulness Scores**: Higher scores often indicate better factual accuracy (depending on implementation)
+* **Quality Scores**: Interpretation varies by specific metric and use case
+
+### Setting Effective Thresholds
+
+**Risk-Based Thresholds**: Organizations should establish score thresholds based on their specific risk tolerance, regulatory requirements, and business context rather than using universal cutoffs.
+
+**Adaptive Thresholds**: Score thresholds may need adjustment over time as models evolve, user expectations change, or business requirements shift.
+
+**Multi-Score Policies**: Complex governance policies often require consideration of multiple Trust Scores simultaneously, using weighted combinations or hierarchical decision trees.
+
+## Challenges in Trust Score Implementation
+
+**Score Reliability**: While Trust Scores provide consistent measurements, their accuracy depends on the underlying evaluation models and may vary across different content types, domains, or edge cases.
+
+**Threshold Calibration**: Determining appropriate score thresholds requires balancing false positives (blocking acceptable content) against false negatives (allowing problematic content), often requiring extensive testing with representative data.
+
+**Score Evolution**: As language usage and societal standards evolve, Trust Score models may need updates to maintain alignment with current expectations, requiring periodic recalibration of thresholds.
+
+**Context Sensitivity**: Content appropriateness often depends on context that may not be fully captured in individual scores, requiring careful consideration of how contextual factors should influence score interpretation.
+
+**Multi-dimensional Analysis**: Monitoring multiple score dimensions simultaneously requires sophisticated dashboard design and alert logic to avoid information overload while ensuring comprehensive coverage.
+
+## Trust Score Implementation Guide
+
+1. **Establish Score Requirements**
+   * Identify which quality and safety dimensions are most critical for your use case
+   * Determine required score granularity and update frequency
+   * Consider regulatory and compliance requirements that may influence score interpretation
+2. **Configure Score Generation**
+   * Enable appropriate enrichments during model onboarding to generate relevant Trust Scores
+   * Ensure score generation aligns with your monitoring and governance requirements
+   * Test score generation with representative data samples
+3. **Calibrate Thresholds**
+   * Analyze score distributions across representative datasets to understand normal ranges
+   * Set initial thresholds based on risk tolerance and business requirements
+   * Validate threshold effectiveness through controlled testing
+4. **Implement Monitoring**
+   * Create dashboards that effectively visualize score trends and distributions
+   * Configure alert rules based on score thresholds and trend analysis
+   * Establish escalation procedures for different types of score anomalies
+5. **Optimize and Refine**
+   * Monitor false positive and false negative rates for threshold adjustments
+   * Regularly review score patterns to identify opportunities for improvement
+   * Update thresholds and interpretation guidelines based on operational experience
+
+## Frequently Asked Questions
+
+**Q: How are Trust Scores calculated?**
+
+Trust Scores are generated by Fiddler's enrichment processes using specialized evaluation models. Each enrichment applies domain-specific evaluation logic to assess content quality, safety, or other dimensions, producing numerical scores that quantify the assessment results.
+
+**Q: What's the difference between Trust Scores and enrichments?**
+
+Enrichments are the computational processes that analyze content, while Trust Scores are the numerical outputs that result from those processes. Think of enrichments as the evaluation engines and Trust Scores as the quantified results they produce.
+
+**Q: How reliable are Trust Scores compared to human evaluation?**
+
+Fiddler's Trust Scores are designed to correlate strongly with human judgments while providing consistency and scalability that human evaluation cannot match. While no automated system perfectly replicates human assessment, Trust Scores provide reliable signals that align well with human evaluations across most common use cases.
+
+**Q: Can I customize Trust Score thresholds for my organization?**
+
+Yes, Fiddler allows organizations to set custom thresholds for Trust Scores based on their specific risk tolerance, compliance requirements, and business context. Threshold configuration is separate from score generation, enabling adaptation without changing underlying evaluation logic.
+
+**Q: How do Trust Scores power Fiddler Guardrails?**
+
+Trust Scores serve as the decision signals for Guardrails' real-time content filtering. When scores exceed configured safety thresholds or fall below quality requirements, Guardrails can automatically block content or provide detailed explanations of detected violations.
+
+**Q: Do Trust Scores impact system performance?**
+
+Trust Scores themselves are lightweight numerical values that have minimal impact on system performance. The computational cost comes from the enrichment processes that generate the scores, which are optimized for efficiency in Fiddler's infrastructure.
+
+## Related Terms
+
+* [Enrichments](/observability/llm/enrichments.md) - The computational processes that generate Trust Scores
+* [Fiddler Guardrails](/reference/glossary/guardrails.md) - Real-time protection using Trust Score evaluation
+* [Fiddler Trust Service](/reference/glossary/trust-service.md) - The infrastructure powering score generation
+* [LLM Observability](/reference/glossary/llm-observability.md) - The monitoring practice enabled by Trust Scores
+
+## Related Resources
+
+* [LLM Monitoring Overview](/observability/llm.md)
+* [Enrichments Documentation](/observability/llm/enrichments.md)
+* [Selecting Enrichments Guide](/observability/llm/selecting-enrichments.md)
+* [Guardrails for Content Protection](/reference/glossary/guardrails.md)
+* [LLM-based Metrics Guide](/observability/llm/llm-based-metrics.md)
+
+
+---

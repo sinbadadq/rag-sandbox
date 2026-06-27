@@ -1,0 +1,82 @@
+# BigQuery
+
+### Integrating Fiddler with BigQuery
+
+Learn how to connect Fiddler's ML monitoring platform with your BigQuery data to enable comprehensive model tracking and analysis. This guide covers:
+
+* Using BigQuery data to onboard models in Fiddler
+* Loading baseline datasets from BigQuery tables
+* Monitoring production data by connecting BigQuery to Fiddler
+
+#### Prerequisites:
+
+* A Google Cloud account with BigQuery access
+* Fiddler account [credentials](/reference/settings.md#credentials)
+* [Python Client SDK](/api/fiddler-python-client-sdk/python-client.md) installed
+
+### Configure BigQuery Access
+
+Before importing data, you'll need to set up BigQuery API access and authentication:
+
+1. In the GCP platform, Go to the navigation menu -> click APIs & Services. Once you are there, click + Enable APIs and Services (Highlighted below). In the search bar, enter BigQuery API and click Enable.
+
+![GCP APIs & Services dashboard with the Enable APIs and Services button highlights.](/files/3J8dqSyD4HNGtQ1jLCtD)
+
+![BigQuery API landing page highlighting the Try This API button and showing the API as enabled.](/files/d3xbihd1fYQyXRcYe5G0)
+
+2. In order to make a request to the API enabled in Step #1, you need to create a service account and get an authentication file for your Jupyter Notebook. To do so, navigate to the Credentials tab under APIs and Services console and click Create Credentials tab, and then Service account under dropdown.
+
+![APIs & Services credentials landing page showing the Credentials left navigation link and the Create Credentials button highlighted.](/files/OU2EJUgmRCGbqmu55zrG)
+
+3. Enter the Service account name and description and click Done. You can use the BigQuery Admin role under Grant this service account access to the project. You can now see the new service account under the Credentials screen. Click the pencil icon beside the new service account you have created and click Add Key to add auth key. Please choose JSON and click CREATE. It will download the JSON file with auth key info. (Download path will be used to authenticate)
+
+![Showing Keys tab of the new service account and the create private key model for example account "fiddler" with JSON key type option selected.](/files/pLsFRveSRutbH73OXruq)
+
+### Connect to BigQuery Data
+
+Set up your Python environment and connect to BigQuery:
+
+1. Install Required Packages
+
+```bash
+pip install google-cloud google-cloud-bigquery[pandas] google-cloud-storage
+```
+
+2. Configure Authentication
+
+```python
+# Set environment variables for your notebook
+import os
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path/to/your/auth-key.json'
+```
+
+3. Initialize BigQuery Client
+
+```python
+# Imports google cloud client library and initiates BQ service
+from google.cloud import bigquery
+bigquery_client = bigquery.Client()
+```
+
+4. Query Your Data
+
+```python
+# Example query to fetch baseline data
+query = """
+SELECT * FROM `fiddler-bq.fiddler_test.churn_prediction_baseline` 
+"""
+
+# Execute query and load into pandas DataFrame
+baseline_df = bigquery_client.query(query).to_dataframe()
+```
+
+#### Next Steps
+
+Now that you've connected BigQuery to Fiddler, you can:
+
+1. [Onboard a model](/developers/client-library-reference/model-onboarding/create-a-project-and-model.md) using the baseline dataset for the model schema inference sample.
+2. [Upload a Baseline dataset](/developers/client-library-reference/publishing-production-data/creating-a-baseline-dataset.md), which is optional but recommended for monitoring comparisons.
+3. [Publish production events](/developers/client-library-reference/publishing-production-data.md) for continuous monitoring.
+
+
+---

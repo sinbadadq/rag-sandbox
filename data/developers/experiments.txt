@@ -1,0 +1,197 @@
+# Experiments
+
+Building reliable AI applications requires systematic evaluation to ensure quality, safety, and consistent performance. This section provides comprehensive tutorials and quick starts to help you evaluate your LLM applications, RAG systems, and AI agents using Fiddler Experiments.
+
+{% hint style="info" %}
+**New to Fiddler Experiments?** Start with [Getting Started with Fiddler Experiments](/getting-started/experiments.md) to understand the core concepts and interface before diving into these tutorials.
+{% endhint %}
+
+## What You'll Learn
+
+These tutorials cover the full spectrum of experiment capabilities in Fiddler:
+
+## Recommended Learning Path
+
+**New to Fiddler Experiments?** Follow this progression:
+
+1. [**Getting Started with Fiddler Experiments**](/getting-started/experiments.md) - Understand the why and what (15 min read)
+2. [**Evals SDK Quick Start**](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start) - Build your first experiment (20 min hands-on)
+3. [**Advanced Patterns**](/developers/tutorials/experiments/evals-sdk-advanced.md) - Master production patterns (45 min hands-on)
+4. [**Evals SDK Reference**](/api/fiddler-evals-sdk/evals.md) - Complete SDK documentation (reference)
+
+**Evaluating RAG applications?** Follow this path:
+
+1. [**RAG Health Diagnostics**](/concepts/rag-health-diagnostics.md) - Understand the RAG diagnostic triad (15 min read)
+2. [**RAG Health Metrics Tutorial**](/developers/tutorials/experiments/rag-health-metrics-tutorial.md) - Evaluate RAG systems with Answer Relevance 2.0, Context Relevance, and RAG Faithfulness (30 min hands-on)
+3. [**RAG Evaluation Fundamentals Cookbook**](/developers/cookbooks/rag-evaluation-fundamentals.md) - End-to-end RAG evaluation use case
+
+**Already familiar with Fiddler Experiments?** Jump to the Fiddler Evals SDK Reference for API details.
+
+***
+
+### Fiddler Evals SDK Quick Start
+
+Get hands-on with the Fiddler Evals SDK in 20 minutes. Learn to create experiment datasets, use built-in evaluators (Answer Relevance, Coherence, Toxicity), build custom evaluators, and run comprehensive experiments with detailed analysis.
+
+**Perfect for:** Developers new to the Fiddler Evals SDK who want to understand experiment workflows quickly.
+
+[Start the Quick Start](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start)
+
+### RAG Health Metrics Tutorial
+
+Evaluate RAG applications using the diagnostic triad: Answer Relevance 2.0, Context Relevance, and RAG Faithfulness. Learn to identify whether issues stem from retrieval, generation, or query understanding, and run experiments to compare pipeline configurations.
+
+**Perfect for:** Teams building or maintaining RAG applications who need systematic evaluation and root cause analysis.
+
+[Start the RAG Health Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md)
+
+### Fiddler Evals SDK Advanced Guide
+
+Master advanced evaluation patterns for production LLM applications. Explore complex data import strategies, context-aware evaluators for RAG systems, multi-score evaluators, lambda-based parameter mapping, and production-ready experiment patterns with 11+ evaluators.
+
+**Perfect for:** Teams building production experiment pipelines with sophisticated requirements.
+
+[Explore Advanced Patterns](/developers/tutorials/experiments/evals-sdk-advanced.md)
+
+### Compare LLM Outputs
+
+Learn how to systematically compare outputs from different LLM models (like GPT-3.5 and Claude) to determine the most suitable choice for your application. This guide demonstrates side-by-side model comparison workflows using Fiddler's evaluation framework.
+
+**Perfect for:** Teams evaluating multiple models or prompt variations to make data-driven decisions.
+
+[Compare Models](#llm-evaluation-compare-outputs)
+
+### Prompt Specs Quick Start
+
+Create custom LLM-as-a-Judge evaluations in minutes using Prompt Specs. Learn to define evaluation schemas using JSON, validate and test your evaluations, and deploy custom evaluators to production monitoring—all without manual prompt engineering.
+
+**Perfect for:** Teams needing domain-specific evaluation logic without extensive prompt-tuning effort.
+
+[Create Custom Evaluations](#llm-evaluation-prompt-specs-quick-start)
+
+## Key Experiment Capabilities
+
+### Comprehensive Test Suites
+
+Create datasets with test cases covering real-world scenarios, edge cases, and expected behaviors. Import data from CSV, JSONL, or pandas DataFrames with flexible column mapping.
+
+### Built-in Evaluators
+
+Access production-ready evaluators for common evaluation tasks:
+
+* **Quality**: Answer Relevance 2.0 (ordinal scoring), Coherence, Conciseness, Completeness
+* **RAG Health**: Answer Relevance 2.0, Context Relevance, RAG Faithfulness — the diagnostic triad for RAG pipeline evaluation
+* **Safety**: Toxicity Detection, Prompt Injection, PII Detection
+* **Context-Aware**: FTL Faithfulness for RAG systems (Fast Trust Model)
+* **Sentiment**: Multi-score sentiment and topic classification
+* **Pattern Matching**: Regex-based format validation
+
+### Custom Evaluation Logic
+
+Build evaluators tailored to your domain using:
+
+* **Python-based evaluators** with the Evaluator base class
+* **Prompt Specs** for schema-based LLM-as-a-Judge evaluation
+* **Multi-score evaluators** returning multiple metrics per test case
+* **Function wrappers** for existing evaluation functions
+
+### Experiment Management
+
+Run comprehensive experiments with:
+
+* **Parallel processing** for faster evaluation across large datasets
+* **Detailed results tracking** with scores, timing, and error handling
+* **Metadata tagging** for experiment organization and filtering
+* **Side-by-side comparison** to validate improvements
+
+### Production Integration
+
+Deploy evaluations to production monitoring:
+
+* **Enrichment pipeline integration** for real-time evaluation
+* **Automated alerting** based on evaluation metrics
+* **Dashboard visualization** for tracking quality trends
+* **Historical tracking** to monitor improvements over time
+
+## Enterprise Experiment Features
+
+### Team Collaboration
+
+* **Shared experiment libraries**: Reuse datasets and evaluators across teams
+* **Access control**: Project-level and application-level permissions
+* **Experiment tracking**: Compare evaluations across team members and versions
+
+### Production Integration
+
+* **CI/CD pipelines**: Automated evaluation before deployment
+* **Quality gates**: Set score thresholds that must be met for deployment
+* **Regression detection**: Alert when experiment scores drop
+
+### Compliance & Auditing
+
+* **Evaluation history**: Complete audit trail of all experiments
+* **Reproducibility**: Frozen datasets and evaluators for regulatory compliance
+* **Export capabilities**: Download results for external analysis and reporting
+
+## Experiment Use Cases
+
+### Single-Turn Q\&A Systems
+
+Evaluate direct question-answering applications with relevance, correctness, and conciseness metrics.
+
+### RAG Applications
+
+Assess context-grounded responses by checking for faithfulness, relevance, and completeness.
+
+### Multi-Turn Conversations
+
+Evaluate dialogue systems with coherence, context retention, and conversation quality metrics.
+
+### Agentic Workflows
+
+Test tool-using agents with trajectory evaluation, tool selection accuracy, and task completion metrics.
+
+## Getting Started Paths
+
+**For SDK Users:**
+
+1. Start with [Evals SDK Quick Start](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start)
+2. Progress to [Evals SDK Advanced Guide](/developers/tutorials/experiments/evals-sdk-advanced.md)
+3. Review the [Fiddler Evals SDK Reference](/api/fiddler-evals-sdk/evals.md)
+
+**For Custom Evaluation Needs:**
+
+1. Understand LLM Evaluation Prompt Specs concepts
+2. Follow the [Prompt Specs Quick Start](/evaluate-and-test/prompt-specs-quick-start.md)
+3. Explore [Advanced Prompt Specs](/developers/tutorials/experiments/prompt-specs-advanced.md) patterns
+
+**For Model Selection:**
+
+1. Review [Compare LLM Outputs](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/llm-evaluation-example)
+2. Set up comparison experiments with your candidate models
+3. Use evaluation metrics to make data-driven decisions
+
+## Best Practices
+
+### Start Small, Scale Systematically
+
+Begin with a focused test suite covering critical functionality. Gradually expand coverage as you understand your application's failure modes.
+
+### Use Multiple Evaluators
+
+Combine different evaluator types (quality, safety, domain-specific) for a comprehensive assessment. No single metric captures all aspects of AI application quality.
+
+### Track Over Time
+
+Establish baselines and monitor evaluation metrics as your application evolves. Systematic tracking reveals degradation before it impacts users.
+
+### Leverage Metadata
+
+Tag test cases with categories, difficulty levels, and business context. Rich metadata enables targeted analysis and root cause investigation.
+
+### Automate Evaluation
+
+Integrate evaluations into CI/CD pipelines and deploy to production monitoring. Continuous evaluation prevents quality regressions and maintains user trust.
+
+
+---

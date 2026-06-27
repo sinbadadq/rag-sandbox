@@ -1,0 +1,81 @@
+# ModelSpec
+
+Defines how model columns are categorized and used along with model task configuration.
+
+ModelSpec provides a comprehensive specification of how different columns in your model's data should be interpreted and used. It categorizes columns into inputs, outputs, targets, decisions, and metadata, and allows for custom feature definitions that enhance model monitoring and analysis capabilities.
+
+This specification is crucial for Fiddler to understand your model's structure, enabling proper monitoring, drift detection, bias analysis, and explainability features. It acts as the contract between your model and Fiddler's monitoring infrastructure.
+
+## Examples
+
+Creating a basic model spec for classification:
+
+```python
+spec = ModelSpec(
+    inputs=["age", "income", "credit_score"],
+    outputs=["prediction", "probability"],
+    targets=["approved"],
+    metadata=["customer_id", "timestamp"]
+)
+```
+
+Creating a spec with custom features:
+
+```python
+from fiddler.schemas.custom_features import Multivariate, TextEmbedding
+
+spec = ModelSpec(
+    inputs=["user_clicks", "session_time", "review_text_embedding"],
+    outputs=["recommendation_score"],
+    targets=["user_rating"],
+    metadata=["user_id", "session_id"],
+    custom_features=[
+        Multivariate(
+            name="user_behavior",
+            columns=["user_clicks", "session_time"],
+            n_clusters=5
+        ),
+        TextEmbedding(
+            name="review_clusters",
+            column="review_text_embedding",
+            source_column="review_text",
+            n_clusters=8
+        )
+    ]
+)
+```
+
+Creating a spec for ranking models:
+
+```python
+ranking_spec = ModelSpec(
+    inputs=["query_features", "doc_features", "relevance_score"],
+    outputs=["ranking_score"],
+    targets=["click_through"],
+    decisions=["final_ranking"],
+    metadata=["query_id", "doc_id"]
+)
+```
+
+Schema version
+
+Feature columns
+
+Prediction columns
+
+Label columns
+
+Decisions columns
+
+Metadata columns
+
+Custom feature definitions
+
+## remove\_column()
+
+Remove a column name from spec if it exists.
+
+**Return type:** None
+
+
+---

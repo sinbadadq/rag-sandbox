@@ -1,0 +1,135 @@
+# Alerts
+
+### Overview
+
+Fiddler enables users to set up alert rules to track a model's health and performance over time. Fiddler alerts also enable users to dig into triggered alerts and perform root-cause analysis to identify what is causing a model to degrade. Users can set up alerts using the [Fiddler Python client SDK](/api/fiddler-python-client-sdk/python-client.md) and the Fiddler UI as demonstrated below.
+
+### Supported Metric Types
+
+You can get alerts for the following metrics:
+
+* [**Traffic**](/observability/platform/traffic-platform.md)
+  * The volume of traffic received by the model over time indicates the overall system's health.
+* [**Statistics**](/observability/platform/statistics.md)
+  * Metrics for monitoring basic column aggregations.
+* [**Data Drift**](/observability/platform/data-drift-platform.md)
+  * Model performance can be poor if models trained on a specific dataset encounter different data in production.
+* [**Data Integrity**](/observability/platform/data-integrity-platform.md)
+  * Three types of violations can occur at model inference: missing feature values, type mismatches (e.g. sending a float input for a categorical feature type) or range mismatches (e.g. sending an unknown US State for a State categorical feature).
+* [**Performance**](/observability/platform/performance-tracking-platform.md)
+  * The model performance tells us how well a model performs on its task. A poorly performing model can have significant business implications.
+* [**Custom Metrics**](/observability/platform/custom-metrics.md)
+  * Create your own custom metric formulas and create Alerts on those metrics giving you ultimate flexibility in alerting behavior.
+
+### Alert Configurations
+
+#### Comparison Types
+
+There are two options for alert threshold comparison:
+
+* **Absolute** — Compare the metric to an absolute value
+  * Example: if traffic for a given hour is less than a threshold of 1,000, trigger alert.
+* **Relative** — Compare the metric to a previous period
+  * Example: if traffic is down 10% or more than it was at the same time one week ago, trigger alert.
+
+#### Alert Rule Priority & Severity
+
+* **Priority**: Whether you're setting up an alert rule to keep tabs on a model in a test environment or for production scenarios, Fiddler has you covered. Easily set the Alert Rule Priority to indicate the importance of any given Alert Rule. Users can select from Low, Medium, and High priorities.
+* **Severity**: Up to two threshold values can be specified for additional flexibility. A **Critical** severity threshold value is always required when setting up an Alert Rule, and a **Warning** threshold value is optional.
+
+### Why do we need alerts?
+
+* It’s not possible to manually track all metrics 24/7.
+* Sensible alerts are your first line of defense, and they are meant to warn about issues in production.
+
+#### Setting up Alert Rules
+
+To create a new alert in the Fiddler UI, click Add Alert on the Alerts tab.
+
+1. Fill in the Alert Rule form with basic details like alert name, project, and model.
+2. Choose an Alert Type (Traffic, Data Drift, Data Integrity, Performance, Statistic, or Custom Metric) and set up specific metrics, bin size, and columns.
+3. Define comparison methods, thresholds, and notification preferences. Click Add Alert Rule to finish.
+
+![](/files/85sexGJr13MU3yFypAh1)
+
+In order to create and configure alerts using the Fiddler Python client SDK see [Alert Configuration with Fiddler Client](/developers/client-library-reference/alerts-with-fiddler-client.md).
+
+#### Alert Notification options
+
+You can select the following notification types for your alert.
+
+![](/files/XfY25CpHRAl7V5VC01Wc)
+
+#### Delete an Alert Rule
+
+Delete an existing alert by clicking on the overflow button (⋮) on the right-hand side of any Alert Rule record and clicking `Delete`. To make any other changes to an Alert Rule, you will need to delete the alert and create a new one with the desired specifications.
+
+![](/files/gvCKwXadMh8xgJVBMsdK)
+
+#### Triggered Alert Revisions
+
+Say goodbye to stale alerts! Triggered Alert Revisions mark a leap forward in alert intelligence, giving you the confidence to act decisively and optimize your operations.
+
+Alerts now adapt to changing data. If new information emerges that alters an alert's severity or value, the alert automatically updates you with highlights in the user interface and revised notifications. This approach empowers you to:
+
+* Make informed decisions based on real-time data: No more relying on outdated or inaccurate alerts.
+* Focus on critical issues: Updated alerts prioritize the most relevant information.
+
+![Inspect Alert experience](/files/EegTjaMmxGjDE4Qm44Tz)
+
+Inspect Alert experience
+
+![Triggered Alert revision experience](/files/zzF9x9c3CgdLpV0AR7R7)
+
+### Sample Alert Email
+
+Here's a sample of an email that's sent if an alert is triggered:
+
+![](/files/It7eWwJma2aXNmDTxUZU)
+
+### Integrations
+
+The Integrations tab is a read-only view of all the integrations your Admin has enabled for use. As of today, users can configure their Alert Rules to notify them via email or Pager Duty services.
+
+![](/files/7hQ7m7IYdW9kJYCA7EFh)
+
+Admins can add new integrations by clicking on the setting cog icon in the main navigation bar and selecting the integration tab of interest.
+
+![](/files/YFggxaYh9StM158aDSYf)
+
+#### Pause alert notification
+
+This feature allows users to temporarily pause and resume notifications for specific alerts without affecting their evaluation and triggering mechanisms. It enhances user experience by providing efficient notification management.\\
+
+**How to Use**
+
+**Using the Fiddler User Interface (UI)**
+
+* Locate the Alert Tool:\
+  Navigate to the alert rule table and identify the desired alert.
+* Toggle Notifications:
+  * Click the notification bell icon.
+  * The icon updates to indicate the new state (paused or resumed).
+* Confirm Action:
+  * A loading indicator and a toast notification confirm the action.
+
+**Using the Fiddler Client SDK**
+
+For programmatic control, use the Fiddler client SDK's alert-rules method with the enable\_notification argument.
+
+* Details:\
+  Refer to the [Fiddler Python client SDK Reference](/api/fiddler-langgraph-sdk/core/fiddler-client.md) for a complete explanation of SDK features.
+
+**Note**
+
+* No Impact on Evaluation:\
+  Pausing notifications does not affect the evaluation of alert conditions. The alert tool will continue to assess conditions and trigger alerts as usual.
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

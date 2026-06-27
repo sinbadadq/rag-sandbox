@@ -1,0 +1,89 @@
+# Access Control
+
+This section covers how to configure user access, authentication, and authorization in Fiddler.
+
+## Overview
+
+Managing access to your Fiddler instance involves these key components:
+
+* **Authentication**: Verifying user identities through Single Sign-On (SSO) or email-based methods
+* **User Management**: Adding and managing users in the Fiddler AuthN console or dynamically with SSO integration
+* **Authorization**: Configuring what users can access through role-based permissions in the Fiddler UI or dynamically with SSO integration
+
+## Getting Started with Authentication Management
+
+Fiddler provides a dedicated authentication management console to deliver secure, flexible user management. As an administrator, you'll use the Fiddler AuthN console to configure authentication methods and manage users.
+
+### Initial Setup
+
+For new Fiddler deployments:
+
+* A Fiddler representative will work with you to set up your initial authentication configuration
+* Choose your preferred authentication method: SSO, email-based authentication, or both
+* At least one user in your organization must be assigned the "Org Owner" or "Org User Manager" role in the Fiddler AuthN console.
+  * An "Org Owner" can administer their SSO integration with Fiddler as well as manage users
+  * An "Org User Manager" can manage users when leveraging email-based authentication
+
+## Authentication Methods
+
+Choose the authentication method that best fits your organization's infrastructure:
+
+### Single Sign-On (SSO)
+
+SSO users are automatically provisioned when they first log in with valid credentials from your identity provider.
+
+| Identity Provider                      | Protocol | Guide                                                                                      |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| Okta                                   | OIDC     | [Okta OIDC SSO Integration](/reference/access-control/okta-integration.md)                 |
+| Okta                                   | SAML     | ToDo                                                                                       |
+| Microsoft Entra ID (formerly Azure AD) | OIDC     | [Azure AD OIDC SSO Integration](/reference/access-control/single-sign-on-with-azure-ad.md) |
+| Ping Identity                          | SAML     | [Ping Identity SAML SSO Integration](/reference/access-control/ping-identity-saml.md)      |
+| Google                                 | OIDC     | [Google OIDC SSO Integration](/reference/access-control/google-integration.md)             |
+
+### Email-Based Authentication
+
+For organizations without an identity provider or when you need to add specific users outside your SSO system.
+
+| Guide                                                                 | Description                                                                                                              |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Email Login Configuration](/reference/access-control/email-login.md) | Configure Fiddler's email-based authentication and learn how to add users through the authentication management console. |
+
+### Mixed Authentication
+
+You can use both SSO and email authentication simultaneously:
+
+* SSO users are automatically provisioned on first login
+* Email users must be manually added through the authentication management console
+* Each user account can only use one authentication method
+
+## Authorization and Access Control
+
+Authorization settings are managed in the Fiddler UI using Fiddler's role-based access control system and optional LDAP syncing with your IDP:
+
+| Guide                                                                       | Description                                                                                                  |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [Role-Based Access Control](/reference/access-control/role-based-access.md) | Understand and configure user permissions through pre-defined roles                                          |
+| Mapping Identity Provider Groups to Fiddler Teams and Roles                 | Synchronize external user groups with Fiddler teams and organization roles for streamlined access management |
+
+## Configuration Sequence
+
+For organizations new to Fiddler access management, we recommend this sequence:
+
+1. **Set up authentication management access in the Fiddler AuthN console**: Ensure you have the appropriate AuthN administrator role: Org Owner
+2. **Configure authentication**: Choose and implement your authentication method (SSO, email, or both)
+3. **Add initial users**: Use the authentication management console to add users or configure SSO for automatic provisioning when users first sign in
+4. **Configure authorization**: Set up role-based access control within the Fiddler UI's Access tab in the Settings page
+5. **Create teams**: Organize users into teams for efficient permission management
+6. **Map external groups** (if applicable): Connect your identity provider groups to Fiddler teams and manage Fiddler roles
+
+## Troubleshooting and Support
+
+If you encounter issues with authentication or user management:
+
+* Check the authentication management console for authentication logs and user status
+* Verify that your SSO configuration matches your identity provider settings
+* Ensure users have the correct administrative roles for user management tasks
+* Contact your Fiddler representative for assistance with authentication configuration
+
+
+---

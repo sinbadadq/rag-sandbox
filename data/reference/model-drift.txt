@@ -1,0 +1,114 @@
+# Model Drift
+
+Model drift refers to the degradation in an AI model's performance over time as the relationship between input features and target outputs changes in the real world. Unlike data drift, which focuses solely on shifts in input distributions, model drift encompasses broader changes in model behavior and effectiveness, even when input distributions remain stable.
+
+Model drift can manifest in various ways: prediction patterns may shift, error rates might increase, or the model's underlying assumptions may no longer hold valid. This phenomenon is an inevitable challenge in machine learning deployments, as the real-world environment rarely remains static over extended periods.
+
+In the context of AI observability, model drift represents a critical concern that requires continuous monitoring, timely detection, and proactive remediation to maintain reliable and effective AI systems in production.
+
+## How Fiddler Monitors Model Drift
+
+Fiddler's platform takes a comprehensive approach to model drift detection by monitoring several interconnected dimensions that together provide a complete picture of model health and stability.
+
+Through its performance tracking capabilities, Fiddler continuously evaluates model predictions against ground truth values (when available) to identify degradation in accuracy, precision, recall, or custom business metrics that might indicate model drift. This performance monitoring is complemented by data drift detection, which helps determine whether changes in model behavior are due to shifts in input data patterns.
+
+Fiddler also enables root cause analysis, allowing users to detect model drift that might affect specific segments of the data population differently. By comparing current performance across various cohorts against baseline expectations, Fiddler can identify localized drift that might not be apparent in aggregate metrics.
+
+## Why Monitoring Model Drift Is Important
+
+Monitoring model drift is essential for maintaining reliable and trustworthy AI systems in production environments. Undetected model drift can lead to incorrect predictions, suboptimal decisions, and potentially significant business impact, especially in critical applications like fraud detection, risk assessment, or healthcare diagnostics.
+
+By implementing robust model drift monitoring, organizations can ensure their AI systems continue to perform as expected, identify when retraining or recalibration is necessary, and maintain confidence in automated decision processes. This monitoring capability is particularly crucial as AI deployments scale across the enterprise and become more deeply integrated into business operations.
+
+* **Maintaining Prediction Quality**: Regular monitoring for model drift ensures that prediction quality remains high over time, preventing gradual degradation that might otherwise go unnoticed until it causes significant issues.
+* **Timely Model Updates**: Early detection of model drift enables more proactive model maintenance, allowing teams to schedule retraining or updates before performance deteriorates to unacceptable levels.
+* **Root Cause Analysis**: Comprehensive model drift monitoring provides insights into why performance is changing, differentiating between data quality issues, concept drift, or other factors affecting model behavior.
+* **Business Impact Mitigation**: By detecting model drift early, organizations can prevent potential negative business impacts such as revenue loss, customer dissatisfaction, or compliance violations that might result from degraded model performance.
+* **Resource Optimization**: Understanding patterns of model drift helps organizations optimize the frequency of model retraining, avoiding both unnecessary updates (when models remain stable) and delayed responses to genuine performance issues.
+* **Regulatory Compliance**: In regulated industries, demonstrating continuous monitoring for model drift is increasingly becoming a requirement for responsible AI governance and compliance with emerging AI regulations.
+* **Continuous Improvement**: Tracking model drift over time provides valuable insights that can inform better feature engineering, model architecture decisions, and training practices for future model iterations.
+
+## Types of Model Drift
+
+* **Concept Drift**: Changes in the underlying relationship between input features and target variables, where the statistical properties of the target variable change over time, making previous patterns less predictive.
+* **Prediction Drift**: Changes in the statistical distribution of model outputs or predictions over time, which may indicate shifting behavior even if accuracy metrics remain temporarily stable.
+* **Accuracy Drift**: Direct degradation in performance metrics like accuracy, precision, recall, or F1-score that indicates the model is becoming less effective at its intended task.
+* **Feature Contribution Drift**: Changes in how different features influence model predictions, potentially indicating that the model's internal decision-making process is evolving in unexpected ways.
+* **Seasonal Drift**: Cyclical changes in model performance related to time-based patterns such as day/night cycles, weekday/weekend differences, or annual seasonality effects.
+* **Population Drift**: Changes in model performance for specific segments or cohorts of the data, even when overall performance metrics remain stable, indicating uneven drift effects across different populations.
+* **Business Impact Drift**: Changes in how model predictions affect business outcomes and KPIs, where technical performance metrics might remain stable but the business value of the model's decisions decreases.
+
+## Challenges
+
+While essential for AI system maintenance, effective model drift monitoring comes with several technical and practical challenges that organizations must navigate.
+
+* **Ground Truth Latency**: In many real-world applications, actual outcomes (ground truth) may not be available until significantly after predictions are made, creating delays in detecting accuracy-based drift signals.
+* **Distinguishing Causes**: Determining whether observed drift is due to data distribution changes, evolving relationships between variables, or issues with the model itself can be challenging but necessary for appropriate remediation.
+* **Setting Appropriate Thresholds**: Defining meaningful thresholds for when drift requires attention is complex, requiring balance between sensitivity to meaningful changes and resistance to false alarms from normal statistical variation.
+* **High-Dimensional Monitoring**: Models with many features present challenges for comprehensive drift monitoring, as changes might occur in complex, high-dimensional patterns that are difficult to detect and visualize.
+* **Feedback Loops**: When model outputs influence future inputs (as in recommendation systems or pricing models), distinguishing natural system dynamics from problematic drift becomes especially challenging.
+* **Resource Constraints**: Comprehensive model drift monitoring can be computationally intensive, particularly for large-scale models or high-volume inference systems, requiring efficient implementation strategies.
+* **Interpretability Trade-offs**: More sophisticated drift detection approaches might provide better sensitivity but at the cost of interpretability, making it harder to explain detected issues to stakeholders.
+
+## Model Drift Monitoring Implementation Guide
+
+1. **Define Monitoring Objectives**
+   * Identify which aspects of model performance are most critical for your specific use case.
+   * Determine acceptable performance thresholds based on business requirements and risk tolerance.
+2. **Establish Comprehensive Baselines**
+   * Create performance baselines using training or validation data to serve as reference points.
+   * Consider multiple baselines for different time periods or data segments if appropriate.
+3. **Configure Multi-Dimensional Monitoring**
+   * Set up combined monitoring for both data drift and performance metrics to capture different drift signals.
+   * Implement segment-specific monitoring for important data cohorts or slices.
+4. **Set Up Alert Systems**
+   * Configure alerts with appropriate thresholds for different drift metrics based on sensitivity needs.
+   * Establish notification workflows to ensure the right teams are informed when drift is detected.
+5. **Implement Regular Review Processes**
+   * Schedule routine reviews of drift metrics even in the absence of alerts to spot gradual changes.
+   * Maintain documentation of observed drift patterns and corresponding actions taken.
+6. **Develop Remediation Strategies**
+   * Create predefined response plans for different types and severities of model drift.
+   * Consider automated model updating pipelines for cases where drift follows predictable patterns.
+
+## Frequently Asked Questions
+
+**Q: How is model drift different from data drift?**
+
+While data drift focuses specifically on changes in the statistical distribution of input features, model drift is a broader concept that encompasses any degradation in model performance over time. Data drift is often a cause of model drift, but model drift can also occur due to other factors such as concept drift (changes in the relationship between inputs and outputs) or model decay (gradual degradation of model parameters or implementation). Fiddler monitors both phenomena to provide comprehensive observability.
+
+**Q: How frequently should I check for model drift?**
+
+The optimal frequency depends on your specific use case, data velocity, and business requirements. For critical applications with high-frequency decisions, daily or even hourly monitoring might be appropriate. For more stable applications with slower-changing environments, weekly or monthly checks might suffice. Fiddler's platform allows for flexible monitoring schedules tailored to your specific needs and can automate this process through continuous monitoring and alerts.
+
+**Q: Should I retrain my model at the first sign of drift?**
+
+Not necessarily. Minor drift might be within normal statistical variation or temporary in nature. Before retraining, it's important to investigate the root cause, assess business impact, and determine if the drift represents a genuine shift requiring model updates. Fiddler's analytics capabilities help you make informed decisions about when retraining is truly warranted versus when other interventions might be more appropriate.
+
+**Q: Can model drift occur even if my data hasn't changed?**
+
+Yes, model drift can occur even with stable input distributions. This might happen due to changes in the underlying relationships between variables (concept drift), subtle implementation issues during deployment, hardware or infrastructure changes affecting numerical precision, or gradual erosion of model effectiveness in dynamic environments. Monitoring both data distributions and model performance is essential for comprehensive drift detection.
+
+**Q: How does Fiddler help distinguish different types of drift?**
+
+Fiddler provides multiple monitoring dimensions that together help diagnose the nature of observed drift. By simultaneously tracking data drift metrics, performance metrics, feature importance, and segment-specific analyses, Fiddler enables users to triangulate the likely causes of detected drift. This multi-faceted approach helps distinguish between data quality issues, concept drift, or other factors, guiding more targeted remediation strategies.
+
+## Related Terms
+
+* [Data Drift](/reference/glossary/data-drift.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+* [Model Drift](/reference/glossary/model-drift.md)
+* [Metrics](/reference/glossary/metric.md)
+* [Baselines](/reference/glossary/baseline.md)
+
+## Related Resources
+
+* [ML Monitoring Platform Overview](/welcome/readme.md))
+* [Data Drift Monitoring](/observability/platform/data-drift-platform.md)
+* [Performance Tracking](/observability/platform/performance-tracking-platform.md)
+* [Ensuring Data Integrity](/observability/platform/data-integrity-platform.md)
+* [Model Segments](/observability/platform/segments.md)
+* [Setting Up Alerts](/observability/platform/alerts-platform.md)
+
+
+---

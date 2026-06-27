@@ -1,0 +1,436 @@
+# Experiments Quick Start
+
+Systematically evaluate your LLM applications, RAG systems, and AI agents using the Fiddler Evals SDK with built-in evaluators and custom metrics.
+
+**Time to complete**: \~20 minutes
+
+## What You'll Learn
+
+* Initialize the Fiddler Evals SDK and organize your experiments
+* Create experiment datasets with test cases
+* Use built-in evaluators (faithfulness, relevance, coherence, etc.)
+* Create custom evaluators for domain-specific requirements
+* Run experiments and analyze results
+
+***
+
+## Prerequisites
+
+* **Fiddler Account**: Active account with API access
+* **Python 3.10+**
+* **Fiddler Evals SDK**: `pip install fiddler-evals`
+* **Access Token**: From [Settings > Credentials](/reference/settings.md#credentials)
+
+***
+
+## Quick Start
+
+### Step 1: Connect to Fiddler
+
+```python
+from fiddler_evals import init
+
+# Initialize connection
+init(
+    url='https://your-org.fiddler.ai',
+    token='your-access-token'
+)
+```
+
+### Step 2: Create Project and Application
+
+```python
+from fiddler_evals import Project, Application, Dataset
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+# Create organizational structure
+project = Project.get_or_create(name='my_eval_project')
+application = Application.get_or_create(
+    name='my_llm_app',
+    project_id=project.id
+)
+
+# Create experiment dataset
+dataset = Dataset.create(
+    name='experiment_dataset',
+    application_id=application.id,
+    description='Test cases for LLM experiments'
+)
+```
+
+### Step 3: Add Test Cases
+
+```python
+# Define test cases
+test_cases = [
+    NewDatasetItem(
+        inputs={"question": "What is the capital of France?"},
+        expected_outputs={"answer": "Paris is the capital of France"},
+        metadata={"type": "Factual", "category": "Geography"}
+    ),
+    NewDatasetItem(
+        inputs={"question": "Explain photosynthesis"},
+        expected_outputs={"answer": "Photosynthesis is the process by which plants convert sunlight into energy"},
+        metadata={"type": "Explanation", "category": "Science"}
+    ),
+]
+
+# Insert test cases into dataset
+dataset.insert(test_cases)
+print(f"✅ Added {len(test_cases)} test cases")
+```
+
+### Step 4: Define Your LLM Task
+
+```python
+def my_llm_task(inputs, extras, metadata):
+    """Your LLM application logic."""
+    question = inputs.get("question", "")
+
+    # Call your LLM here (example uses placeholder)
+    # In production, call OpenAI, Anthropic, or your LLM
+    answer = f"Mock response to: {question}"
+
+    return {"answer": answer}
+```
+
+### Step 5: Run Experiment with Built-In Evaluators
+
+```python
+from fiddler_evals import evaluate
+from fiddler_evals.evaluators import (
+    AnswerRelevance,
+    Conciseness,
+    FTLPromptSafety
+)
+
+MODEL = "openai/gpt-4o"
+CREDENTIAL = "your-llm-credential"  # From Settings > LLM Gateway
+
+# Run evaluation
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model=MODEL, credential=CREDENTIAL),
+        Conciseness(model=MODEL, credential=CREDENTIAL),
+        FTLPromptSafety()  # FTL models run locally, no model= needed
+    ],
+    name_prefix="my_experiment",
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["question"],
+        "rag_response": "answer",
+        "response": "answer",
+        "text": "answer",
+    }
+)
+
+print(f"✅ Evaluated {len(results.results)} test cases")
+```
+
+### Step 6: Analyze Results
+
+```python
+# Access results programmatically
+for item_result in results.results:
+    print(f"\nTest Case: {item_result.dataset_item_id}")
+    print(f"Task Output: {item_result.task_output}")
+
+    # View scores from each evaluator
+    for score in item_result.scores:
+        print(f"  {score.name}: {score.value} - {score.reasoning}")
+
+# View results in Fiddler UI
+print(f"\n🔗 View results: https://your-org.fiddler.ai")
+```
+
+***
+
+## Built-In Evaluators
+
+The Fiddler Evals SDK includes 13 pre-built evaluators:
+
+### Quality & Accuracy
+
+* **AnswerRelevance** - Measures response relevance to the question (High / Medium / Low)
+* **Coherence** - Evaluates logical flow and consistency
+* **Conciseness** - Checks for unnecessary verbosity
+
+### Safety & Trust
+
+* **FTLPromptSafety** - Detects prompt injection, jailbreaks, and unsafe prompts
+* **FTLResponseFaithfulness** - Evaluate faithfulness of LLM responses (Fast Trust Model)
+
+### RAG Health Metrics
+
+* **AnswerRelevance** - Measures how well responses address user queries (High / Medium / Low)
+* **ContextRelevance** - Evaluates whether retrieved documents are relevant to the query (High / Medium / Low)
+* **RAGFaithfulness** - Checks if response is grounded in retrieved documents (Yes / No)
+
+Use these three evaluators together as a diagnostic triad to pinpoint whether RAG pipeline issues originate in retrieval, generation, or query understanding.
+
+### Example: RAG Experiment
+
+```python
+from fiddler_evals.evaluators import AnswerRelevance, ContextRelevance, RAGFaithfulness
+
+# Add context to test cases
+rag_test_cases = [
+    NewDatasetItem(
+        inputs={
+            "user_query": "What is the capital of France?",
+            "retrieved_documents": "Paris is the capital and largest city of France."
+        },
+        expected_outputs={"rag_response": "Paris"}
+    ),
+]
+
+dataset.insert(rag_test_cases)
+
+# Evaluate with RAG Health Metrics evaluators
+rag_results = evaluate(
+    dataset=dataset,
+    task=my_rag_task,  # Your RAG system
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+        ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+        RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential")
+    ],
+    score_fn_kwargs_mapping={
+        "rag_response": "rag_response",
+        "retrieved_documents": lambda x: x["inputs"]["retrieved_documents"],
+        "user_query": lambda x: x["inputs"]["user_query"]
+    }
+)
+```
+
+***
+
+## Custom Evaluators
+
+Create domain-specific evaluators for your use case:
+
+```python
+from fiddler_evals.evaluators.base import Evaluator
+from fiddler_evals.pydantic_models.score import Score
+
+class CustomToneEvaluator(Evaluator):
+    """Evaluates if response matches desired tone."""
+
+    def score(self, response: str, desired_tone: str = "professional") -> Score:
+        # Your custom evaluation logic
+        is_professional = self._check_tone(response, desired_tone)
+
+        return Score(
+            name="tone_match",
+            value=1.0 if is_professional else 0.0,
+            reasoning=f"Response {'matches' if is_professional else 'does not match'} {desired_tone} tone"
+        )
+
+    def _check_tone(self, text: str, tone: str) -> bool:
+        # Implement your tone detection logic
+        # Could use keyword matching, LLM-as-judge, or ML model
+        return True  # Placeholder
+
+# Use custom evaluator
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[CustomToneEvaluator()],
+    score_fn_kwargs_mapping={
+        "response": "answer",
+        "desired_tone": "professional"
+    }
+)
+```
+
+***
+
+## Advanced Features
+
+### Batch Experiments with Parallel Processing
+
+```python
+# Evaluate with parallel workers for faster execution
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"), Conciseness(model="openai/gpt-4o", credential="your-llm-credential")],
+    max_workers=5  # Process 5 test cases in parallel
+)
+```
+
+### Import Datasets from Files
+
+```python
+# From CSV
+dataset.insert_from_csv_file(
+    csv_file_path='test_cases.csv',
+    inputs_columns=['question'],
+    expected_outputs_columns=['answer']
+)
+
+# From JSONL
+dataset.insert_from_jsonl_file(
+    jsonl_file_path='test_cases.jsonl'
+)
+
+# From Pandas DataFrame
+import pandas as pd
+
+df = pd.DataFrame({
+    'question': ['Q1', 'Q2'],
+    'expected_answer': ['A1', 'A2']
+})
+
+dataset.insert_from_pandas(
+    dataframe=df,
+    inputs_columns=['question'],
+    expected_outputs_columns=['expected_answer']
+)
+```
+
+### Track Experiment Metadata
+
+```python
+# Add experiment metadata for tracking
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential")],
+    name_prefix="experiment_v2",  # Version your experiments
+    score_fn_kwargs_mapping={"response": "answer"}
+)
+
+# Results are automatically tracked in Fiddler
+# View experiment history in the Fiddler UI
+```
+
+***
+
+## Complete Example: RAG Experiment Pipeline
+
+```python
+from fiddler_evals import init, Project, Application, Dataset, evaluate
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+from fiddler_evals.evaluators import (
+    RAGFaithfulness,
+    AnswerRelevance,
+    ContextRelevance,
+    Conciseness
+)
+
+# Step 1: Initialize
+init(url='https://your-org.fiddler.ai', token='your-token')
+
+# Step 2: Set up organization
+project = Project.get_or_create(name='rag_experiments')
+app = Application.get_or_create(name='doc_qa_system', project_id=project.id)
+dataset = Dataset.create(name='qa_test_set', application_id=app.id)
+
+# Step 3: Create test cases
+test_cases = [
+    NewDatasetItem(
+        inputs={
+            "user_query": "What is machine learning?",
+            "retrieved_documents": "Machine learning is a subset of AI that enables "
+                "systems to learn from data."
+        },
+        expected_outputs={
+            "rag_response": "Machine learning is a subset of AI."
+        },
+        metadata={"difficulty": "easy"}
+    ),
+]
+dataset.insert(test_cases)
+
+# Step 4: Define RAG task
+def rag_task(inputs, extras, metadata):
+    """Your RAG system implementation."""
+    user_query = inputs["user_query"]
+    retrieved_documents = inputs["retrieved_documents"]
+
+    # Call your RAG system (simplified example)
+    rag_response = generate_answer(user_query, retrieved_documents)
+
+    return {
+        "rag_response": rag_response,
+        "retrieved_documents": retrieved_documents,
+    }
+
+# Step 5: Run comprehensive evaluation
+results = evaluate(
+    dataset=dataset,
+    task=rag_task,
+    evaluators=[
+        RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential"),     # Check factual grounding (Yes/No)
+        AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),     # Check relevance to query (High/Medium/Low)
+        ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),    # Check retrieval quality (High/Medium/Low)
+        Conciseness(model="openai/gpt-4o", credential="your-llm-credential"),         # Check for verbosity
+    ],
+    name_prefix="rag_eval_v1",
+    score_fn_kwargs_mapping={
+        "rag_response": "rag_response",
+        "retrieved_documents": "retrieved_documents",
+        "user_query": lambda x: x["inputs"]["user_query"],
+    }
+)
+
+# Step 6: Analyze
+print(f"Evaluated {len(results.results)} test cases")
+for result in results.results:
+    print(f"\n{result.dataset_item_id}:")
+    for score in result.scores:
+        print(f"  {score.name}: {score.value:.3f}")
+```
+
+***
+
+## Best Practices
+
+1. **Start Small**: Begin with 10-20 test cases to validate your setup
+2. **Use Multiple Evaluators**: Combine quality, safety, and domain-specific evaluators
+3. **Version Your Experiments**: Use `name_prefix` to track different experiment runs
+4. **Monitor Over Time**: Run experiments regularly to catch regressions
+5. **Custom Evaluators**: Create domain-specific evaluators for specialized needs
+6. **Leverage Parallelization**: Use `max_workers` for faster evaluation of large datasets
+7. **Organize Hierarchically**: Use Projects > Applications > Datasets structure
+
+***
+
+## Next Steps
+
+### Complete Guides
+
+* [**Evals SDK Quick Start**](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start) - Full tutorial with detailed examples
+* [**Evals SDK Reference**](/api/fiddler-evals-sdk/evals.md) - Complete API documentation
+
+### Concepts & Background
+
+* [**Experiments Overview**](/getting-started/experiments.md) - Why and when to run experiments
+* [**Trust Service**](/reference/glossary/trust-service.md) - Fiddler's evaluation platform
+
+### Integration Guides
+
+* [**Evals SDK Integration**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md) - Integration patterns and examples
+* [**LangGraph SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) - Monitor LangGraph agents
+* [**Strands Agents SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md) - Monitor Strands agents
+
+***
+
+## Summary
+
+You've learned how to:
+
+* ✅ Initialize the Fiddler Evals SDK with `init()`
+* ✅ Create Projects, Applications, and Datasets for organization
+* ✅ Build experiment datasets with test cases
+* ✅ Use 13 built-in evaluators for quality, safety, and RAG metrics
+* ✅ Create custom evaluators for domain-specific requirements
+* ✅ Run experiments with the `evaluate()` function
+* ✅ Analyze results programmatically and in the Fiddler UI
+
+The Fiddler Evals SDK provides a comprehensive framework for systematic LLM experiments, enabling you to ensure quality, safety, and accuracy before deploying your AI applications.
+
+
+---

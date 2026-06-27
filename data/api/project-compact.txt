@@ -1,0 +1,41 @@
+# ProjectCompact
+
+Lightweight project representation for listing and basic operations.
+
+A minimal project object containing only essential identifiers. Used by various listing operations to efficiently return project information without fetching full project details and associated resources.
+
+This class provides a memory-efficient way to work with project references when you don't need the full project functionality but want to access basic information or fetch the complete project when needed.
+
+## Example
+
+```python
+# From project references in other entities
+model = Model.get(id_="model-uuid")
+project_compact = model.project  # Returns ProjectCompact
+
+# Access basic info
+print(f"Project: {project_compact.name}")
+print(f"ID: {project_compact.id}")
+
+# Fetch full details when needed
+full_project = project_compact.fetch()
+print(f"Created: {full_project.created_at}")
+print(f"Models: {len(list(full_project.models))}")
+```
+
+{% hint style="info" %}
+ProjectCompact objects are typically returned by other entities that reference projects. Use .fetch() to get the complete Project instance when you need full functionality like listing models or project operations.
+{% endhint %}
+
+## fetch()
+
+Fetch project instance.
+
+## Returns
+
+Complete project instance with all details.
+
+**Return type:** [`Project`](/api/fiddler-python-client-sdk/entities/project.md)
+
+
+---

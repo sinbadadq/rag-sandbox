@@ -1,0 +1,24 @@
+# ConnTimeout
+
+Raised when a connection timeout occurs during HTTP requests.
+
+This exception was used to indicate that an HTTP request to the Fiddler platform timed out while waiting for a response. Timeouts can occur due to network issues, server overload, or requests taking longer than the configured timeout period.
+
+## Examples
+
+```python
+Historical usage (now deprecated):
+
+    try:
+        # Long-running API call
+        pass
+
+    except ConnTimeout as e:
+        print(f"Request timed out: {e.message}")
+        # Retry with longer timeout or check network
+```
+
+## message *: str* *= 'Request timed out while trying to reach endpoint'*
+
+
+---

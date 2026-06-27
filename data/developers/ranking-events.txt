@@ -1,0 +1,78 @@
+# Ranking Events
+
+### Publish Inference Events for Ranking Models
+
+A ranking machine learning model orders items based on their relevance to a specific query or context. Unlike classification or regression models that predict absolute values, ranking models focus on relative ordering between items.
+
+#### Grouping Format for Ranking Model Inference Events
+
+Before publishing ranking model events to Fiddler, format them in a **grouped format**. This means items returned for the same query ID (specified by the group\_by parameter in TaskParams) appear in a single row with values stored as lists.
+
+Example of correctly grouped format:
+
+| srch\_id | price\_usd                 | review\_score      | ...    | prediction               | target     |
+| -------- | -------------------------- | ------------------ | ------ | ------------------------ | ---------- |
+| 101      | \[134.77,180.74,159.80]    | \[5.0,2.5,4.5]     | \[...] | \[1.97, 0.84,-0.69]      | \[1,0,0]   |
+| ...      | ...                        |                    | ...    | ...                      | ...        |
+| 112      | \[26.00,51.00,205.11,73.2] | \[3.0,4.5,2.0,1.0] | \[...] | \[10.75,8.41,-0.23,-3.2] | \[0,1,0,0] |
+
+In this example, `srch_id` is the `group_by` column, and all other columns contain lists corresponding to each group.
+
+#### How to Convert a Flat CSV File Into Grouped Format
+
+If your data is in a flat CSV file (one item per row), use Fiddler's utility function to convert it to the required grouped format:
+
+```python
+from fiddler.utils.helpers import group_by
+import pandas as pd
+
+# Read the flat CSV file
+df = pd.read_csv('path/to/ranking_events.csv')
+
+# Convert to grouped format
+df_grouped = group_by(df=df, group_by_col='srch_id')
+```
+
+The `group_by_col` argument should match the column specified in the `group_by` parameter of your [Model](/api/fiddler-python-client-sdk/python-client.md) object.
+
+### Publish Grouped Ranking Events
+
+After preparing your grouped data, publish it to Fiddler:
+
+```python
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+# df_grouped DataFrame from above example
+publish_job = model.publish(df_grouped)
+
+# The publish() method is asynchronous. Use the publish job's wait() method 
+# if synchronous behavior is desired.
+publish_job.wait() 
+
+```
+
+### Update Ranking Events
+
+You can update existing ranking events while maintaining the same grouped format.
+
+#### Prepare the Updating DataFrame
+
+To update the ground truth labels (called 'target values' in Fiddler), create a dataframe with the required updates while keeping the grouped format.
+
+Call model.publish() with update set to true:
+
+```python
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+# Publish updates to existing events
+event_id_list = model.publish(source=modified_df_grouped, update=True)
+
+print(f'Updated events: {event_id_list}')
+```
+
+Fiddler will update only the columns included in your modified dataframe while preserving all other data. Event update behavior is described in more detail in the [Event Update](/developers/client-library-reference/publishing-production-data/updating-events.md) guide.
+
+
+---

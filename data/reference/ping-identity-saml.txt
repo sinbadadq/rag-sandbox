@@ -1,0 +1,71 @@
+# Ping Identity SAML
+
+This guide explains how to integrate Fiddler with an existing Ping Identity SSO application using SAML.
+
+### Ping Identity Setup
+
+1. Create a new SAML integration application with following properties:
+
+* **ACS URL**: <https://deployment\\_name/api/sso/ping/callback>
+* **Entity ID**: <https://deployment\\_name/>
+* Set Signing property to **Sign Assertion and Response** .
+
+Once the setup is complete, download the certificate file.
+
+![Example of the add new application form in the Ping Applications dashboard.](/files/bQMHhAKDTcVGFq7bcBAW)
+
+### Deployment Instructions
+
+1. Create a `<secret_filename>.yaml` file using the following template.
+
+You'll find the values in the Ping application's configuration.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+    name: fiddler-sso-ping-credentials
+    namespace: <NAMESPACE_NAME>
+data:
+    # Value of Single Sign-On Service when viewing the configuration of the application 
+    sso-ping-entry-point: <PING_ENTRY_POINT> 
+    # Value of entity ID
+    sso-ping-entity-id: <PING_ENTITY_ID> 
+    # Download .crt file from the application configuration
+    sso-ping-cert: <PING_CERTIFICATE> 
+type: Opaque
+```
+
+{% hint style="info" %}
+All the values must be base64 encoded.
+
+On Mac OS X, you can run `echo -n "string to be encoded" | base64` to get the encoded value.
+{% endhint %}
+
+{% hint style="warning" %}
+Do not use double quotes anywhere in the values.
+{% endhint %}
+
+2. Update the Kubernetes secret in the namespace of the cluster using the above file.
+
+```
+kubectl apply -f <secret_filename>.yaml -n fiddler
+```
+
+3. Update the Helm variables below.
+
+```
+fiddler:
+    auth:
+        sso:
+            provider: ping
+        ping:
+            secretName: fiddler-sso-ping-credentials
+```
+
+{% hint style="info" %}
+Once the deployments are updated, the new SSO settings will be applied.
+{% endhint %}
+
+
+---

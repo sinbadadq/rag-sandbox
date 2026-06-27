@@ -1,0 +1,100 @@
+# Embedding Visualization
+
+[Embedding Visualizations](/observability/llm/embedding-visualization-with-umap.md) in Fiddler AI are interactive graphical representations that display high-dimensional embedding vectors in a more accessible two or three-dimensional space. These visualizations use dimensionality reduction techniques, primarily [UMAP](https://umap-learn.readthedocs.io/en/latest/) (Uniform Manifold Approximation and Projection), to transform complex vector data into visual patterns that humans can interpret and analyze.
+
+When working with Large Language Models (LLMs) and other AI systems, embeddings capture semantic relationships in high-dimensional space (typically hundreds or thousands of dimensions). Embedding Visualizations make these abstract mathematical relationships visible, allowing users to identify clusters, outliers, and patterns that might otherwise remain hidden in the raw numerical data.
+
+In the Fiddler platform, Embedding Visualizations appear as interactive charts that plot embedding vectors as points in 2D space, with proximity between points indicating semantic similarity. These visualizations provide a powerful tool for understanding model behavior, monitoring for drift or anomalies, and gaining insights into how AI systems represent and process information.
+
+## How Fiddler Uses Embedding Visualizations
+
+Fiddler integrates Embedding Visualizations as a core component of its LLM monitoring and observability platform. When monitoring LLM applications, Fiddler processes embedding data (either uploaded by users or generated through Fiddler's enrichment capabilities) and creates interactive UMAP visualizations that help users understand the semantic landscape of their model inputs and outputs.
+
+These visualizations are displayed in Fiddler Charts, which provide additional interactive capabilities such as filtering, color-coding, and time-based analysis. Users can explore embedding spaces to identify clusters of similar content, detect outlier patterns, and track how embedding distributions change over time.
+
+Embedding Visualizations complement Fiddler's other monitoring metrics by providing a spatial understanding of semantic relationships that numerical metrics alone cannot capture. They serve as an essential tool for both regular monitoring and deep-dive investigations when issues are detected.
+
+## Why Embedding Visualizations Are Important
+
+Embedding Visualizations address a fundamental challenge in LLM and AI monitoring: how to make sense of high-dimensional data that cannot be directly observed or interpreted by humans. By transforming complex embedding spaces into visual representations, these visualizations enable insights that would be impossible to derive from raw vector data or simple statistical metrics.
+
+For organizations deploying LLM applications, Embedding Visualizations provide a crucial window into how their models are processing and representing information, helping teams detect subtle patterns, identify unexpected behaviors, and communicate findings to both technical and non-technical stakeholders.
+
+The visual nature of these representations makes complex AI behavior more accessible and interpretable, supporting more effective monitoring, debugging, and governance of AI systems.
+
+* **Pattern Detection**: Visualizations reveal clusters, outliers, and other patterns in embedding space that might indicate important semantic groupings or anomalous data points that require investigation.
+* **Drift Monitoring**: By comparing embedding distributions over time, visualizations can highlight semantic drift that might not be captured by traditional statistical drift metrics, showing how the meaning and context of data is evolving.
+* **Model Understanding**: Visualizations provide insights into how models represent information, helping users understand the semantic relationships and structures learned by the model.
+* **Anomaly Investigation**: When unusual model behaviors occur, embedding visualizations can help identify whether these anomalies cluster together semantically, suggesting common underlying causes.
+* **Communication Tool**: Visual representations of complex data make technical concepts more accessible to diverse stakeholders, facilitating communication between data scientists, engineers, compliance teams, and business leaders.
+* **Quality Assessment**: Visualizations can reveal whether similar inputs receive similar outputs or whether semantically related concepts are appropriately clustered, indicating model consistency and quality.
+* **Dataset Exploration**: Visualizations enable interactive exploration of large datasets, helping users understand the distribution and characteristics of their data in ways that tabular views cannot provide.
+
+## Challenges
+
+While Embedding Visualizations provide powerful insights, they also come with several technical and interpretive challenges that users should be aware of when incorporating them into monitoring workflows.
+
+* **Dimensionality Reduction Trade-offs**: Techniques like UMAP inherently lose some information when reducing high-dimensional spaces to 2D or 3D, meaning that some relationships or patterns might be obscured or distorted in the visualization.
+* **Parameter Sensitivity**: UMAP and similar algorithms require careful parameter tuning, as different settings can produce significantly different visualizations from the same underlying data, potentially leading to different interpretations.
+* **Computational Overhead**: Generating high-quality embedding visualizations, especially for large datasets, can be computationally intensive and may require significant processing resources.
+* **Interpretation Complexity**: Without proper context and understanding of the underlying algorithms, users may misinterpret patterns in embedding visualizations or draw incorrect conclusions about what they represent.
+* **Temporal Consistency**: Maintaining consistent visualizations over time can be challenging, as new data points may shift the overall projection, making it difficult to compare visualizations from different time periods.
+* **Scalability Limitations**: Visualizing very large numbers of embeddings can lead to overcrowded displays or performance issues, requiring careful sampling or filtering strategies.
+* **Contextual Information Loss**: While embeddings capture semantic relationships, the original context that produced those embeddings may be lost in visualization, requiring additional metadata to fully interpret observed patterns.
+
+## Embedding Visualization Implementation Guide
+
+1. **Prepare Your Embedding Data**
+   * Ensure your model is configured to generate or capture embeddings for the selected fields.
+   * If using custom embeddings, verify they are properly formatted and included in your data publishing pipeline.
+2. **Create a Visualization Chart**
+   * In the Fiddler platform, navigate to the Charts section and create a new UMAP Visualization chart.
+   * Select the appropriate model and field containing the embedding vectors you wish to visualize.
+3. **Configure UMAP Parameters**
+   * Adjust parameters like number of neighbors and minimum distance to optimize the visualization for your specific data characteristics.
+   * Consider experimenting with different parameters to find the most informative representation.
+4. **Add Contextual Information**
+   * Configure color-coding or filters based on relevant metadata to add context to the visualization.
+   * Consider adding time-based filters to observe how embeddings change over specific periods.
+5. **Analyze Patterns**
+   * Look for clusters that might indicate semantic groupings in your data.
+   * Identify outliers or unexpected patterns that might require further investigation.
+6. **Integrate with Monitoring**
+   * Add embedding visualizations to monitoring dashboards alongside other metrics.
+   * Set up regular reviews to detect changes in embedding patterns over time.
+
+## Frequently Asked Questions
+
+**Q: What is UMAP and why is it used for embedding visualization?**
+
+UMAP (Uniform Manifold Approximation and Projection) is a dimensionality reduction technique that preserves both local and global structure when projecting high-dimensional data to lower dimensions. It's particularly well-suited for visualizing embeddings because it maintains meaningful relationships between data points, allowing clusters and patterns in the high-dimensional space to be visible in the 2D projection. Fiddler uses UMAP because it offers a good balance of performance and accuracy in representing complex embedding spaces.
+
+**Q: How should I interpret clusters in an embedding visualization?**
+
+Clusters in embedding visualizations typically represent groups of semantically similar items. Points that appear close together in the visualization share similar meanings or characteristics in the high-dimensional embedding space. When analyzing clusters, examine a sample of items within each cluster to understand the common themes or attributes they share. This can reveal how your model is grouping concepts and whether these groupings align with your expectations.
+
+**Q: Can embedding visualizations help detect problems in my LLM?**
+
+Yes, embedding visualizations can reveal various issues in LLM systems. Unexpected outliers might indicate anomalous inputs or outputs. Shifts in cluster patterns over time could signal semantic drift affecting your model. Overlapping clusters that should be distinct might suggest the model is conflating concepts it should differentiate. By regularly monitoring these visualizations alongside other metrics, you can detect subtle changes in model behavior that might not be apparent through other monitoring approaches.
+
+**Q: How frequently should I update my embedding visualizations?**
+
+The optimal frequency depends on your specific use case and data volume. For high-traffic LLM applications, daily or weekly visualization updates may be appropriate to catch shifts in patterns early. For more stable applications or those with lower traffic, monthly updates might be sufficient. Consider automating the generation of these visualizations as part of your regular monitoring cycle, aligning their frequency with your organization's model governance and review procedures.
+
+**Q: Can I export or share embedding visualizations from Fiddler?**
+
+Yes, Fiddler allows you to export embedding visualizations for sharing with team members or inclusion in reports. These exports capture the current state of the visualization including any applied filters or color-coding. This capability is particularly useful for communicating findings to stakeholders or documenting the state of your model at specific points in time for governance and compliance purposes.
+
+## Related Terms
+
+[LLM and GenAI Observability](/reference/glossary/llm-observability.md)
+
+## Related Resources
+
+* [Embedding Visualization with UMAP](/observability/llm/embedding-visualization-with-umap.md)
+* [Monitoring Charts Platform](/observability/platform/monitoring-charts-platform.md)
+* [Vector Monitoring Platform](/observability/platform/vector-monitoring-platform.md)
+* [Selecting LLM Enrichments](/observability/llm/selecting-enrichments.md)
+
+
+---

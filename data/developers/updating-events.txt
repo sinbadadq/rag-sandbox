@@ -1,0 +1,136 @@
+# Updating Events
+
+Fiddler allows you to update specific fields in previously published events. While your model feature values can't be updated, you can update:
+
+* Target column values (ground truth labels)
+* Metadata columns
+
+Input, Output, and Custom Feature column types cannot be updated once published. If values for these columns are included with your update (`update_event=True`), they will be ignored.
+
+### Updating Ground Truth Labels
+
+Updating ground truth labels is the most common use case for post-publish updates.
+
+You can update events when:
+
+* Actual values become available for events initially published without labels
+* You discover that initially uploaded labels are incorrect
+
+Things to keep in mind about ground truth labels (target values):
+
+* Use null values when initially publishing inferences that don't yet have labels
+* Fiddler automatically keeps aggregated performance metrics current as labels are updated
+* Labels can be updated multiple times if necessary
+
+### Updating Metadata Columns
+
+Fiddler supports updating **metadata** columns with new values. This is particularly useful for supporting alternate labels that can be used with Custom Metrics to calculate alternative performance metrics.
+
+Things to keep in mind regarding metadata updates:
+
+* Updated values are visible in Feature Analytics and [Root Cause Analysis ](/observability/analytics.md#root-cause-analysis)views
+* Pre-calculated aggregated metrics will not reflect the updated values
+* Custom Metrics, used in charts and alerts, will always use the current values since they're calculated at runtime
+* Updating metadata columns requires additional processing time, so only send updates when necessary
+
+### Label Update Examples
+
+#### Stream Label Updates
+
+As with inference publishing, label updates can be sent as streams or batches.
+
+**Stream Update Data Formats**
+
+* List of Python dictionaries
+
+**Stream Update One or More Events**
+
+Integrate Fiddler directly into your production system to publish label updates as they occur. The event ID, the column chosen for Model.event\_id\_col, is required.
+
+```python
+import fiddler as fdl
+
+# Instantiate the Model object for your model
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+event_update = [
+    {
+        'label_value': 1,
+        'event_id': 'A1',
+    },
+    ...
+]
+
+# Streaming update returns the list of event ID(s) updated.
+event_id = model.publish(
+    source=event_update,
+    environment=fdl.EnvType.PRODUCTION,
+    update=True,
+)
+```
+
+**Stream Update Label and Metadata**
+
+Metadata column(s) can also be updated.
+
+```python
+import fiddler as fdl
+
+# Instantiate the Model object for your model
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+event_update = [
+    {
+        'metadata_col': 'yes',
+        'label_value': 1,
+        'event_id': 'A1',
+    },
+]
+
+event_id = model.publish(
+    source=event_update,
+    environment=fdl.EnvType.PRODUCTION,
+    update=True,
+)
+```
+
+#### Batch Update Data Formats
+
+* pandas DataFrame
+* CSV file (`.csv`),
+* Parquet file (`.parquet`)
+
+**Batch Update Events**
+
+Publish larger sets of label updates using batch publishing. The event ID, the column chosen for Model.event\_id\_col, is required.
+
+```python
+import pandas as pd
+import fiddler as fdl
+
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+label_batch = pd.read_parquet('path_to_your_updated_labels/data.parquet')
+
+update_job = model.publish(
+    source=label_batch,
+    environment=fdl.EnvType.PRODUCTION,
+    update=True,
+)
+```
+
+Refer to Model.publish() documentation for more details on different sources and parameters.
+
+> 📘 **There are a few points to be aware of:**
+>
+> * Performance metrics (available in monitoring charts and alert rules) will be computed as ground truth labels are inserted and recomputed when later updated.
+>   * For example, if the ground truth values are originally missing from events in a given time range, there will be **no performance metrics available** for that time range. Once the events are updated, performance metrics will be computed and will populate the monitoring charts.
+>   * Events that do not originally have ground truth labels should be **uploaded with empty values**—not dummy values. If dummy values are used, you will have improper performance metrics, and once the new values come in, the old, incorrect values will still be present.
+>   * Metrics based on **Metadata** columns won't reflect updates.
+> * In order to update existing events, you will need access to the event IDs used at the time of upload.
+> * Updating the event timestamp, `Model.event_ts_col`, is not supported.
+
+
+---

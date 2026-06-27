@@ -1,0 +1,367 @@
+# Updating Model Schema
+
+Learn how to modify your model's schema after initial creation by adding new columns.
+
+## Overview
+
+Sometimes you need to add new columns to an existing model in production. Common scenarios include:
+
+* Adding new features that weren't in the original training data
+* Including additional metadata for monitoring purposes
+* Extending the model with derived features
+* Adding tracking columns for business metrics
+
+Fiddler allows you to update your model schema programmatically using the Python client's `add_column()` method.
+
+{% hint style="info" %}
+**Availability:** This feature requires Fiddler Python Client SDK version 3.11 or later.
+
+For detailed API reference, see [Model.add\_column()](/api/fiddler-python-client-sdk/entities/model.md#add_column).
+{% endhint %}
+
+## Prerequisites
+
+* An existing model in Fiddler
+* Python client installed and initialized (version 3.11+)
+* Appropriate permissions to modify the model
+
+## Adding a Column
+
+Use the `add_column()` method on your model instance to add a new column:
+
+### Basic Example
+
+```python
+import fiddler as fdl
+from fiddler import Column, DataType
+
+# Fetch existing model
+model = fdl.Model.from_name(
+    name="fraud_detector",
+    project_id="YOUR_PROJECT_ID"
+)
+
+# Define new column (bins are optional — auto-generated from min/max if omitted)
+new_column = Column(
+    name="transaction_amount",
+    data_type=DataType.FLOAT,
+    min=0.0,
+    max=100000.0,
+    bins=[0, 100, 500, 1000, 5000, 10000, 50000, 100000]
+)
+
+# Add to model schema
+model.add_column(column=new_column, column_type='metadata')
+```
+
+## Column Types
+
+The `column_type` parameter specifies where the column will be used in your model. Available types:
+
+* **`'inputs'`**: Model input features used for predictions
+* **`'outputs'`**: Model prediction outputs (probabilities, scores, etc.)
+* **`'targets'`**: Ground truth labels for evaluation
+* **`'metadata'`**: Tracking/monitoring data (default)
+
+## Data Type Examples
+
+Fiddler supports the following data types for model columns:
+
+* **Integer** (`DataType.INTEGER`): Whole numbers (e.g., age, count)
+* **Float** (`DataType.FLOAT`): Decimal numbers (e.g., price, score, probability)
+* **Category** (`DataType.CATEGORY`): Categorical values from a predefined set
+* **String** (`DataType.STRING`): Text data
+* **Boolean** (`DataType.BOOLEAN`): True/false values
+* **Vector** (`DataType.VECTOR`): Multi-dimensional numerical arrays (embeddings)
+* **Timestamp** (`DataType.TIMESTAMP`): Date and time values
+
+### Numeric Column (Integer)
+
+```python
+from fiddler import Column, DataType
+
+age_col = Column(
+    name="customer_age",
+    data_type=DataType.INTEGER,
+    min=18,
+    max=100
+)
+model.add_column(column=age_col, column_type='metadata')
+```
+
+### Numeric Column (Float)
+
+```python
+score_col = Column(
+    name="risk_score",
+    data_type=DataType.FLOAT,
+    min=0.0,
+    max=1.0
+)
+model.add_column(column=score_col, column_type='outputs')
+```
+
+### Categorical Column
+
+```python
+category_col = Column(
+    name="product_category",
+    data_type=DataType.CATEGORY,
+    categories=["Electronics", "Clothing", "Food", "Books"]
+)
+model.add_column(column=category_col, column_type='inputs')
+```
+
+### String Column
+
+```python
+text_col = Column(
+    name="customer_feedback",
+    data_type=DataType.STRING
+)
+model.add_column(column=text_col, column_type='metadata')
+```
+
+### Boolean Column
+
+```python
+bool_col = Column(
+    name="is_premium_customer",
+    data_type=DataType.BOOLEAN
+)
+model.add_column(column=bool_col, column_type='metadata')
+```
+
+### Vector Column (Embeddings)
+
+```python
+embedding_col = Column(
+    name="text_embedding",
+    data_type=DataType.VECTOR,
+    n_dimensions=768
+)
+model.add_column(column=embedding_col, column_type='inputs')
+```
+
+### Timestamp Column
+
+```python
+timestamp_col = Column(
+    name="transaction_time",
+    data_type=DataType.TIMESTAMP
+)
+model.add_column(column=timestamp_col, column_type='metadata')
+```
+
+## Important Considerations
+
+### Historical Data
+
+Adding a column doesn't automatically populate historical data. The new column will have `null` values for all past events. Only newly published events will contain values for the added column.
+
+Additionally, the baseline dataset won't have data for this new column. If you need to compute drift metrics for the new column, upload a new baseline dataset that includes the column data:
+
+```python
+import pandas as pd
+
+# Prepare baseline data with the new column included
+baseline_df = pd.DataFrame({
+    "feature1": [...],
+    "feature2": [...],
+    "region": ["US", "EU", "APAC", ...]  # New column added to schema
+})
+
+# Upload new baseline dataset
+baseline_publish_job = model.publish(
+    source=baseline_df,
+    environment=fdl.EnvType.PRE_PRODUCTION,
+    dataset_name='baseline_with_new_column',
+)
+print(f'Baseline upload initiated with Job ID = {baseline_publish_job.id}')
+```
+
+### Schema Validation
+
+The column definition must pass Fiddler's validation rules:
+
+* Column names must be unique within the model
+* Data types must be valid
+* Numeric columns should specify min/max ranges
+* Numeric columns may optionally specify custom bins (must span \[min, max], be strictly increasing, at most 16 boundary values)
+* Categorical columns should specify categories
+* Vector columns must specify dimensions
+
+### Publishing Data
+
+After adding a column, remember to include it when publishing new events:
+
+```python
+import fiddler as fdl
+import pandas as pd
+
+# Add new column to model
+model.add_column(
+    column=Column(name="region", data_type=DataType.STRING),
+    column_type='metadata'
+)
+
+# Publish events including the new column
+events_df = pd.DataFrame({
+    "timestamp": [...],
+    "feature1": [...],
+    "feature2": [...],
+    "region": ["US", "EU", "APAC", ...]  # New column
+})
+
+model.publish(source=events_df, environment=fdl.EnvType.PRODUCTION)
+```
+
+## Common Use Cases
+
+### Adding Multiple Columns
+
+```python
+# Define multiple columns
+columns_to_add = [
+    Column(name="customer_segment", data_type=DataType.INTEGER, min=1, max=5),
+    Column(name="region", data_type=DataType.STRING),
+    Column(name="is_returning", data_type=DataType.BOOLEAN)
+]
+
+# Add each column
+for col in columns_to_add:
+    model.add_column(column=col, column_type='metadata')
+    print(f"Added column: {col.name}")
+```
+
+### Adding a Feature Column
+
+```python
+# Add a new feature that wasn't in original training data
+new_feature = Column(
+    name="days_since_last_purchase",
+    data_type=DataType.INTEGER,
+    min=0,
+    max=365
+)
+model.add_column(column=new_feature, column_type='inputs')
+```
+
+## Error Handling
+
+### Duplicate Column Names
+
+```python
+try:
+    model.add_column(
+        column=Column(name="existing_column", data_type=DataType.STRING),
+        column_type='metadata'
+    )
+except ValueError as e:
+    print(f"Error: {e}")
+    # Output: Column 'existing_column' already exists in model schema
+```
+
+## Complete Example
+
+Here's a complete workflow for adding columns to an existing model:
+
+```python
+import fiddler as fdl
+from fiddler import Column, DataType
+import pandas as pd
+
+# Initialize Fiddler client
+fdl.init(
+    url="https://your-instance.fiddler.ai",
+    token="your-api-token"
+)
+
+# Get existing model
+model = fdl.Model.from_name(
+    name="credit_risk_model",
+    project_id="my-project-id"
+)
+
+print(f"Current columns: {[col.name for col in model.schema.columns]}")
+
+# Add new metadata columns
+new_columns = [
+    Column(
+        name="customer_tier",
+        data_type=DataType.CATEGORY,
+        categories=["Bronze", "Silver", "Gold", "Platinum"]
+    ),
+    Column(
+        name="account_age_days",
+        data_type=DataType.INTEGER,
+        min=0,
+        max=10000
+    ),
+    Column(
+        name="transaction_history_summary",
+        data_type=DataType.STRING
+    )
+]
+
+# Add each column
+for col in new_columns:
+    try:
+        model.add_column(column=col, column_type='metadata')
+        print(f"✓ Added: {col.name}")
+    except ValueError as e:
+        print(f"✗ Failed to add {col.name}: {e}")
+
+# Verify columns were added
+print(f"Updated columns: {[col.name for col in model.schema.columns]}")
+
+# Publish new events with the added columns
+new_events = pd.DataFrame({
+    # Existing columns
+    "timestamp": ["2024-01-01T12:00:00Z"],
+    "credit_score": [720],
+    "annual_income": [75000],
+
+    # Newly added columns
+    "customer_tier": ["Gold"],
+    "account_age_days": [365],
+    "transaction_history_summary": ["Regular activity, no delinquencies"]
+})
+
+job = model.publish(source=new_events, environment=fdl.EnvType.PRODUCTION)
+print(f"Published events with new columns. Job ID: {job.id}")
+```
+
+## Related Documentation
+
+* [Create a Project and Model](/developers/client-library-reference/model-onboarding/create-a-project-and-model.md)
+* [Customizing Your Model Schema](/developers/client-library-reference/model-onboarding/customizing-your-model-schema.md)
+* [Publishing Production Data](/developers/client-library-reference/publishing-production-data.md)
+* [Model Task Types](/developers/client-library-reference/model-onboarding/task-types.md)
+
+## Frequently Asked Questions (FAQ)
+
+**Q: Can I modify an existing column?**
+
+A: `add_column()` is only for adding new columns. To modify an existing column's properties (like min, max, bins, or categories), update the property on the schema and call `model.update()`:
+
+```python
+model = fdl.Model.get(id_="abc-123")
+model.schema["credit_score"].bins = [350, 500, 650, 850]
+model.update()
+```
+
+> **Note:** Bin boundaries must span the column's existing \[min, max] range. If you are also changing the range, update min and max in the same call.
+
+See [Customizing Your Model Schema](/developers/client-library-reference/model-onboarding/customizing-your-model-schema.md) for details.
+
+**Q: What happens to existing alerts and monitors?**
+
+A: Existing alerts and monitors continue to work. However, you may want to create new monitors for the added columns.
+
+**Q: Can I add multiple columns at once?**
+
+A: You need to call `add_column()` separately for each column. The method updates the model after each addition.
+
+
+---

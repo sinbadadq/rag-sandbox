@@ -1,0 +1,114 @@
+# Coherence
+
+Evaluator to assess the coherence and logical flow of a response.
+
+The Coherence evaluator measures whether a response is well-structured, logically consistent, and flows naturally from one idea to the next. This metric is important for ensuring that responses are easy to follow and understand, with clear connections between different parts of the text.
+
+Key Features:
+
+* **Coherence Assessment**: Determines if the response has logical flow and structure
+* **Binary Scoring**: Returns 1.0 for coherent responses, 0.0 for incoherent ones
+* **Optional Context**: Can optionally use a prompt for context-aware evaluation
+* **Detailed Reasoning**: Provides explanation for the coherence assessment
+* **Fiddler API Integration**: Uses Fiddler's built-in coherence evaluation model
+
+Use Cases:
+
+* **Content Quality**: Ensuring responses are well-structured and logical
+* **Educational Content**: Verifying explanations flow logically
+* **Technical Documentation**: Checking if instructions are coherent
+* **Creative Writing**: Assessing narrative flow and consistency
+* **Conversational AI**: Ensuring responses make sense in context
+
+Scoring Logic:
+
+* **1.0 (Coherent)**: Response has clear logical flow and structure
+* **0.0 (Incoherent)**: Response lacks logical flow or has structural issues
+
+## Parameters
+
+| Parameter  | Type            | Required | Default | Description                                                                                   |
+| ---------- | --------------- | -------- | ------- | --------------------------------------------------------------------------------------------- |
+| `response` | `str`           | ✗        | `None`  | The response to evaluate for coherence.                                                       |
+| `prompt`   | `str, optional` | ✗        | `None`  | The original prompt that generated the response. Used for context-aware coherence evaluation. |
+
+## Returns
+
+A Score object containing: : - name: "is\_coherent"
+
+* evaluator\_name: "Coherence"
+* value: 1.0 if coherent, 0.0 if incoherent
+* label: String representation of the boolean result
+* reasoning: Explanation for the coherence assessment
+
+**Return type:** Score
+
+## Raises
+
+**ValueError** -- If the response is empty or None, or if no scores are returned from the API.
+
+## Example
+
+```python
+from fiddler_evals.evaluators import Coherence
+evaluator = Coherence()
+```
+
+```python
+# Coherent response
+score = evaluator.score(
+
+    response="First, we need to understand the problem. Then, we can identify potential solutions. Finally, we should test our approach."
+
+)
+print(f"Coherence: {score.value}")  # 1.0
+
+# Incoherent response
+incoherent_score = evaluator.score(
+
+    prompt="Explain the process of making coffee",
+    response="The sky is blue. I like pizza. Quantum physics is complex. Let's go shopping.",
+
+)
+print(f"Coherence: {incoherent_score.value}")  # 0.0
+
+# With context
+contextual_score = evaluator.score(
+
+    prompt="Explain the process of making coffee",
+    response="First, grind the beans. Then, heat the water. Next, pour water over grounds. Finally, enjoy your coffee."
+
+)
+print(f"Coherence: {contextual_score.value}")  # 1.0
+
+# Check coherence
+if score.value == 1.0:
+
+    print("Response is coherent and well-structured")
+```
+
+{% hint style="info" %}
+This evaluator uses Fiddler's built-in coherence assessment model and requires an active connection to the Fiddler API. The optional prompt parameter can provide additional context for more accurate coherence evaluation, especially when the response needs to be evaluated in relation to a specific question or task.
+{% endhint %}
+
+## name *= 'coherence'*
+
+## score()
+
+Score the coherence of a response.
+
+## Parameters
+
+| Parameter  | Type  | Required | Default | Description                                      |
+| ---------- | ----- | -------- | ------- | ------------------------------------------------ |
+| `prompt`   | `str` | ✗        | `None`  | The original prompt that generated the response. |
+| `response` | `str` | ✗        | `None`  | The response to evaluate for coherence.          |
+
+## Returns
+
+A Score object for coherence assessment.
+
+**Return type:** Score
+
+
+---

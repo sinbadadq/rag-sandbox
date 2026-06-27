@@ -1,0 +1,256 @@
+# Overview
+
+## Quick Start Guides
+
+Ready to start testing your LLM applications? Choose the hands-on guide that matches your evaluation needs. Each quick start provides step-by-step instructions, code examples, and takes 15-20 minutes to complete.
+
+{% hint style="info" %}
+**New to Fiddler Experiments?** Start with our [comprehensive Experiments guide](/getting-started/experiments.md) to understand core concepts, workflows, and best practices before diving into these quick starts.
+{% endhint %}
+
+***
+
+### Evals SDK Quick Start
+
+**Build comprehensive experiment workflows with built-in and custom evaluators**
+
+<figure><img src="/files/oItXGJgROjC9Dh0o8dUf" alt="Fiddler Experiments results example page"><figcaption><p>Analyze experiment results with detailed metrics and insights</p></figcaption></figure>
+
+**What you'll learn:**
+
+* Connect to Fiddler and set up evaluation projects
+* Create datasets with test cases (CSV, JSONL, or DataFrame)
+* Use production-ready evaluators (Relevance, Coherence, Toxicity, Sentiment)
+* Build custom evaluators for domain-specific requirements
+* Run experiments with parallel processing
+* Analyze results and export data for further analysis
+
+**Perfect for:**
+
+* Teams needing full control over evaluation logic
+* Building comprehensive test suites with multiple quality dimensions
+* Creating domain-specific custom metrics
+* Programmatic experiment workflows and CI/CD integration
+
+**Time to complete:** \~20 minutes
+
+[Start Evals SDK Quick Start →](/evaluate-and-test/evals-sdk-quick-start.md)
+
+***
+
+### Prompt Specs Quick Start
+
+**Create custom LLM-as-a-Judge evaluations without manual prompt engineering**
+
+**What you'll build:** A news article topic classifier that demonstrates:
+
+* Schema-based evaluation definition (no prompt writing!)
+* Validation and testing workflows
+* Iterative improvement with field descriptions
+* Production deployment as Fiddler enrichments
+
+**What you'll learn:**
+
+* Define evaluation schemas using JSON
+* Validate Prompt Specs before deployment
+* Test evaluation logic with sample data
+* Improve accuracy through structured descriptions
+* Deploy custom evaluators to production monitoring
+
+**Perfect for:**
+
+* Teams needing domain-specific evaluation logic
+* Avoiding time-consuming prompt engineering
+* Rapid iteration on evaluation criteria
+* Schema-driven evaluation workflows
+
+**Time to complete:** \~15 minutes
+
+[Start Prompt Specs Quick Start →](/evaluate-and-test/prompt-specs-quick-start.md)
+
+***
+
+### Compare LLM Outputs
+
+**Systematically compare different LLM models to make data-driven decisions**
+
+**What you'll learn:**
+
+* Compare outputs from different LLM models (GPT-4, Claude, Llama, etc.)
+* Evaluate multiple prompt variations side-by-side
+* Use Fiddler's observability features for pre-production testing
+* Balance quality, cost, and latency trade-offs
+
+**Perfect for:**
+
+* Model selection and validation
+* Prompt A/B testing and optimization
+* Cost optimization through model comparison
+* Pre-production evaluation of LLM outputs
+
+**Time to complete:** \~15 minutes
+
+**Interactive notebook:**
+
+* [Open in Google Colab](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Comparison.ipynb)
+* [Download from GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Comparison.ipynb)
+
+[Start Comparing Models →](/evaluate-and-test/llm-evaluation-example.md)
+
+***
+
+## Choosing the Right Quick Start
+
+Not sure which guide to start with? Use this decision tree:
+
+```mermaid
+graph TD
+    A[What's your evaluation goal?] --> B{Need custom<br/>domain logic?}
+    A --> C{Comparing<br/>models?}
+    A --> D{Building test<br/>suites?}
+
+    B -->|Yes, schema-based| E[Prompt Specs<br/>Quick Start]
+    B -->|Yes, Python-based| F[Evals SDK<br/>Quick Start]
+
+    C -->|Yes| G[Compare LLM<br/>Outputs]
+
+    D -->|Yes| F
+
+    style E fill:#1976d2,color:#fff,stroke:#0d47a1
+    style F fill:#388e3c,color:#fff,stroke:#1b5e20
+    style G fill:#f57c00,color:#fff,stroke:#e65100
+```
+
+**Quick recommendations:**
+
+* 🎯 **First-time users**: Start with [Evals SDK Quick Start](/evaluate-and-test/evals-sdk-quick-start.md) to learn the fundamentals
+* 🔧 **Custom evaluations needed**: Use [Prompt Specs Quick Start](/evaluate-and-test/prompt-specs-quick-start.md) for schema-based approach
+* 📊 **Model comparison**: Jump to [Compare LLM Outputs](/evaluate-and-test/llm-evaluation-example.md) for side-by-side testing
+
+## Core Evaluation Concepts
+
+These quick starts demonstrate key Fiddler Experiments capabilities:
+
+### Built-in Evaluators
+
+Production-ready metrics that run on [Fiddler Trust Models](https://www.fiddler.ai/trust-service):
+
+* **Quality**: Answer Relevance, Coherence, Conciseness, Completeness
+* **Safety**: Toxicity Detection, Prompt Injection, PII Detection
+* **RAG-Specific**: Faithfulness, Context Relevance
+* **Sentiment**: Multi-score sentiment and topic classification
+
+**Key benefits:**
+
+* Zero external API costs
+* <100ms latency for real-time evaluation
+* Your data never leaves your environment
+
+### Custom Evaluation Frameworks
+
+Build domain-specific evaluators using:
+
+* **Python-based evaluators** - Full programmatic control
+* **Prompt Specs** - Schema-driven LLM-as-a-Judge (no manual prompting)
+* **Function wrappers** - Integrate existing evaluation logic
+
+### Experiment Tracking & Comparison
+
+Every experiment run is tracked:
+
+* Complete lineage of inputs, outputs, and scores
+* Side-by-side experiment comparison in Fiddler UI
+* Aggregate statistics and drill-down analysis
+* Export capabilities for further processing
+
+## Common Experiment Workflows
+
+These quick starts support various experiment scenarios:
+
+### Pre-Production Testing
+
+* **Regression Testing**: Run comprehensive test suites before deployment
+* **Quality Gates**: Set score thresholds that must be met
+* **Version Validation**: Compare model versions on same datasets
+
+### Model & Prompt Optimization
+
+* **A/B Testing**: Compare prompt variations quantitatively
+* **Model Selection**: Evaluate multiple LLMs on same tasks
+* **Hyperparameter Tuning**: Test temperature, top-p, and other configs
+
+### RAG System Evaluation
+
+Evaluate RAG pipelines end-to-end using the [RAG Health Metrics](/getting-started/experiments.md) evaluators — a purpose-built diagnostic framework that pinpoints whether issues originate in retrieval, generation, or query understanding:
+
+* **Answer Relevance 2.0**: Assess how well responses address user queries with ordinal scoring (High / Medium / Low)
+* **Context Relevance**: Measure whether retrieved documents are relevant to the query (High / Medium / Low)
+* **RAG Faithfulness**: Verify responses are grounded in retrieved documents (Yes / No with reasoning)
+
+Use these evaluators together to diagnose specific failure modes — for example, high faithfulness with low relevance indicates the response is grounded but doesn't answer the question, pointing to a retrieval problem rather than a generation problem.
+
+### Safety & Compliance
+
+* **Adversarial Testing**: Test with jailbreak attempts and prompt injections
+* **Content Moderation**: Measure toxicity, bias, and PII exposure
+* **Policy Validation**: Ensure outputs meet organizational standards
+
+## From Development to Production
+
+Fiddler Experiments integrates seamlessly with production monitoring:
+
+**Unified Workflow Benefits:**
+
+* **Consistent Metrics**: Same evaluators in development and production
+* **Continuous Learning**: Production insights feed back into test datasets
+* **Seamless Transition**: Deploy with confidence—monitoring matches testing
+
+**Complete AI Lifecycle:**
+
+1. **Build** → Design and instrument your applications
+2. **Test** → Evaluate with Fiddler Experiments *(these quick starts)*
+3. **Monitor** → Track production with [Agentic Monitoring](/getting-started/agentic-monitoring.md)
+4. **Improve** → Refine based on insights
+
+Learn more about [Fiddler's end-to-end agentic AI lifecycle](https://www.fiddler.ai/blog/end-to-end-agentic-observability-lifecycle).
+
+## Getting Started Checklist
+
+Ready to evaluate your LLM applications?
+
+* [ ] Choose a quick start guide based on your evaluation needs
+* [ ] Install the [Fiddler Evals SDK](/api/fiddler-evals-sdk/evals.md) (for SDK and Prompt Specs guides)
+* [ ] Prepare 5-10 sample test cases for your application
+* [ ] Follow the step-by-step guide (15-20 minutes)
+* [ ] Review results in Fiddler UI
+* [ ] Iterate and expand your experiment coverage
+
+## Additional Resources
+
+**Learn More:**
+
+* [Experiments Overview](/getting-started/experiments.md) - Comprehensive guide to Fiddler Experiments
+* [Evals SDK Advanced Guide](/developers/tutorials/experiments/evals-sdk-advanced.md) - Production patterns
+* [Fiddler Evals SDK Reference](/api/fiddler-evals-sdk/evals.md) - Complete API documentation
+* [Experiments Glossary](/reference/glossary/experiments.md) - Key terminology
+
+**Example Notebooks:**
+
+* [Evaluations SDK Notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Evaluations_SDK.ipynb)
+* [Prompt Specs Notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLMaaJ_Prompt_Spec.ipynb)
+* [LLM Comparison Notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Comparison.ipynb)
+
+**Related Capabilities:**
+
+* [Agentic Monitoring](/getting-started/agentic-monitoring.md) - Production agent observability
+* [LLM Monitoring](/getting-started/llm-monitoring.md) - Production LLM tracking
+* [Guardrails](/getting-started/guardrails.md) - Real-time safety validation
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

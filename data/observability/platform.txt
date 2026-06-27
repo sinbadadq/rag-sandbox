@@ -1,0 +1,15 @@
+# Monitoring Platform
+
+Fiddler Monitoring helps you detect performance issues in your production ML models and LLM applications. It provides five built-in metric types, plus support for custom metrics that you can monitor and track.
+
+* [**Data Drift**](/observability/platform/data-drift-platform.md)
+* [**Performance**](/observability/platform/performance-tracking-platform.md)
+* [**Data Integrity**](/observability/platform/data-integrity-platform.md)
+* [**Traffic**](/observability/platform/traffic-platform.md)
+* [**Statistic**](/observability/platform/statistics.md)
+* [**Custom Metrics**](/observability/platform/custom-metrics.md)
+
+These metrics can be visualized through Fiddler's Charts and Dashboards, alerted on using Alerts, and extended with Custom Metrics, allowing for quick root cause analysis alerts.
+
+
+---

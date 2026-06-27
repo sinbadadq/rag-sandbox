@@ -1,0 +1,46 @@
+# FiddlerSpanAttributes
+
+Constants for Fiddler OpenTelemetry span attributes.
+
+## AGENT\_NAME *= 'gen\_ai.agent.name'*
+
+## AGENT\_ID *= 'gen\_ai.agent.id'*
+
+## CONVERSATION\_ID *= 'gen\_ai.conversation.id'*
+
+## TYPE *= 'fiddler.span.type'*
+
+## SERVICE\_VERSION *= 'service.version'*
+
+## LLM\_INPUT\_SYSTEM *= 'gen\_ai.llm.input.system'*
+
+## LLM\_INPUT\_USER *= 'gen\_ai.llm.input.user'*
+
+## LLM\_OUTPUT *= 'gen\_ai.llm.output'*
+
+## LLM\_CONTEXT *= 'gen\_ai.llm.context'*
+
+## LLM\_REQUEST\_MODEL *= 'gen\_ai.request.model'*
+
+## LLM\_SYSTEM *= 'gen\_ai.system'*
+
+## LLM\_TOKEN\_COUNT\_INPUT *= 'gen\_ai.usage.input\_tokens'*
+
+## LLM\_TOKEN\_COUNT\_OUTPUT *= 'gen\_ai.usage.output\_tokens'*
+
+## LLM\_TOKEN\_COUNT\_TOTAL *= 'gen\_ai.usage.total\_tokens'*
+
+## GEN\_AI\_INPUT\_MESSAGES *= 'gen\_ai.input.messages'*
+
+## GEN\_AI\_OUTPUT\_MESSAGES *= 'gen\_ai.output.messages'*
+
+## TOOL\_INPUT *= 'gen\_ai.tool.input'*
+
+## TOOL\_OUTPUT *= 'gen\_ai.tool.output'*
+
+## TOOL\_NAME *= 'gen\_ai.tool.name'*
+
+## TOOL\_DEFINITIONS *= 'gen\_ai.tool.definitions'*
+
+
+---

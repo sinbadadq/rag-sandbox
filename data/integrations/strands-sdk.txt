@@ -1,0 +1,340 @@
+# Fiddler Strands SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-strands)](https://pypi.org/project/fiddler-strands/)
+
+Monitor Strands Agent applications with Fiddler's purpose-built SDK. The Strands Agents SDK provides deep visibility into agent reasoning, tool execution, and multi-agent coordination for Strands-based agent applications.
+
+**Platform Compatibility:** Works with Strands agents deployed on any platform, including AWS Bedrock, custom infrastructure, or other cloud providers.
+
+## What You'll Need
+
+* Fiddler account (cloud or on-premises)
+* Strands agent application
+* Python 3.10 or higher
+* Fiddler API key
+
+## Quick Start
+
+```bash
+# Step 1: Install (uv recommended)
+uv add fiddler-strands
+# or: pip install fiddler-strands
+```
+
+```python
+# Step 2: Set up telemetry and instrumentation
+import os
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+strands_telemetry = StrandsTelemetry()
+strands_telemetry.setup_otlp_exporter()  # Sends to Fiddler
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+
+# Step 3: Create your Strands agent as usual
+from strands import Agent
+from strands.models.openai import OpenAIModel
+
+model = OpenAIModel(api_key=os.getenv("OPENAI_API_KEY"))
+agent = Agent(model=model, system_prompt="You are a helpful assistant")
+
+# Step 4: Agent calls are automatically traced
+response = agent("Hello, how are you?")
+```
+
+**Prerequisites:** Configure OpenTelemetry environment variables for Fiddler integration:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <token>,fiddler-application-id=<app-uuid>"
+```
+
+## What Gets Monitored
+
+### Strands Agent Operations
+
+* **Agent Invocations** - Full request/response capture with timing
+* **Tool Execution** - Tool and API call tracking
+* **Knowledge Base Queries** - RAG retrieval and context usage
+* **Prompt Orchestration** - Prompt templates and LLM interactions
+* **Session Management** - Multi-turn conversation tracking
+
+### Strands-Specific Metrics
+
+* **Reasoning Traces** - Agent thought process and decision-making
+* **Tool Execution** - Success rates, latency, error patterns
+* **Knowledge Retrieval** - Relevance scores, source attribution
+* **Multi-Agent Coordination** - Cross-agent communication patterns
+* **Infrastructure Metrics** - Platform-specific infrastructure calls
+
+## Configuration Options
+
+### Environment Variables (OpenTelemetry Standard)
+
+The SDK uses standard OpenTelemetry environment variables for configuration:
+
+```bash
+# Required - Fiddler OTLP endpoint
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+
+# Required - Fiddler authentication and application ID
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <your-token>,fiddler-application-id=<app-uuid>"
+
+# Optional - Application metadata
+export OTEL_RESOURCE_ATTRIBUTES="application.id=<app-uuid>,service.name=my-agent,deployment.environment=production"
+
+# Required - OpenAI API key (for running agents)
+export OPENAI_API_KEY="sk-..."
+```
+
+See the [Quick Start Guide](/developers/agentic-ai-monitoring/strands-agent-quick-start.md) for detailed configuration steps.
+
+### Programmatic Configuration
+
+```python
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+# Basic setup
+strands_telemetry = StrandsTelemetry()
+strands_telemetry.setup_console_exporter()  # Optional: for debugging
+strands_telemetry.setup_otlp_exporter()     # Sends to Fiddler
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+
+# All agents created after this point are automatically instrumented
+```
+
+## Example Applications
+
+### Customer Service Agent with Tools
+
+```python
+import os
+from strands import Agent, tool
+from strands.models.openai import OpenAIModel
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor, set_conversation_id
+
+# Set up instrumentation
+strands_telemetry = StrandsTelemetry()
+strands_telemetry.setup_otlp_exporter()
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+
+# Define tools
+@tool
+def lookup_order(order_id: str) -> str:
+    """Look up customer order details."""
+    return f"Order {order_id}: Shipped, arriving Tuesday"
+
+@tool
+def check_inventory(product: str) -> str:
+    """Check product inventory."""
+    return f"{product}: 42 units in stock"
+
+# Create agent with tools
+model = OpenAIModel(api_key=os.getenv("OPENAI_API_KEY"))
+agent = Agent(
+    model=model,
+    system_prompt="You are a helpful customer service agent.",
+    tools=[lookup_order, check_inventory]
+)
+
+# Track conversation
+set_conversation_id(agent, "customer-12345")
+
+# Use agent - all interactions automatically traced to Fiddler:
+# - Agent reasoning steps
+# - Tool calls (lookup_order, check_inventory)
+# - Response generation
+response = agent("What's the status of order #789?")
+```
+
+### Multi-Agent System
+
+```python
+from strands import Agent
+from strands.models.openai import OpenAIModel
+
+# All agents are automatically instrumented after setup
+model = OpenAIModel(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Create specialized agents with unique IDs
+verification_agent = Agent(
+    model=model,
+    system_prompt="You verify user identity",
+    agent_id="verification-agent"
+)
+
+account_agent = Agent(
+    model=model,
+    system_prompt="You create user accounts",
+    agent_id="account-agent"
+)
+
+# Each agent appears separately in Fiddler with full trace visibility
+```
+
+[**View complete example →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Strands_Agent_Integration.ipynb)
+
+## Viewing Your Data
+
+Navigate to Fiddler UI to analyze Strands Agent performance:
+
+1. **Agent Overview** - Overall agent performance metrics
+2. **Session Analysis** - Multi-turn conversation flows
+3. **Action Group Metrics** - Tool usage patterns and success rates
+4. **Knowledge Base Performance** - Retrieval quality and relevance
+5. **Cost Tracking** - Token usage and AWS costs per agent
+
+### Key Metrics
+
+* **Agent Latency**: P50/P95/P99 response times
+* **Tool Success Rate**: Percentage of successful action group executions
+* **Retrieval Quality**: Knowledge base query relevance scores
+* **Token Usage**: LLM tokens consumed per session
+* **Error Rates**: Failed invocations by error type
+
+## Advanced Features
+
+### Custom Metadata with Helper Functions
+
+The SDK provides helper functions to enrich your traces with custom business context:
+
+#### Conversation Tracking
+
+```python
+from fiddler_strandsagents import set_conversation_id, get_conversation_id
+
+# Set conversation ID for multi-turn tracking
+set_conversation_id(agent, 'session_1234567890')
+
+# Retrieve it later
+conversation_id = get_conversation_id(agent)
+```
+
+#### Session-Level Attributes
+
+```python
+from fiddler_strandsagents import set_session_attributes, get_session_attributes
+
+# Add business context to all spans in this session
+set_session_attributes(agent,
+    customer_tier="premium",
+    region="us-west",
+    campaign="summer-2024",
+    cost_center="support_team"
+)
+
+# Retrieve session attributes
+attributes = get_session_attributes(agent)
+```
+
+#### Span-Level Attributes
+
+```python
+from fiddler_strandsagents import set_span_attributes, get_span_attributes
+
+# Add attributes to specific components
+set_span_attributes(model,
+    model_version="gpt-4o-mini",
+    temperature=0.7,
+    max_tokens=1000
+)
+
+set_span_attributes(search_tool,
+    department="search",
+    version="2.0",
+    environment="production"
+)
+
+# Retrieve span attributes
+model_attrs = get_span_attributes(model)
+```
+
+#### LLM Context
+
+```python
+from fiddler_strandsagents import set_llm_context, get_llm_context
+
+# Set additional context for LLM interactions
+# This context will be added to telemetry spans as 'gen_ai.llm.context'
+set_llm_context(model, 'Available hotels: Hilton, Marriott, Hyatt...')
+
+# Retrieve LLM context
+context = get_llm_context(model)
+```
+
+## Troubleshooting
+
+### Traces Not Appearing in Fiddler
+
+**Verify environment variables:**
+
+```bash
+echo $OTEL_EXPORTER_OTLP_ENDPOINT
+echo $OTEL_EXPORTER_OTLP_HEADERS
+```
+
+**Check instrumentation is enabled:**
+
+```python
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+instrumentor = StrandsAgentInstrumentor(strands_telemetry)
+print(f"Instrumented: {instrumentor.is_instrumented_by_opentelemetry}")
+```
+
+**Test with console exporter:**
+
+```python
+# Add console exporter to see traces locally
+strands_telemetry.setup_console_exporter()
+```
+
+### Missing Agent Attributes on Child Spans
+
+**Verify SDK instrumentation:**
+
+```python
+# Ensure StrandsAgentInstrumentor is called
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+```
+
+**Add custom attributes:**
+
+```python
+from fiddler_strandsagents import set_span_attributes
+
+set_span_attributes(agent, custom_attr="value")
+set_span_attributes(model, environment="production")
+```
+
+### Performance Optimization
+
+The SDK uses batch span processing by default for minimal overhead. For additional optimization:
+
+**Disable console exporter in production:**
+
+```python
+# Only use OTLP exporter in production
+strands_telemetry.setup_otlp_exporter()
+# Don't call setup_console_exporter()
+```
+
+**Adjust batch processor settings:**
+
+```python
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+# Custom batch settings for high-throughput scenarios
+# (See Advanced Configuration in Quick Start Guide)
+```
+
+## Related Documentation
+
+* [**Strands Agents SDK Quick Start** ](/developers/agentic-ai-monitoring/strands-agent-quick-start.md)- Detailed setup guide
+* [**Fiddler Evals SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md) - Evaluate Strands Agent quality
+* [**Strands Agents SDK Reference** ](/api/fiddler-strands-agents-sdk/strands.md)- Complete class and method documentation
+
+
+---

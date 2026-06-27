@@ -1,0 +1,12 @@
+# Feature Impact
+
+This guide will walk you through the steps needed to upload your model's existing feature impact values to your Fiddler model. This notebook uses the same example model leveraged in the [ML Monitoring - Simple](/developers/ml-monitoring/simple-ml-monitoring.md) quick start. If you have already run that notebook and the model exists in your Fiddler instance, then you may skip the setup steps in this guide as noted in the instructions.
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_User_Defined_Feature_Impact.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_User_Defined_Feature_Impact.ipynb).
+
+
+---

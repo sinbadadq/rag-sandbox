@@ -1,0 +1,20 @@
+# get\_session\_attributes
+
+Get the session attributes for the current agent invocation.
+
+Retrieves session attributes that were previously set using set\_session\_attributes(). Works in both synchronous and asynchronous contexts automatically.
+
+## Parameters
+
+| Parameter | Type    | Required | Default | Description                                                    |
+| --------- | ------- | -------- | ------- | -------------------------------------------------------------- |
+| `agent`   | `Agent` | ✗        | `None`  | The Strands Agent instance to retrieve session attributes from |
+
+## Returns
+
+Dictionary of session attribute key-value pairs, or empty dict if none exist
+
+**Return type:** dict\[str, str | int | float | bool]
+
+
+---

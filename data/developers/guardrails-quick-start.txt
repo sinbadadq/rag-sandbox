@@ -1,0 +1,629 @@
+# Guardrails Quick Start
+
+Fiddler Guardrails provide real-time protection for your LLM applications by detecting and preventing harmful content, PII leaks, and hallucinations before they reach your users.
+
+**Time to complete**: \~15 minutes
+
+## What You'll Learn
+
+* How to set up Fiddler Guardrails
+* How to use the three main guardrail types (Safety, PII, Faithfulness)
+* How to interpret risk scores
+* How to integrate guardrails into your LLM application
+
+## Prerequisites
+
+* **Fiddler Guardrails Account**: Sign up for [Free Guardrails](https://fiddler.ai/free-guardrails)
+* **API Key**: Generated from your Fiddler Guardrails dashboard
+* **Python 3.8+** (or any HTTP client)
+
+***
+
+## Quick Start: Setting Up Guardrails
+
+### Step 1: Get Your API Key
+
+1. Sign up at [fiddler.ai/free-guardrails](https://fiddler.ai/free-guardrails)
+2. Activate your account via email
+3. Generate your API key from the dashboard
+
+For detailed setup instructions, see the [Guardrails Getting Started Guide](/getting-started/guardrails.md).
+
+### Step 2: Install Required Libraries (Optional)
+
+```bash
+# For Python
+pip install requests
+
+# Or use any HTTP client in your preferred language
+```
+
+### Step 3: Configure Your Connection
+
+```python
+import requests
+import json
+
+# Your API credentials
+FIDDLER_URL = "https://your-instance.fiddler.ai"  # Replace with your Fiddler instance URL
+API_KEY = "your-api-key-here"
+
+# Standard headers for all guardrail requests
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+```
+
+***
+
+## Guardrail Types and Usage
+
+Each guardrail type has its own endpoint and request/response format. Choose the appropriate guardrail based on your protection needs.
+
+### 🛡️ Safety Guardrails
+
+Detect harmful, toxic, or jailbreaking content across 10 safety dimensions.
+
+**Endpoint**: `/v3/guardrails/ftl-safety`
+
+**Use cases:**
+
+* Content moderation
+* Jailbreak prevention
+* Toxic content detection
+
+#### Example: Check for Harmful Content
+
+```python
+def check_safety(text):
+    """Check text for safety violations across 10 dimensions."""
+    response = requests.post(
+        f"{FIDDLER_URL}/v3/guardrails/ftl-safety",
+        headers=HEADERS,
+        json={"data": {"input": text}}
+    )
+    return response.json()
+
+# Test with potentially harmful content
+test_input = "I want to cause harm to others"
+safety_scores = check_safety(test_input)
+
+print(json.dumps(safety_scores, indent=2))
+```
+
+**Response Format:**
+
+```json
+{
+  "fdl_harmful": 0.92,
+  "fdl_violent": 0.78,
+  "fdl_unethical": 0.65,
+  "fdl_illegal": 0.45,
+  "fdl_sexual": 0.12,
+  "fdl_racist": 0.08,
+  "fdl_jailbreaking": 0.23,
+  "fdl_harassing": 0.54,
+  "fdl_hateful": 0.71,
+  "fdl_sexist": 0.15
+}
+```
+
+**Safety Dimensions:**
+
+* `fdl_harmful` - General harmful content
+* `fdl_violent` - Violence and threats
+* `fdl_unethical` - Unethical behavior
+* `fdl_illegal` - Illegal activities
+* `fdl_sexual` - Sexual content
+* `fdl_racist` - Racist content
+* `fdl_jailbreaking` - Prompt manipulation attempts
+* `fdl_harassing` - Harassment
+* `fdl_hateful` - Hateful content
+* `fdl_sexist` - Sexist content
+* `fdl_roleplaying` - Prompting persona change
+
+#### Interpreting Safety Scores
+
+Each dimension returns a score between 0 and 1:
+
+* **0.0 - 0.3**: Low risk (safe to proceed)
+* **0.3 - 0.7**: Medium risk (review recommended)
+* **0.7 - 1.0**: High risk (block or flag for review)
+
+```python
+def is_safe(safety_scores, threshold=0.7):
+    """
+    Check if content passes safety check.
+    Returns True if ALL dimensions are below threshold.
+    """
+    dangerous_dimensions = [
+        dim for dim, score in safety_scores.items()
+        if score >= threshold
+    ]
+
+    if dangerous_dimensions:
+        print(f"⚠️ Safety violations: {dangerous_dimensions}")
+        return False
+
+    print("✅ Content passed safety check")
+    return True
+
+# Use in your application
+if is_safe(safety_scores):
+    # Proceed with LLM processing
+    pass
+else:
+    # Block or flag content
+    print("Content blocked due to safety concerns")
+```
+
+**→** [**Safety Guardrails Tutorial**](/developers/tutorials/guardrails/guardrails-safety.md)
+
+***
+
+### 🔒 PII Detection
+
+Detect personally identifiable information (PII), protected health information (PHI), and custom sensitive data.
+
+**Endpoint**: `/v3/guardrails/sensitive-information`
+
+**Use cases:**
+
+* Data privacy compliance
+* GDPR/CCPA protection
+* Sensitive data redaction
+
+#### Example 1: Detect PII
+
+```python
+def detect_pii(text, entity_categories="PII"):
+    """
+    Detect sensitive information in text.
+
+    Args:
+        text: Input text to analyze
+        entity_categories: "PII", "PHI", "Custom Entities", or list like ["PII", "PHI"]
+    """
+    payload = {
+        "data": {
+            "input": text,
+            "entity_categories": entity_categories
+        }
+    }
+
+    response = requests.post(
+        f"{FIDDLER_URL}/v3/guardrails/sensitive-information",
+        headers=HEADERS,
+        json=payload
+    )
+    return response.json()
+
+# Test with PII data
+test_text = """
+Contact John Doe at john.doe@email.com or call (555) 123-4567.
+SSN: 123-45-6789. Credit card: 4111-1111-1111-1111.
+"""
+
+pii_results = detect_pii(test_text)
+print(json.dumps(pii_results, indent=2))
+```
+
+**Response Format:**
+
+```json
+{
+  "fdl_sensitive_information_scores": [
+    {
+      "score": 0.987,
+      "label": "person",
+      "text": "John Doe",
+      "start": 8,
+      "end": 16
+    },
+    {
+      "score": 0.998,
+      "label": "email",
+      "text": "john.doe@email.com",
+      "start": 20,
+      "end": 38
+    },
+    {
+      "score": 0.991,
+      "label": "social_security_number",
+      "text": "123-45-6789",
+      "start": 72,
+      "end": 83
+    }
+  ]
+}
+```
+
+**Response Fields:**
+
+* `score` - Confidence score (0.0 to 1.0)
+* `label` - Entity type (e.g., "email", "social\_security\_number")
+* `text` - The detected sensitive information
+* `start` / `end` - Character positions in the input text
+
+#### Example 2: Detect PHI (Healthcare Data)
+
+```python
+# Detect protected health information
+healthcare_text = """
+Patient John Smith prescribed metformin for diabetes.
+Insurance number: HI-987654321.
+"""
+
+phi_results = detect_pii(healthcare_text, entity_categories="PHI")
+
+# Display detected PHI entities
+for entity in phi_results.get("fdl_sensitive_information_scores", []):
+    print(f"Found {entity['label']}: '{entity['text']}' (confidence: {entity['score']:.3f})")
+```
+
+#### Example 3: Custom Entity Detection
+
+```python
+# Detect organization-specific sensitive data
+custom_text = "Employee ID: EMP-2024-001, API key: sk-abc123xyz789"
+
+custom_results = detect_pii(
+    custom_text,
+    entity_categories="Custom Entities"
+)
+
+# Note: For custom entities, you can also specify the entity types:
+payload = {
+    "data": {
+        "input": custom_text,
+        "entity_categories": "Custom Entities",
+        "custom_entities": ["employee id", "api key", "project code"]
+    }
+}
+```
+
+**Supported Entity Categories:**
+
+* **PII**: 35+ types including names, addresses, SSN, credit cards, emails, phone numbers
+* **PHI**: 7 healthcare-specific types (medication, medical conditions, health insurance numbers)
+* **Custom Entities**: Define your own sensitive data patterns
+
+#### Processing PII Results
+
+```python
+def redact_pii(text, pii_results):
+    """Redact detected PII from text."""
+    entities = pii_results.get("fdl_sensitive_information_scores", [])
+
+    # Sort by position in reverse to maintain correct offsets
+    entities_sorted = sorted(entities, key=lambda x: x['start'], reverse=True)
+
+    redacted_text = text
+    for entity in entities_sorted:
+        redacted_text = (
+            redacted_text[:entity['start']] +
+            f"[REDACTED_{entity['label'].upper()}]" +
+            redacted_text[entity['end']:]
+        )
+
+    return redacted_text
+
+# Use in your application
+if pii_results.get("fdl_sensitive_information_scores"):
+    clean_text = redact_pii(test_text, pii_results)
+    print(f"Redacted: {clean_text}")
+```
+
+**→** [**PII Detection Tutorial**](/developers/tutorials/guardrails/guardrails-pii.md)
+
+***
+
+### ✅ FTL Faithfulness Detection
+
+Detect hallucinations and unsupported claims by comparing LLM outputs to source context (for RAG applications) using Fiddler's proprietary Fast Trust Model.
+
+**Endpoint**: `/v3/guardrails/ftl-response-faithfulness`
+
+{% hint style="info" %}
+This guardrail uses the **FTL Faithfulness** model for real-time content blocking. For RAG pipeline diagnostics using the LLM-as-a-Judge approach, see [RAG Health Metrics](/concepts/rag-health-diagnostics.md).
+{% endhint %}
+
+**Use cases:**
+
+* RAG application accuracy
+* Fact-checking
+* Hallucination prevention
+
+#### Example: Check Response Faithfulness
+
+```python
+def check_faithfulness(llm_response, source_context):
+    """
+    Check if LLM response is faithful to the provided context.
+
+    Args:
+        llm_response: The text generated by your LLM
+        source_context: The reference text from your knowledge base/retrieval
+    """
+    payload = {
+        "data": {
+            "response": llm_response,
+            "context": source_context
+        }
+    }
+
+    response = requests.post(
+        f"{FIDDLER_URL}/v3/guardrails/ftl-response-faithfulness",
+        headers=HEADERS,
+        json=payload
+    )
+    return response.json()
+
+# Test with RAG example
+retrieved_context = """
+The Eiffel Tower is located in Paris, France. It was completed in 1889
+and stands 330 meters tall. It was designed by Gustave Eiffel.
+"""
+
+llm_response_correct = "The Eiffel Tower in Paris is 330 meters tall and was completed in 1889."
+llm_response_hallucinated = "The Eiffel Tower in Paris is 450 meters tall and was completed in 1895."
+
+# Check faithful response
+faithful_score = check_faithfulness(llm_response_correct, retrieved_context)
+print(f"Faithful response score: {faithful_score}")
+
+# Check hallucinated response
+hallucinated_score = check_faithfulness(llm_response_hallucinated, retrieved_context)
+print(f"Hallucinated response score: {hallucinated_score}")
+```
+
+**Response Format:**
+
+```json
+{
+  "fdl_faithful_score": 0.92
+}
+```
+
+**Score Interpretation:**
+
+* **0.0 - 0.3**: Low faithfulness (likely hallucination)
+* **0.3 - 0.7**: Medium faithfulness (review recommended)
+* **0.7 - 1.0**: High faithfulness (response is well-supported by context)
+
+```python
+def is_faithful(faithfulness_result, threshold=0.7):
+    """Check if response is faithful to context."""
+    score = faithfulness_result.get("fdl_faithful_score", 0.0)
+
+    if score >= threshold:
+        print(f"✅ Response is faithful (score: {score:.3f})")
+        return True
+    else:
+        print(f"⚠️ Possible hallucination detected (score: {score:.3f})")
+        return False
+
+# Use in your RAG application
+if not is_faithful(faithful_score):
+    print("Warning: LLM response may contain unsupported claims")
+```
+
+**→** [**Faithfulness Tutorial**](/developers/tutorials/guardrails/guardrails-faithfulness.md)
+
+***
+
+## Common Integration Patterns
+
+### Pattern 1: Pre-Processing (Input Guardrails)
+
+Check user input before sending to your LLM:
+
+```python
+def process_user_input(user_message):
+    """Process and validate user input before LLM processing."""
+
+    # Step 1: Check safety
+    safety_scores = check_safety(user_message)
+
+    # Block if any safety dimension exceeds threshold
+    max_safety_score = max(safety_scores.values())
+    if max_safety_score >= 0.7:
+        return {
+            "error": "Your message contains inappropriate content.",
+            "blocked": True
+        }
+
+    # Step 2: Check for PII and redact if needed
+    pii_results = detect_pii(user_message)
+
+    if pii_results.get("fdl_sensitive_information_scores"):
+        # Redact PII before sending to LLM
+        user_message = redact_pii(user_message, pii_results)
+        print(f"⚠️ PII detected and redacted")
+
+    # Step 3: Proceed with LLM processing
+    return {
+        "message": user_message,
+        "blocked": False
+    }
+
+# Example usage
+user_input = "My SSN is 123-45-6789. Can you help me?"
+result = process_user_input(user_input)
+
+if not result.get("blocked"):
+    # Safe to send to LLM
+    llm_response = call_your_llm(result["message"])
+```
+
+### Pattern 2: Post-Processing (Output Guardrails)
+
+Check LLM output before returning to user:
+
+```python
+def validate_llm_output(llm_response, retrieval_context=None):
+    """Validate LLM output before returning to user."""
+
+    # Step 1: Check for PII in output
+    pii_results = detect_pii(llm_response)
+
+    if pii_results.get("fdl_sensitive_information_scores"):
+        # Redact any PII in the response
+        llm_response = redact_pii(llm_response, pii_results)
+        print("⚠️ PII detected in LLM output and redacted")
+
+    # Step 2: Check faithfulness (for RAG applications)
+    if retrieval_context:
+        faithfulness_result = check_faithfulness(llm_response, retrieval_context)
+
+        if not is_faithful(faithfulness_result, threshold=0.7):
+            return {
+                "response": llm_response,
+                "warning": "This response may contain information not supported by source documents."
+            }
+
+    return {
+        "response": llm_response,
+        "warning": None
+    }
+
+# Example usage in RAG application
+context = retrieve_from_knowledge_base(user_query)
+llm_output = generate_llm_response(user_query, context)
+validated = validate_llm_output(llm_output, context)
+
+if validated.get("warning"):
+    print(f"⚠️ {validated['warning']}")
+
+return validated["response"]
+```
+
+### Pattern 3: Complete LLM Pipeline with Multiple Guardrails
+
+```python
+def safe_llm_pipeline(user_input, use_rag=True):
+    """Complete LLM pipeline with comprehensive guardrails."""
+
+    # === INPUT GUARDRAILS ===
+
+    # 1. Safety check
+    safety_scores = check_safety(user_input)
+    if max(safety_scores.values()) >= 0.7:
+        return {"error": "Inappropriate content detected", "blocked": True}
+
+    # 2. PII detection and redaction
+    pii_input = detect_pii(user_input)
+    if pii_input.get("fdl_sensitive_information_scores"):
+        user_input = redact_pii(user_input, pii_input)
+
+    # === LLM PROCESSING ===
+
+    context = None
+    if use_rag:
+        context = retrieve_from_knowledge_base(user_input)
+
+    llm_response = generate_llm_response(user_input, context)
+
+    # === OUTPUT GUARDRAILS ===
+
+    # 3. PII detection in output
+    pii_output = detect_pii(llm_response)
+    if pii_output.get("fdl_sensitive_information_scores"):
+        llm_response = redact_pii(llm_response, pii_output)
+
+    # 4. Faithfulness check (for RAG)
+    warning = None
+    if use_rag and context:
+        faithfulness = check_faithfulness(llm_response, context)
+        if faithfulness.get("fdl_faithful_score", 0) < 0.7:
+            warning = "Response may contain unsupported claims"
+
+    return {
+        "response": llm_response,
+        "warning": warning,
+        "blocked": False
+    }
+```
+
+***
+
+## Best Practices
+
+1. **Layer Multiple Guardrails**: Use safety + PII for inputs, faithfulness + PII for outputs
+2. **Set Appropriate Thresholds**: Adjust risk score thresholds based on your use case sensitivity
+3. **Log All Checks**: Track guardrail results for monitoring and continuous improvement
+4. **Handle Gracefully**: Provide helpful user-facing messages when content is blocked
+5. **Monitor Performance**: Track false positives/negatives and adjust thresholds accordingly
+6. **Consider Latency**: Guardrail checks add \~100-300ms - use async calls when possible
+7. **Respect Rate Limits**: Free tier has limits (2 req/s, 70 req/hr, 200 req/day)
+
+***
+
+## Error Handling
+
+```python
+def safe_guardrail_check(guardrail_func, *args, **kwargs):
+    """Wrapper for safe guardrail execution with error handling."""
+    try:
+        response = guardrail_func(*args, **kwargs)
+        return response, None
+
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            error = "Authentication failed. Check your API key."
+        elif e.response.status_code == 413:
+            error = "Input exceeds token length limit."
+        elif e.response.status_code == 429:
+            error = "Rate limit exceeded. Please retry later."
+        else:
+            error = f"HTTP error: {e.response.status_code}"
+
+        return None, error
+
+    except requests.exceptions.Timeout:
+        return None, "Request timed out."
+
+    except Exception as e:
+        return None, f"Unexpected error: {str(e)}"
+
+# Usage
+safety_result, error = safe_guardrail_check(check_safety, user_input)
+if error:
+    print(f"Guardrail check failed: {error}")
+    # Fallback behavior
+else:
+    # Process safety_result
+    pass
+```
+
+***
+
+## Next Steps
+
+* **API Reference**: [Complete Guardrails API Documentation](/api/rest-api/guardrails-api-reference.md)
+* **Setup Guide**: [Complete Guardrails Setup](/protect-and-guardrails/guardrails-quick-start.md)
+* **Concepts**: [Guardrails Overview](/getting-started/guardrails.md)
+* **Tutorials**:
+  * [Safety Guardrails Notebook](/developers/tutorials/guardrails/guardrails-safety.md)
+  * [PII Detection Notebook](/developers/tutorials/guardrails/guardrails-pii.md)
+  * [Faithfulness Detection Notebook](/developers/tutorials/guardrails/guardrails-faithfulness.md)
+* **FAQ**: [Guardrails Frequently Asked Questions](/protect-and-guardrails/guardrails-faq.md)
+* **Monitoring**: [Integrate Guardrails with LLM Monitoring](/protect-and-guardrails/guardrails.md)
+
+***
+
+## Summary
+
+You've learned how to:
+
+* ✅ Use Safety Guardrails to detect harmful content across 10 dimensions
+* ✅ Detect and redact PII, PHI, and custom sensitive information
+* ✅ Check response faithfulness to prevent hallucinations in RAG applications
+* ✅ Integrate multiple guardrails into your LLM pipeline
+* ✅ Handle errors and respect rate limits
+
+Each guardrail type uses a different endpoint and response format optimized for its specific protection purpose. Combine multiple guardrails for comprehensive LLM application safety.
+
+
+---

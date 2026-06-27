@@ -1,0 +1,55 @@
+# LLM Monitoring
+
+## Fiddler LLM Monitoring Introduction
+
+### What is LLM Monitoring?
+
+Large Language Models (LLMs) are powerful but introduce unique challenges around accuracy, safety, and reliability. Effective monitoring is critical for detecting issues like hallucinations, toxic content, and performance degradation in production LLM applications.
+
+### How Fiddler LLM Monitoring Works
+
+Fiddler's LLM monitoring solution tracks your AI application's inputs and outputs, then enriches this data with specialized metrics that measure quality, safety, and performance. These enrichments provide visibility into how your LLM applications behave in production, enabling you to:
+
+* Detect problematic responses before they impact users
+* Identify patterns of failure across your applications
+* Track performance trends over time
+* Analyze root causes when issues occur
+
+### Key Capabilities
+
+* **Comprehensive Metrics**: Monitor hallucinations, toxicity, relevance, latency, and many other LLM-specific metrics
+* **Real-time Analysis**: Track performance as it happens with intuitive dashboards
+* **Advanced Enrichments**: Generate embeddings, similarity scores, and specialized trust metrics automatically
+* **Drift Detection**: Identify when prompts or responses drift from expected patterns
+* **RAG-specific Monitoring**: For retrieval-augmented applications, analyze retrieval quality and source relevance
+
+### Getting Started
+
+Implementing Fiddler LLM monitoring requires just three steps:
+
+1. **Onboard your LLM application** to Fiddler by defining its inputs, outputs, and which enrichment metrics you need
+2. **Publish your application data** to Fiddler, including prompts, responses, and context
+3. **Monitor performance** through dashboards and alerts that track the metrics most important to your use case
+
+Fiddler automatically handles the complex work of generating enrichments, detecting anomalies, and providing the visualizations you need to maintain high-quality LLM applications.
+
+### Next Steps
+
+* **Quick Start**: [Simple LLM Monitoring](/developers/llm-monitoring/simple-llm-monitoring.md) ⏱️ 10 min
+* **Learn**:
+  * [Understanding LLM Enrichment Metrics](/observability/llm/enrichments.md)
+  * [How Fiddler generates LLM metrics](/observability/llm/llm-based-metrics.md)
+  * [Available LLM metrics](/observability/llm/selecting-enrichments.md)
+  * [How to create LLM visualizations using embeddings](/observability/llm/embedding-visualization-with-umap.md)
+* **Reference**:
+  * [Fiddler Python client SDK](/api/fiddler-python-client-sdk/python-client.md)
+  * [Fiddler Python client SDK guides](/developers/client-library-reference/installation-and-setup.md)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

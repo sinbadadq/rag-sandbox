@@ -1,0 +1,10 @@
+# Model Onboarding
+
+- [Create a Project and Model](https://docs.fiddler.ai/developers/client-library-reference/model-onboarding/create-a-project-and-model.md): Explore our guide to creating a project and onboarding a model for observation. Learn how projects organize models and define a ModelSpec and Model Task.
+- [Customizing Your Model Schema](https://docs.fiddler.ai/developers/client-library-reference/model-onboarding/customizing-your-model-schema.md): Delve into our guide to customize your Model Schema with Fiddler. Learn how to adjust a column’s value range, possible values, and data type to match your model.
+- [Updating Model Schema](https://docs.fiddler.ai/developers/client-library-reference/model-onboarding/updating-model-schema.md): Learn how to modify your model's schema after initial creation by adding new columns using the Python client's add\_column() method. Add features, metadata, and tracking columns to existing models.
+- [Task Types](https://docs.fiddler.ai/developers/client-library-reference/model-onboarding/task-types.md): Explore our guide to selecting a model task type when onboarding your ML models and LLM applications.
+- [Custom Missing Values](https://docs.fiddler.ai/developers/client-library-reference/model-onboarding/specifying-custom-missing-value-representations.md): Learn how you can customize a model column to assign values to be treated as missing or null data in order to handle a value or token that is inserted in place of null.
+
+
+---

@@ -1,0 +1,14 @@
+# Class Imbalance
+
+Many ML use cases, like fraud detection and facial recognition, suffer from what is known as the *class imbalance problem*. This problem exists where a vast majority of the inferences seen by the model belong to only one class, known as the majority class. This makes detecting drift in the minority class very difficult as the "signal" is completely outweighed by the sheer number of inferences seen in the majority class.
+
+This guide showcases how Fiddler uses a class weighting parameter to deal with this problem. This notebook will onboard two identical models -- one without class imbalance weighting and one with class imbalance weighting -- to illustrate how drift signals in the minority class are easier to detect once properly amplified by Fiddler's unique class weighting approach..
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Imbalanced_Data.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Imbalanced_Data.ipynb).
+
+
+---

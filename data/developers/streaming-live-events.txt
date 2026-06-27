@@ -1,0 +1,59 @@
+# Streaming Live Events
+
+You can stream production data to Fiddler as an alternative to batch publishing. Streaming offers lower latency, which is beneficial for high-velocity or near real-time models.
+
+### When to Use Streaming vs. Batch Publishing
+
+* Use streaming when low latency is a priority and you're working with individual events or small batches
+* Use batch publishing for large datasets or when you need to track longer-running processes with Job objects
+
+#### Stream Individual Inference Events
+
+To stream a single inference event:
+
+```python
+project = fdl.Project.from_name(name='your_project_name')
+model = fdl.Model.from_name(name='your_model_name', project_id=project.id)
+
+# A single event must still be passed as an array.
+model.publish([
+    {
+        'customer_id': 1234,
+        'timestamp': 1710428785,
+        'CreditScore': 650,
+        'Geography': 'France',
+        'Gender': 'Female',
+        'Age': 45,
+        'Tenure': 2,
+        'Balance': 10000.0,
+        'NumOfProducts': 1,
+        'HasCrCard': 'Yes',
+        'isActiveMember': 'Yes',
+        'EstimatedSalary': 120000,
+        'probability_churned': 0.105,
+        'churn': 1
+    }
+])
+```
+
+#### Stream Small Batches of Events
+
+For better efficiency, you can stream multiple events at once:
+
+```python
+# For multiple events, where `my_events` is a list of Python dictionaries
+model.publish(my_events)
+```
+
+> 🚧 Note
+>
+> Convert a pandas DataFrame to a list of event dictionaries using the to\_dict function.
+
+```python
+my_events = my_df.to_dict(orient='records')
+```
+
+For batches larger than 5,000 events, prefer [batch publishing](/developers/client-library-reference/publishing-production-data/publishing-batches-of-events.md) over streaming.
+
+
+---

@@ -1,0 +1,68 @@
+# BaselineType
+
+Baseline computation strategies for data drift detection in Fiddler.
+
+Baseline types determine how reference data is defined and used for comparison with production model behavior. Fiddler supports static and rolling baselines, each serving different monitoring needs and use cases.
+
+Static Baselines:
+
+* Fixed reference point that doesn't change over time
+* Can be created from pre-production data (training/test sets) or production data
+* Consistent comparison point for detecting absolute drift
+* Ideal for compliance, audit requirements, and stable model environments
+* Pre-production static baselines created via model.publish() with PRE\_PRODUCTION environment
+* Production static baselines defined using specific time ranges
+
+Rolling Baselines:
+
+* Dynamic sliding window that shifts with time
+* Always maintains fixed time distance from current data (e.g., 4 weeks ago)
+* Automatically adapts to gradual changes in data patterns
+* Excellent for detecting sudden changes or anomalies in time-sensitive data
+* Requires window\_bin\_size and offset\_delta parameters
+
+Selection Guidelines:
+
+* Use STATIC for regulatory compliance, model validation, and stable environments
+* Use ROLLING for seasonal patterns, evolving data, and operational monitoring
+* Static pre-production baselines are recommended for most use cases
+* Rolling baselines work best with sufficient historical production data
+
+## Example
+
+```python
+# Static production baseline using time range
+static_baseline = fdl.Baseline(
+    name="static_baseline",
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.STATIC,
+    start_time=(datetime.now() - timedelta(days=30)).timestamp(),
+    end_time=(datetime.now() - timedelta(days=7)).timestamp()
+).create()
+
+# Rolling production baseline with monthly window
+rolling_baseline = fdl.Baseline(
+    name="rolling_baseline",
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.ROLLING,
+    window_bin_size=fdl.WindowBinSize.MONTH,
+    offset_delta=1  # 1 month offset
+).create()
+```
+
+## STATIC
+
+Fixed baseline using historical reference data or specific time ranges
+
+## ROLLING
+
+Dynamic sliding window baseline that shifts with time
+
+## STATIC *= 'STATIC'*
+
+## ROLLING *= 'ROLLING'*
+
+
+---

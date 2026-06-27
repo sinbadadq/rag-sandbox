@@ -1,0 +1,37 @@
+# AsyncJobFailed
+
+Raised when an asynchronous job fails to execute successfully.
+
+This exception is thrown when long-running operations (such as model training, data processing, or batch operations) fail to complete successfully. The job may have been submitted successfully but encountered an error during execution.
+
+Async jobs in Fiddler include operations like model artifact uploads, baseline computations, batch data ingestion, and other time-intensive operations that run in the background.
+
+## Examples
+
+Handling async job failures:
+
+```python
+try:
+    job = model.upload_artifact(artifact_path)
+    job.wait()  # Wait for completion
+
+except AsyncJobFailed as e:
+    print(f"Job failed: {e.message}")
+    # Check job logs or retry operation
+```
+
+Monitoring job status to avoid exceptions:
+
+```python
+job = model.upload_artifact(artifact_path)
+while not job.is_complete():
+
+    if job.status == JobStatus.FAILED:
+        print(f"Job failed: {job.error_message}")
+        break
+
+        time.sleep(5)
+```
+
+
+---

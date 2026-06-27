@@ -1,0 +1,33 @@
+# Unsupported
+
+Raised when an unsupported operation is attempted.
+
+This exception occurs when users try to perform operations that are not supported by the current Fiddler platform configuration, client version, or specific model/dataset setup. This can include feature limitations, deprecated functionality, or operations not available for certain model types.
+
+Common scenarios include attempting to use features not available in the current platform edition, trying deprecated API methods, or performing operations incompatible with the model's configuration.
+
+## Examples
+
+Handling unsupported operations:
+
+```python
+try:
+    model.enable_advanced_feature()
+
+except Unsupported as e:
+    print(f"Feature not available: {e.message}")
+    # Use alternative approach or upgrade platform
+```
+
+Common unsupported scenarios:
+
+```python
+- Using enterprise features on basic plans
+- Attempting operations on incompatible model types
+- Calling deprecated API methods
+```
+
+## message *: str* *= 'This operation is not supported'*
+
+
+---

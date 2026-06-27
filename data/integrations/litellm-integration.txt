@@ -1,0 +1,524 @@
+# LiteLLM Integration
+
+## Overview
+
+[LiteLLM](https://docs.litellm.ai/) provides a unified interface for calling 100+ LLM providers. Fiddler supports two integration modes:
+
+| Mode              | Best for                                                                        | Extra packages required |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------- |
+| **LiteLLM SDK**   | Applications calling LLM providers directly via `litellm.completion()`          | None                    |
+| **LiteLLM Proxy** | Teams routing all LLM traffic through a centrally managed LiteLLM proxy gateway | None                    |
+
+Both modes work by routing OpenTelemetry traces to Fiddler's OTLP ingestion endpoint using standard environment variables.
+
+***
+
+## LiteLLM SDK Integration
+
+### Overview
+
+LiteLLM includes a built-in OpenTelemetry integration. When you enable it and point the OTLP exporter at Fiddler, every LLM call is automatically traced — with no Fiddler-specific package required.
+
+Fiddler natively ingests LiteLLM SDK-generated OTel traces and maps them to the Fiddler schema, giving you full observability over prompts, responses, and token usage across all LLM providers.
+
+The following SDK functions are supported:
+
+| SDK Function                                                  | `gen_ai.operation.name`                  | Fiddler Span Type |
+| ------------------------------------------------------------- | ---------------------------------------- | ----------------- |
+| `litellm.completion()` / `litellm.acompletion()`              | `chat` / `completion` / `acompletion`    | `llm`             |
+| `litellm.text_completion()` / `litellm.atext_completion()`    | `text_completion` / `atext_completion`   | `llm`             |
+| `litellm.responses()` / `litellm.aresponses()`                | `responses` / `aresponses`               | `llm`             |
+| `litellm.anthropic_interface.messages.create()` / `acreate()` | `anthropic_messages`                     | `llm`             |
+| `litellm.generate_content()` / `litellm.agenerate_content()`  | `generate_content` / `agenerate_content` | `llm`             |
+| `litellm.embedding()` / `litellm.aembedding()`                | `embedding` / `aembedding`               | `chain`           |
+| `litellm.image_generation()` / `litellm.aimage_generation()`  | `image_generation` / `aimage_generation` | `chain`           |
+| `litellm.image_edit()` / `litellm.aimage_edit()`              | `image_edit` / `aimage_edit`             | `chain`           |
+| `litellm.moderation()` / `litellm.amoderation()`              | `moderation` / `amoderation`             | `chain`           |
+| `litellm.transcription()` / `litellm.atranscription()`        | `transcription` / `atranscription`       | `chain`           |
+| `litellm.speech()` / `litellm.aspeech()`                      | `speech` / `aspeech`                     | `chain`           |
+| `litellm.rerank()` / `litellm.arerank()`                      | `rerank` / `arerank`                     | `chain`           |
+| `litellm.ocr()` / `litellm.aocr()`                            | `ocr` / `aocr`                           | `chain`           |
+
+{% hint style="info" %}
+**Notes on the table above:**
+
+* **`completion` operation name:** LiteLLM versions before `1.82.1` (released January 2026) emit `gen_ai.operation.name = "completion"` literally for `litellm.completion()` calls. Newer versions rewrite it to `"chat"`. Both are classified identically as `llm`.
+* **Non-text APIs classified as `chain`:** Fiddler's LLM observability currently focuses on text-based generative completions. Image, audio, embedding, moderation, ranking, and OCR operations are classified as `chain` so they remain visible in traces without being treated as LLM completions.
+  {% endhint %}
+
+{% hint style="warning" %}
+**Conversation tracking is not currently supported** for the LiteLLM integration. Session-level grouping of multi-turn conversations will be addressed in a future release as part of broader session attribute support.
+{% endhint %}
+
+### Architecture
+
+```mermaid
+graph TB
+    App["Your Application<br/>litellm.callbacks = [&quot;otel&quot;]"] -->|OTLP/HTTP| Fiddler
+
+    subgraph "Fiddler Platform"
+        Fiddler["OTLP Ingestion Endpoint"]
+        Fiddler --> Mapper["LiteLLM Span Mapper<br/>Classify llm / chain<br/>Extract messages & tokens<br/>Map to Fiddler schema"]
+        Mapper --> Analytics["Analytics & Visualization<br/>Trace Explorer<br/>Latency Monitoring"]
+    end
+
+    style App fill:#e1f5ff
+    style Mapper fill:#fff4e6
+    style Analytics fill:#e6ffe6
+```
+
+### Prerequisites
+
+* Fiddler account with a GenAI application already created
+* `pip install litellm` (or `uv add litellm`)
+* A valid LLM provider API key (e.g. `OPENAI_API_KEY` for OpenAI models)
+
+### Quick Start
+
+#### Step 1: Set environment variables
+
+Set these before starting your application:
+
+```bash
+# Fiddler OTel ingestion
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <your-fiddler-token>,fiddler-application-id=<your-app-uuid>"
+export OTEL_RESOURCE_ATTRIBUTES="application.id=<your-app-uuid>"
+
+# LLM provider key (name varies by provider)
+export OPENAI_API_KEY="your-openai-key"
+```
+
+To find your application UUID: navigate to your application in the Fiddler UI and copy the UUID from the URL or application settings.
+
+#### Step 2: Enable the built-in OTel callback
+
+Add one line to your application startup:
+
+```python
+import litellm
+
+litellm.callbacks = ["otel"]
+```
+
+#### Step 3: Make completions as normal
+
+No other code changes are required:
+
+```python
+response = litellm.completion(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ],
+)
+print(response.choices[0].message.content)
+```
+
+Every call is now automatically traced and exported to Fiddler.
+
+#### Step 4: Verify traces are arriving
+
+Open the Fiddler UI and navigate to your application's **Trace Explorer**. You should see the trace within a few seconds of making your first completion call.
+
+### What Gets Captured
+
+**Message Content**
+
+| Fiddler Field    | Description                               |
+| ---------------- | ----------------------------------------- |
+| System prompt    | The system instructions sent to the model |
+| User input       | The most recent user turn                 |
+| Assistant output | The model's response                      |
+
+**Token Usage**
+
+| Attribute                    | Description                 |
+| ---------------------------- | --------------------------- |
+| `gen_ai.usage.input_tokens`  | Prompt tokens consumed      |
+| `gen_ai.usage.output_tokens` | Completion tokens generated |
+| `gen_ai.usage.total_tokens`  | Total tokens                |
+
+**Model Information**
+
+`gen_ai.system` and `gen_ai.request.model` are SDK first-class LLM attributes. They are stored at their unprefixed keys and resolved at query time by the Fiddler backend's field registry, making them queryable via `SpanAttribute::gen_ai.system` and `SpanAttribute::gen_ai.request.model`.
+
+| Attribute               | Description                           |
+| ----------------------- | ------------------------------------- |
+| `gen_ai.request.model`  | Model requested (e.g. `gpt-4o-mini`)  |
+| `gen_ai.response.model` | Model actually used                   |
+| `gen_ai.system`         | Provider (e.g. `openai`, `anthropic`) |
+
+### Supported Features
+
+| Feature                           | Support         | Notes                                                                                                                                                               |
+| --------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat/text completion tracing      | ✅ Full          | Prompts, responses, token usage via `completion()`, `text_completion()`                                                                                             |
+| Responses API tracing             | ⚠️ Partial      | Token usage captured; output text and `instructions` system prompt not populated by LiteLLM — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats) |
+| Anthropic Messages API tracing    | ⚠️ Partial      | `system` prompt not populated by LiteLLM — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats)                                                    |
+| Google GenAI native tracing       | ⚠️ Partial      | `systemInstruction` not populated by LiteLLM (chat-completion path is fine) — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats)                 |
+| Embeddings, images, audio, rerank | ⚠️ As `chain`   | Spans captured with token/cost metadata but not classified as `llm`                                                                                                 |
+| Token usage                       | ✅ Full          | Input, output, and total tokens                                                                                                                                     |
+| Model information                 | ✅ Full          | Requested and actual model, provider                                                                                                                                |
+| Cost tracking                     | ❌ Not supported | LiteLLM SDK does not emit `gen_ai.cost.*` attributes                                                                                                                |
+| Tool spans                        | ❌ Not supported | LiteLLM SDK does not emit tool spans                                                                                                                                |
+| Conversation tracking             | ❌ Not supported | Session-level grouping of multi-turn conversations is not available                                                                                                 |
+
+### Troubleshooting
+
+**Traces not appearing in Fiddler**
+
+Check that all three environment variables are set correctly:
+
+```bash
+echo $OTEL_EXPORTER_OTLP_ENDPOINT
+echo $OTEL_EXPORTER_OTLP_HEADERS
+echo $OTEL_RESOURCE_ATTRIBUTES
+```
+
+Check that `litellm.callbacks = ["otel"]` is set before your first `litellm.completion()` call.
+
+**Check the `fiddler-application-id` header and `application.id` resource attribute are both set**
+
+Both are required. `fiddler-application-id` must be a valid UUID for an existing Fiddler application, otherwise spans will be dropped during ingestion.
+
+***
+
+## LiteLLM Proxy Integration
+
+### Overview
+
+[LiteLLM](https://docs.litellm.ai/) is an OpenAI-compatible proxy gateway that lets you call 100+ LLM providers through a single API. When LiteLLM proxy is configured to emit OpenTelemetry traces, Fiddler automatically detects and ingests them — no additional SDK or code changes required.
+
+Fiddler includes a purpose-built mapper for LiteLLM proxy traces that handles the proxy's specific span format, attribute layout, and operation naming conventions. This gives you full observability over every LLM call routed through your proxy: prompts, responses, token usage, cost metadata, and latency — across all models and providers in one place.
+
+### Architecture
+
+```mermaid
+graph TB
+    App["Your Application<br/>(any language, any framework)"]
+    App -->|"OpenAI-compatible API<br/>/chat/completions, /v1/responses,<br/>/completions, /embeddings, ..."| Proxy
+
+    Proxy["LiteLLM Proxy Gateway<br/>service.name = &quot;litellm&quot;"]
+    Proxy -->|OTLP/gRPC or OTLP/HTTP| Fiddler
+
+    subgraph "Fiddler Platform"
+        Fiddler["OTLP Ingestion Endpoint"]
+        Fiddler --> Mapper["LiteLLM Span Mapper<br/>Classify llm / chain<br/>Extract messages & tokens<br/>Map costs to fiddler.span.user.*"]
+        Mapper --> Analytics["Analytics & Visualization<br/>Trace Explorer<br/>Cost Dashboards<br/>Latency Monitoring"]
+    end
+
+    style App fill:#e1f5ff
+    style Proxy fill:#fff4e6
+    style Mapper fill:#f0e6ff
+    style Analytics fill:#e6ffe6
+```
+
+### When to Use This Integration
+
+Use the LiteLLM proxy integration when:
+
+* You are already running LiteLLM proxy as your LLM gateway
+* You want to monitor all LLM traffic centrally regardless of underlying provider (OpenAI, Anthropic, Bedrock, etc.)
+* You want cost attribution and latency tracking without instrumenting individual applications
+
+### Quick Start
+
+#### Step 1: Configure LiteLLM proxy to emit OpenTelemetry
+
+Set the following environment variables before starting the proxy:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <your-fiddler-token>,fiddler-application-id=<your-app-uuid>"
+export OTEL_RESOURCE_ATTRIBUTES="application.id=<your-app-uuid>"
+
+litellm --config config.yaml
+```
+
+Or set them inside your LiteLLM proxy `config.yaml`:
+
+```yaml
+general_settings:
+  otel: true
+
+environment_variables:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://your-fiddler-instance.com"
+  OTEL_EXPORTER_OTLP_HEADERS: "authorization=Bearer <your-fiddler-token>,fiddler-application-id=<your-app-uuid>"
+  OTEL_RESOURCE_ATTRIBUTES: "application.id=<your-app-uuid>"
+```
+
+#### Step 2: Set your Fiddler application ID
+
+Two environment variables carry your application ID and both are required:
+
+* **`OTEL_RESOURCE_ATTRIBUTES`** — sets `application.id` on every OTel resource, which Fiddler uses to route traces to the correct application
+* **`OTEL_EXPORTER_OTLP_HEADERS`** — includes `fiddler-application-id` as an HTTP header for authentication and routing at the ingestion endpoint
+
+To find your application UUID: navigate to your application in the Fiddler UI and copy the UUID from the URL or application settings.
+
+#### Step 3: Verify traces are arriving
+
+Make a test request through your proxy:
+
+```bash
+curl -X POST https://your-litellm-proxy/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+Then open the Fiddler UI and navigate to your application's **Trace Explorer**. You should see the trace within a few seconds.
+
+### What Gets Captured
+
+#### Span Types
+
+LiteLLM proxy emits several span types per request. Fiddler classifies them based on the `gen_ai.operation.name` attribute:
+
+**LLM endpoints** — classified as `llm` (generative text completions):
+
+| Gateway Endpoint                                                    | `gen_ai.operation.name`                                | Description                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------ |
+| `/chat/completions`                                                 | `chat` / `acompletion` / `completion`                  | Chat completion (most common)        |
+| `/completions`                                                      | `text_completion` / `atext_completion`                 | Legacy text completion               |
+| `/v1/responses`                                                     | `responses` / `aresponses`                             | OpenAI Responses API                 |
+| `/v1/messages`, `/anthropic/v1/messages`                            | `anthropic_messages`                                   | Anthropic Messages API               |
+| `/generate_content`, `/models/{model}:generateContent`              | `generate_content` / `agenerate_content`               | Google Gemini native (non-streaming) |
+| `/generate_content_stream`, `/models/{model}:streamGenerateContent` | `generate_content_stream` / `agenerate_content_stream` | Google Gemini native (streaming)     |
+
+**Non-LLM endpoints** — classified as `chain` (not generative text completions):
+
+| Gateway Endpoint        | `gen_ai.operation.name`                  | Description                   |
+| ----------------------- | ---------------------------------------- | ----------------------------- |
+| `/embeddings`           | `embedding` / `aembedding`               | Text-to-vector conversion     |
+| `/moderations`          | `moderation` / `amoderation`             | Content safety scoring        |
+| `/images/generations`   | `image_generation` / `aimage_generation` | Image generation              |
+| `/images/edits`         | `image_edit` / `aimage_edit`             | Image editing                 |
+| `/audio/speech`         | `speech` / `aspeech`                     | Text-to-speech                |
+| `/audio/transcriptions` | `transcription` / `atranscription`       | Speech-to-text                |
+| `/rerank`               | `rerank` / `arerank`                     | Document relevance scoring    |
+| `/ocr`                  | `ocr` / `aocr`                           | Optical character recognition |
+
+**Infrastructure spans** — classified as `chain`:
+
+| LiteLLM Span Name | Description                            |
+| ----------------- | -------------------------------------- |
+| `self`            | Internal LiteLLM API call timing       |
+| `router`          | Model routing and deployment selection |
+| `proxy_pre_call`  | Pre-processing before LLM call         |
+
+Each proxy request typically produces up to 3 spans:
+
+| LiteLLM Span Name               | Description                                         |
+| ------------------------------- | --------------------------------------------------- |
+| `Received Proxy Server Request` | Top-level server span (parent)                      |
+| `litellm_request`               | Primary span carrying all attributes                |
+| `raw_gen_ai_request`            | Child span with raw provider-level request/response |
+
+#### Captured Attributes
+
+**Message Content**
+
+LiteLLM writes full conversation history as JSON on the span (not as span events). Fiddler extracts:
+
+| Fiddler Field    | Source                                                      | Description                               |
+| ---------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| System prompt    | First `role: system` message in `gen_ai.input.messages`     | The system instructions sent to the model |
+| User input       | Last `role: user` message in `gen_ai.input.messages`        | The most recent user turn                 |
+| Assistant output | First `role: assistant` message in `gen_ai.output.messages` | The model's response                      |
+
+{% hint style="info" %}
+If you have disabled message logging in LiteLLM (`turn_off_message_logging: true`), the message content fields will be absent from traces. Token counts and cost metadata are still captured.
+{% endhint %}
+
+**Token Usage**
+
+| Attribute                    | Description                 |
+| ---------------------------- | --------------------------- |
+| `gen_ai.usage.input_tokens`  | Prompt tokens consumed      |
+| `gen_ai.usage.output_tokens` | Completion tokens generated |
+| `gen_ai.usage.total_tokens`  | Total tokens                |
+
+**Model Information**
+
+`gen_ai.system` and `gen_ai.request.model` are SDK first-class LLM attributes. They are stored at their unprefixed keys and resolved at query time by the Fiddler backend's field registry, making them queryable via `SpanAttribute::gen_ai.system` and `SpanAttribute::gen_ai.request.model`.
+
+| Attribute               | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `gen_ai.request.model`  | Model requested (e.g. `gpt-4o-mini`)            |
+| `gen_ai.response.model` | Model actually used (may differ from requested) |
+| `gen_ai.system`         | Provider (e.g. `openai`, `anthropic`)           |
+
+**Cost Metadata** (stored as `fiddler.span.user.*`)
+
+LiteLLM emits cost fields under `gen_ai.cost.*`. These are preserved in Fiddler as user-visible span attributes:
+
+| Attribute                     | Description                          |
+| ----------------------------- | ------------------------------------ |
+| `gen_ai.cost.total_cost`      | Total cost of the request            |
+| `gen_ai.cost.prompt_cost`     | Cost attributed to prompt tokens     |
+| `gen_ai.cost.completion_cost` | Cost attributed to completion tokens |
+
+**Proxy Metadata** (stored as `fiddler.span.user.*`)
+
+LiteLLM proxy emits `metadata.*` attributes containing API key, team, user, and routing information. These are preserved as user-visible span attributes for auditing and cost attribution.
+
+### Supported Features
+
+#### Endpoint Coverage
+
+| Endpoint                               | Span Type | Messages                   | Tokens | Cost | Notes                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------- | --------- | -------------------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/chat/completions`                    | `llm`     | ✅                          | ✅      | ✅    | Full support — prompts, responses, all metadata                                                                                                                                                                                                                                                                                              |
+| `/completions`                         | `llm`     | ✅                          | ✅      | ✅    | Legacy text completion, full content extraction                                                                                                                                                                                                                                                                                              |
+| `/v1/responses`, `/responses`          | `llm`     | ❌                          | ✅      | ✅    | Both `gen_ai.input.messages` and `gen_ai.output.messages` are absent — LiteLLM's OTel callback reads `kwargs["messages"]` / `response["choices"]`, but the Responses API uses `input` / `output`. `instructions` system prompt and provider attribution also missing — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats) |
+| `/v1/messages` (Anthropic)             | `llm`     | partial (no system prompt) | ✅      | ✅    | `system` prompt **not populated** by LiteLLM's OTel integration; provider attribution missing — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats)                                                                                                                                                                        |
+| `/v1beta/...:generateContent` (Gemini) | `llm`     | partial (no system prompt) | ✅      | ✅    | `systemInstruction` **not populated** by LiteLLM's OTel integration; provider attribution missing — see [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats)                                                                                                                                                                    |
+| `/embeddings`                          | `chain`   | ❌                          | ✅      | ✅    | Not a generative completion — no messages to extract                                                                                                                                                                                                                                                                                         |
+| `/moderations`                         | `chain`   | ❌                          | ❌      | ❌    | Content safety scoring; no generative output                                                                                                                                                                                                                                                                                                 |
+| `/images/generations`                  | `chain`   | ❌                          | ❌      | ✅    | Image generation; no text output                                                                                                                                                                                                                                                                                                             |
+| `/images/edits`                        | `chain`   | ❌                          | ❌      | ✅    | Image editing; no text output                                                                                                                                                                                                                                                                                                                |
+| `/audio/speech`                        | `chain`   | ❌                          | ❌      | ✅    | Text-to-speech; no text output                                                                                                                                                                                                                                                                                                               |
+| `/audio/transcriptions`                | `chain`   | ❌                          | ✅      | ✅    | Speech-to-text; transcription not extracted                                                                                                                                                                                                                                                                                                  |
+| `/rerank`                              | `chain`   | ❌                          | ✅      | ✅    | Document relevance scoring                                                                                                                                                                                                                                                                                                                   |
+| `/ocr`                                 | `chain`   | ❌                          | ❌      | ❌    | Optical character recognition                                                                                                                                                                                                                                                                                                                |
+
+#### Platform Features
+
+| Feature               | Support         | Notes                                                                            |
+| --------------------- | --------------- | -------------------------------------------------------------------------------- |
+| Cost tracking         | ✅ Full          | Via `gen_ai.cost.*` attributes                                                   |
+| Provider attribution  | ✅ Full          | Via `gen_ai.system`                                                              |
+| Proxy metadata        | ✅ Full          | API key, team, user, routing info                                                |
+| Tool spans            | ❌ Not supported | LiteLLM does not emit tool spans natively                                        |
+| Infrastructure spans  | ⚠️ As `chain`   | `self`, `router`, `proxy_pre_call` are captured but classified as generic chains |
+| Conversation tracking | ❌ Not supported | Session-level grouping of multi-turn conversations is not available              |
+
+### Troubleshooting
+
+**Traces not appearing in Fiddler**
+
+Check that OTel is enabled in LiteLLM:
+
+```bash
+echo $OTEL_EXPORTER_OTLP_ENDPOINT
+echo $OTEL_EXPORTER_OTLP_HEADERS
+echo $OTEL_RESOURCE_ATTRIBUTES
+```
+
+Check the `fiddler-application-id` header and `application.id` resource attribute are both set:
+
+Both are required. `fiddler-application-id` must be a valid UUID for an existing Fiddler application, otherwise spans will be dropped during ingestion.
+
+**Check `service.name` is `"litellm"`**
+
+Fiddler detects LiteLLM proxy spans by `service.name`. LiteLLM proxy sets this to `"litellm"` by default. If you have overridden `OTEL_SERVICE_NAME`, ensure it is set to `"litellm"` or `"litellm-proxy"`:
+
+```bash
+export OTEL_SERVICE_NAME="litellm"
+```
+
+**Message content missing from traces**
+
+LiteLLM's message logging may be disabled. Check your config for:
+
+```yaml
+litellm_settings:
+  turn_off_message_logging: true  # This suppresses gen_ai.input/output.messages
+```
+
+Remove or set to `false` to re-enable message capture.
+
+**Spans classified as `chain` instead of `llm`**
+
+This happens for internal LiteLLM infrastructure spans (`self`, `router`, `proxy_pre_call`) and for non-completion operations (embeddings, image generation, speech, etc.). This is expected behavior — only completion-generating endpoints (`/chat/completions`, `/completions`, `/v1/responses`) are classified as `llm` spans.
+
+**`/v1/responses` spans are missing message content**
+
+See the [Known LiteLLM Upstream Caveats](#known-litellm-upstream-caveats) section below for details. Token counts, costs, and span-type classification are unaffected.
+
+***
+
+## Known LiteLLM Upstream Caveats
+
+While integrating with LiteLLM, several gaps were identified in LiteLLM's own OpenTelemetry callback (`litellm/integrations/opentelemetry.py`). These are **not** Fiddler issues — they affect every downstream OTel consumer (Datadog, Honeycomb, Phoenix, etc.). Fiddler classifies the spans correctly and surfaces every attribute that LiteLLM does emit, but the gaps below mean some content is simply absent from the trace at the source.
+
+### `/v1/responses` and `/responses` — input and output messages both missing
+
+LiteLLM's OTel callback reads input messages from `kwargs["messages"]` and output messages from `response["choices"]` — both shapes specific to `/chat/completions`. The Responses API uses `kwargs["input"]` and `response["output"]` instead, so neither extraction block runs.
+
+| What you see                    | What's missing                     |
+| ------------------------------- | ---------------------------------- |
+| `gen_ai.usage.*` ✅              | `gen_ai.input.messages` ❌          |
+| `gen_ai.cost.*` ✅               | `gen_ai.output.messages` ❌         |
+| Span correctly typed as `llm` ✅ | `gen_ai.response.finish_reasons` ❌ |
+|                                 | tool call attributes (if any) ❌    |
+
+**Where the data does exist:** the `raw_gen_ai_request` child span (a sibling of the parent `litellm_request` span) carries both the request and response under `llm.<provider>.input` / `llm.<provider>.output`. It is currently surfaced as a `chain` span without content extraction.
+
+**Tracking:** [BerriAI/litellm#25840](https://github.com/BerriAI/litellm/issues/25840)
+
+### `/v1/responses`, `/responses`, `/v1/messages`, `/v1beta/...:generateContent` — system prompt missing
+
+LiteLLM's OTel callback writes `gen_ai.system_instructions` only when the kwarg name is exactly `system_instructions`. Other endpoints use different field names for the same concept:
+
+| Endpoint                                                   | Kwarg name LiteLLM uses internally | OTel callback reads it? |
+| ---------------------------------------------------------- | ---------------------------------- | ----------------------- |
+| Vertex AI Gemini chat-completion path                      | `system_instructions`              | ✅                       |
+| OpenAI Responses API (`/v1/responses`, `/responses`)       | `instructions`                     | ❌                       |
+| Anthropic Messages API (`/v1/messages`)                    | `system`                           | ❌                       |
+| Gemini direct pass-through (`/v1beta/...:generateContent`) | `systemInstruction` (nested)       | ❌                       |
+
+The system prompt does reach LiteLLM and is included in the actual LLM request — it just never lands on `gen_ai.system_instructions` in the OTel trace. As with the output-text gap, the data is visible on the `raw_gen_ai_request` child span (`llm.<provider>.instructions` / `llm.<provider>.system` / `llm.<provider>.systemInstruction`).
+
+**Tracking:** [BerriAI/litellm#25840 (follow-up comment)](https://github.com/BerriAI/litellm/issues/25840#issuecomment-4278874801)
+
+### Non-chat-completion endpoints — `gen_ai.system` empty and `llm.None.*` attribute prefix
+
+For every endpoint family except `/chat/completions`, LiteLLM's `custom_llm_provider` is not propagated into the OTel callback's view of `litellm_params`. This causes two visible symptoms:
+
+* `gen_ai.system` is set to an empty string instead of the provider (e.g. `"openai"`, `"vertex_ai"`, `"anthropic"`).
+* Raw provider attributes on the `raw_gen_ai_request` child span use a `llm.None.*` prefix (e.g. `llm.None.output`, `llm.None.model`) instead of `llm.openai.*` or `llm.vertex_ai.*`.
+
+**Tracking:** [BerriAI/litellm#25240](https://github.com/BerriAI/litellm/issues/25240); fix in flight via [PR #25309](https://github.com/BerriAI/litellm/pull/25309) (scoped to the Responses API; `/v1/messages` and Gemini may need follow-up after merge).
+
+### Gemini streaming variant — `gen_ai.response.model` not set
+
+`/v1beta/models/{model}:streamGenerateContent` does not emit `gen_ai.response.model` on the parent span, even though the non-streaming `:generateContent` variant does. Likely lives in LiteLLM's Gemini streaming aggregation path. Low impact; not yet filed upstream.
+
+### Summary — what works and what doesn't, by endpoint
+
+| Endpoint                                                          | Span type | Tokens | Cost | Input messages     | Output messages          | System prompt     | Provider                               |
+| ----------------------------------------------------------------- | --------- | ------ | ---- | ------------------ | ------------------------ | ----------------- | -------------------------------------- |
+| `/chat/completions`                                               | `llm`     | ✅      | ✅    | ✅                  | ✅                        | ✅ (in `messages`) | ✅                                      |
+| `/completions` (text)                                             | `llm`     | ✅      | ✅    | ✅                  | ✅                        | n/a               | ✅                                      |
+| `/v1/responses`, `/responses`                                     | `llm`     | ✅      | ✅    | ❌                  | ❌                        | ❌                 | ❌                                      |
+| `/v1/messages` (Anthropic)                                        | `llm`     | ✅      | ✅    | ✅                  | ✅                        | ❌                 | ❌                                      |
+| `/v1beta/...:generateContent`                                     | `llm`     | ✅      | ✅    | ✅                  | ✅                        | ❌                 | ❌                                      |
+| `/v1beta/...:streamGenerateContent`                               | `llm`     | ✅      | ✅    | ✅                  | ✅                        | ❌                 | ❌ (also missing `response.model`)      |
+| `/embeddings`, `/moderations`, `/images/*`, `/audio/*`, `/rerank` | `chain`   | ✅      | ✅    | ✅ where applicable | n/a (no text completion) | n/a               | ✅ for `/chat/completions`, ❌ elsewhere |
+| Internal infra (`self`, `router`, `proxy_pre_call`)               | `chain`   | n/a    | n/a  | n/a                | n/a                      | n/a               | n/a                                    |
+
+These caveats will resolve as the upstream LiteLLM PRs land. Fiddler will pick up the improvements automatically — no Fiddler-side changes will be needed when LiteLLM fixes ship.
+
+***
+
+## Related Documentation
+
+* [OpenTelemetry Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) — Manual OTel instrumentation for custom frameworks
+* [Strands Agents SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md) — Native monitoring for Strands agent applications
+* [LangGraph SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) — Auto-instrumentation for LangGraph applications
+* [LiteLLM OTel documentation](https://docs.litellm.ai/docs/proxy/logging#opentelemetry) — LiteLLM's official OpenTelemetry setup guide
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

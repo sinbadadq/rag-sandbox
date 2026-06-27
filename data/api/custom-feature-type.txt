@@ -1,0 +1,192 @@
+# CustomFeatureType
+
+Types of custom features for advanced model monitoring.
+
+This enum defines different types of custom features that can be created for advanced monitoring scenarios. Custom features enable monitoring of complex data types, embeddings, and multi-column relationships.
+
+Feature Categories:
+
+* **Multi-column**: Features derived from multiple input columns
+* **Vector-based**: Features from embedding or vector columns
+* **Embedding-specific**: Specialized embedding monitoring
+* **Enrichment**: Features from data enrichment processes
+
+## Examples
+
+Creating different types of custom features:
+
+```python
+# Multi-column feature for monitoring column interactions
+multivariate_feature = fdl.Multivariate(
+    name='user_profile',
+    columns=['age', 'income', 'location'],
+    monitor_components=True
+)
+
+# Vector feature for embedding monitoring
+vector_feature = fdl.VectorFeature(
+    name='product_embedding',
+    column='product_vector',
+    n_clusters=10
+)
+
+# Text embedding feature with clustering
+text_embedding = fdl.TextEmbedding(
+    name='review_sentiment',
+    column='review_embedding',
+    n_clusters=5,
+    n_tags=10
+)
+
+# Image embedding feature
+image_embedding = fdl.ImageEmbedding(
+    name='image_features',
+    column='image_embedding',
+    n_clusters=8
+)
+
+# Enrichment feature for data validation
+enrichment_feature = fdl.Enrichment(
+    name='email_validation',
+    enrichment='email_validation',
+    columns=['email_address'],
+    config={'strict': True}
+)
+```
+
+{% hint style="info" %}
+Custom features enable advanced monitoring capabilities but require careful configuration to match your specific use case and data structure.
+{% endhint %}
+
+## FROM\_COLUMNS *= 'FROM\_COLUMNS'*
+
+Multi-column derived features (Multivariate).
+
+Used for creating custom features that monitor relationships and interactions between multiple input columns. Enables detection of drift patterns across column combinations.
+
+Characteristics:
+
+* Monitors multiple columns as a single feature
+* Detects multi-dimensional drift patterns
+* Can monitor individual components separately
+* Supports complex feature interactions
+
+Use cases:
+
+* Geographic coordinates (latitude, longitude)
+* User profiles (age, income, location)
+* Product specifications (dimensions, weight, price)
+* Time series components (trend, seasonality)
+
+Configuration:
+
+* Specify list of columns to monitor together
+* Optional component monitoring
+* Clustering for dimensionality reduction
+
+## FROM\_VECTOR *= 'FROM\_VECTOR'*
+
+Single vector column features (VectorFeature).
+
+Used for monitoring embedding vectors or other high-dimensional numerical arrays as single features. Enables clustering-based drift detection and embedding analysis.
+
+Characteristics:
+
+* Monitors single vector/embedding column
+* Clustering-based drift detection
+* Dimensionality reduction visualization
+* Vector similarity analysis
+
+Use cases:
+
+* Word embeddings (Word2Vec, GloVe)
+* Neural network hidden layer outputs
+* Feature vectors from autoencoders
+* Learned representations
+
+Configuration:
+
+* Specify vector column name
+* Set number of clusters for monitoring
+* Optional source column reference
+
+## FROM\_TEXT\_EMBEDDING *= 'FROM\_TEXT\_EMBEDDING'*
+
+Text embedding features (TextEmbedding).
+
+Specialized for monitoring text embeddings with text-specific analysis capabilities. Includes TF-IDF summarization and text-aware clustering.
+
+Characteristics:
+
+* Text-specific embedding analysis
+* TF-IDF token summarization
+* Text-aware clustering
+* Semantic drift detection
+
+Use cases:
+
+* BERT, GPT embeddings
+* Document embeddings
+* Sentence transformers
+* Text classification features
+
+Configuration:
+
+* Specify embedding column
+* Set number of clusters
+* Configure TF-IDF tags per cluster
+
+## FROM\_IMAGE\_EMBEDDING *= 'FROM\_IMAGE\_EMBEDDING'*
+
+Image embedding features (ImageEmbedding).
+
+Specialized for monitoring image embeddings and visual features extracted from images. Optimized for computer vision model monitoring.
+
+Characteristics:
+
+* Image-specific embedding analysis
+* Visual feature clustering
+* Image-aware drift detection
+* Computer vision optimizations
+
+Use cases:
+
+* CNN feature extractions
+* Image classification embeddings
+* Object detection features
+* Visual similarity vectors
+
+Configuration:
+
+* Specify embedding column
+* Set clustering parameters
+* Image-specific preprocessing
+
+## ENRICHMENT *= 'ENRICHMENT'*
+
+Enrichment-derived features (Enrichment).
+
+Used for features created through data enrichment processes such as validation, transformation, or external data augmentation. Enables monitoring of enriched data quality and consistency.
+
+Characteristics:
+
+* Derived from enrichment processes
+* Data quality monitoring
+* Validation result tracking
+* Transformation monitoring
+
+Use cases:
+
+* Email validation results
+* Address standardization
+* Data quality scores
+* External API enrichments
+
+Configuration:
+
+* Specify enrichment type
+* Configure enrichment parameters
+* Set input columns for enrichment
+
+
+---

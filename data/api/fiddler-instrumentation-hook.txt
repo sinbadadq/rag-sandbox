@@ -1,0 +1,72 @@
+# FiddlerInstrumentationHook
+
+Centralized instrumentation hook for Strands agents with Fiddler integration.
+
+This hook provider automatically captures telemetry data from Strands agents and enriches OpenTelemetry spans with Fiddler-specific attributes. It handles three key events: before invocation, after tool execution, and after model calls.
+
+The hook is automatically injected when using StrandsAgentInstrumentor, so users typically don't need to manually add it to their agents.
+
+## Example
+
+```python
+from strands import Agent
+from fiddler_strandsagents import FiddlerInstrumentationHook
+
+# Manual usage (not needed with StrandsAgentInstrumentor)
+agent = Agent(
+    model=model,
+    system_prompt="...",
+    hooks=[FiddlerInstrumentationHook()]
+)
+```
+
+## register\_hooks()
+
+Register hook callbacks with the Strands agent registry.
+
+This method is called by the Strands framework to register callbacks for various agent lifecycle events.
+
+## Parameters
+
+| Parameter  | Type           | Required | Default | Description                                 |
+| ---------- | -------------- | -------- | ------- | ------------------------------------------- |
+| `registry` | `HookRegistry` | ✗        | `None`  | The HookRegistry to register callbacks with |
+
+## tool\_end()
+
+Handle the completion of a tool invocation.
+
+Enriches the current OpenTelemetry span with custom attributes that were set on the tool using set\_span\_attributes(). Attributes are prefixed with 'fiddler.span.user.' for namespacing.
+
+## Parameters
+
+| Parameter | Type                 | Required | Default | Description                                                |
+| --------- | -------------------- | -------- | ------- | ---------------------------------------------------------- |
+| `event`   | `AfterToolCallEvent` | ✗        | `None`  | AfterToolInvocationEvent containing tool execution details |
+
+## model\_end()
+
+Handle the completion of a model invocation.
+
+Enriches the current OpenTelemetry span with custom attributes that were set on the model using set\_span\_attributes(). Attributes are prefixed with 'fiddler.span.user.' for namespacing.
+
+## Parameters
+
+| Parameter | Type                  | Required | Default | Description                                                  |
+| --------- | --------------------- | -------- | ------- | ------------------------------------------------------------ |
+| `event`   | `AfterModelCallEvent` | ✗        | `None`  | AfterModelInvocationEvent containing model execution details |
+
+## before\_invocation()
+
+Handle the start of an agent invocation.
+
+Enriches the current OpenTelemetry span with conversation ID and session attributes that were set using set\_conversation\_id() and set\_session\_attributes(). This ensures trace-level context is available for all child spans.
+
+## Parameters
+
+| Parameter | Type                    | Required | Default | Description                                               |
+| --------- | ----------------------- | -------- | ------- | --------------------------------------------------------- |
+| `event`   | `BeforeInvocationEvent` | ✗        | `None`  | BeforeInvocationEvent containing agent invocation details |
+
+
+---

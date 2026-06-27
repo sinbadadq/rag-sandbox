@@ -1,0 +1,467 @@
+# Fiddler Evals SDK
+
+✓ **GA** | 🏆 **Native SDK**
+
+Evaluate LLM application quality with Fiddler's evaluation framework. Run batch experiments with 13 pre-built evaluators or create custom metrics for domain-specific quality assessment.
+
+## What You'll Need
+
+* Fiddler account
+* Python 3.10 or higher
+* Fiddler API key and access token
+* Dataset for experiments
+
+## Quick Start
+
+```python
+# Step 1: Install
+pip install fiddler-evals
+
+# Step 2: Initialize connection
+from fiddler_evals import init
+
+init(
+    url='https://your-org.fiddler.ai',
+    token='your-access-token'
+)
+
+# Step 3: Create project and application
+from fiddler_evals import Project, Application, Dataset
+
+project = Project.get_or_create(name='my_eval_project')
+application = Application.get_or_create(
+    name='my_llm_app',
+    project_id=project.id
+)
+
+# Step 4: Create dataset and add test cases
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+dataset = Dataset.create(
+    name='experiment_dataset',
+    application_id=application.id,
+    description='Test cases for LLM experiments'
+)
+
+test_cases = [
+    NewDatasetItem(
+        inputs={"question": "What is the capital of France?"},
+        expected_outputs={"answer": "Paris is the capital of France"},
+        metadata={"type": "Factual", "category": "Geography"}
+    ),
+]
+dataset.insert(test_cases)
+
+# Step 5: Run evaluation
+from fiddler_evals import evaluate
+from fiddler_evals.evaluators import AnswerRelevance, Conciseness, Coherence
+
+MODEL = "openai/gpt-4o"
+CREDENTIAL = "your-credential-name"
+
+def my_llm_task(inputs, extras, metadata):
+    """Your LLM application logic"""
+    question = inputs.get("question", "")
+    # Call your LLM here
+    answer = f"Mock response to: {question}"
+    return {"answer": answer}
+
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model=MODEL, credential=CREDENTIAL),
+        Conciseness(model=MODEL, credential=CREDENTIAL),
+        Coherence(model=MODEL, credential=CREDENTIAL)
+    ],
+    name_prefix="my_experiment",
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["question"],
+        "rag_response": "answer",
+        "response": "answer",
+    }
+)
+
+# Step 6: Analyze results in Fiddler UI
+print(f"✅ Evaluated {len(results.results)} test cases")
+```
+
+## Pre-Built Evaluators
+
+### Safety & Trust
+
+* **FTLPromptSafety** - Detect prompt injection, jailbreaks, and unsafe prompts (runs on Fiddler Trust Models)
+
+### Quality & Accuracy
+
+* **AnswerRelevance** - Assess how well responses address user queries (High / Medium / Low)
+* **ContextRelevance** - Evaluate whether retrieved documents are relevant to the query (High / Medium / Low). Available in Agentic Monitoring and Experiments only
+* **RAGFaithfulness** - Check if responses are grounded in retrieved documents (Yes / No)
+* **FTLResponseFaithfulness** - Fast Trust Model faithfulness for low-latency guardrails
+* **Coherence** - Measure logical flow and consistency
+* **Conciseness** - Evaluate response brevity and efficiency
+
+### Content Analysis
+
+* **Sentiment** - Analyze emotional tone
+* **TopicClassification** - Categorize content by topic
+* **RegexSearch** / **RegexMatch** - Custom pattern-based evaluation
+* **EvalFn** - Wrap any Python function as an evaluator
+
+## Example Usage
+
+### Batch Experiment with Multiple Evaluators
+
+```python
+from fiddler_evals import init, evaluate, Dataset
+from fiddler_evals.evaluators import (
+    AnswerRelevance,
+    Conciseness,
+    FTLResponseFaithfulness
+)
+
+MODEL = "openai/gpt-4o"
+CREDENTIAL = "your-credential-name"
+
+# Initialize connection
+init(url='https://your-org.fiddler.ai', token='your-access-token')
+
+# Get existing dataset
+dataset = Dataset.get_by_name(
+    name='llm_outputs',
+    application_id=application.id
+)
+
+# Define your LLM task
+def evaluate_llm(inputs, extras, metadata):
+    question = inputs['question']
+    context = extras.get('context', '')
+
+    # Your LLM call here
+    response = my_llm_model.generate(question, context)
+
+    return {
+        "answer": response,
+        "question": question,
+        "context": context
+    }
+
+# Run evaluation with multiple evaluators
+results = evaluate(
+    dataset=dataset,
+    task=evaluate_llm,
+    evaluators=[
+        AnswerRelevance(model=MODEL, credential=CREDENTIAL),
+        Conciseness(model=MODEL, credential=CREDENTIAL),
+        FTLResponseFaithfulness()  # FTL models don't require model= parameter
+    ],
+    name_prefix="llm-eval",
+    description="Comprehensive LLM experiment",
+    metadata={"model_version": "v2.1", "environment": "production"},
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["question"],
+        "rag_response": "answer",
+        "response": "answer",
+        "context": lambda x: x["extras"].get("context", "")
+    },
+    max_workers=4  # Parallel processing
+)
+
+# Access results programmatically
+for result in results.results:
+    item = result.experiment_item
+    print(f"\nTest Case: {item.dataset_item_id}")
+    print(f"Status: {item.status}")
+    print(f"Duration: {item.duration_ms}ms")
+
+    for score in result.scores:
+        print(f"  {score.name}: {score.value}")
+```
+
+### Custom Evaluators
+
+```python
+from fiddler_evals.evaluators.base import Evaluator
+from fiddler_evals.pydantic_models.score import Score
+
+class LengthEvaluator(Evaluator):
+    """Custom evaluator for response length"""
+
+    def __init__(self, min_length=10, max_length=200):
+        super().__init__()
+        self.min_length = min_length
+        self.max_length = max_length
+
+    def score(self, output: str) -> Score:
+        length = len(output.strip())
+
+        if length < self.min_length:
+            score_value = 0.0
+            reasoning = f"Too short ({length} chars, min {self.min_length})"
+        elif length > self.max_length:
+            score_value = 0.5
+            reasoning = f"Too long ({length} chars, max {self.max_length})"
+        else:
+            score_value = 1.0
+            reasoning = f"Appropriate length ({length} chars)"
+
+        return Score(
+            name="length_check",
+            evaluator_name=self.name,
+            value=score_value,
+            reasoning=reasoning
+        )
+
+# Use custom evaluator alongside built-in ones
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name"),
+        Conciseness(model="openai/gpt-4o", credential="your-credential-name"),
+        LengthEvaluator(min_length=15, max_length=100)
+    ],
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["question"],
+        "rag_response": "answer",
+        "response": "answer",
+        "output": "answer",
+    }
+)
+```
+
+### Importing Test Cases from Files
+
+```python
+# From CSV file
+dataset.insert_from_csv_file(
+    file_path='test_cases.csv',
+    input_columns=['question'],
+    expected_output_columns=['answer'],
+    metadata_columns=['category', 'difficulty']
+)
+
+# From JSONL file
+dataset.insert_from_jsonl_file(
+    file_path='test_cases.jsonl',
+    input_keys=['question'],
+    expected_output_keys=['answer'],
+    metadata_keys=['category']
+)
+
+# From pandas DataFrame
+import pandas as pd
+
+df = pd.DataFrame({
+    'question': ['What is AI?', 'Explain ML'],
+    'expected_answer': ['AI is...', 'ML is...'],
+    'category': ['definition', 'definition']
+})
+
+dataset.insert_from_pandas(
+    df=df,
+    input_columns=['question'],
+    expected_output_columns=['expected_answer'],
+    metadata_columns=['category']
+)
+```
+
+## Viewing Results
+
+Results are automatically tracked in the Fiddler UI. Navigate to your application to:
+
+* View experiment results with detailed scores
+* Compare experiments side-by-side
+* Filter and analyze by metadata
+* Export results for further analysis
+
+### Programmatic Analysis
+
+```python
+from fiddler_evals import ScoreStatus, ExperimentItemStatus
+
+# Analyze individual results
+for i, result in enumerate(results.results):
+    item = result.experiment_item
+    scores = result.scores
+
+    print(f"\n📝 Test Case {i + 1}:")
+    print(f"   Status: {item.status}")
+    print(f"   Duration: {item.duration_ms}ms")
+
+    if item.status == ExperimentItemStatus.SUCCESS:
+        for score in scores:
+            status_emoji = "✅" if score.status == ScoreStatus.SUCCESS else "❌"
+            print(f"     {status_emoji} {score.name}: {score.value}")
+            if score.reasoning:
+                print(f"        {score.reasoning}")
+
+# Calculate summary statistics
+from collections import defaultdict
+
+evaluator_scores = defaultdict(list)
+for result in results.results:
+    for score in result.scores:
+        if score.value is not None:
+            evaluator_scores[score.name].append(score.value)
+
+print("\n🎯 Summary by Evaluator:")
+for evaluator_name, values in evaluator_scores.items():
+    avg_score = sum(values) / len(values) if values else 0
+    print(f"   {evaluator_name}: {avg_score:.3f} (avg)")
+```
+
+## Advanced Configuration
+
+### Parallel Processing
+
+```python
+# Process multiple test cases concurrently
+results = evaluate(
+    dataset=large_dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name"),
+        Conciseness(model="openai/gpt-4o", credential="your-credential-name"),
+    ],
+    max_workers=8,  # Use 8 parallel workers
+    name_prefix="parallel-eval"
+)
+```
+
+### Experiment Metadata and Organization
+
+```python
+# Track experiments with custom metadata
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name")],
+    name_prefix="model-comparison",
+    description="Comparing GPT-4 vs GPT-3.5",
+    metadata={
+        "model_name": "gpt-4",
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "evaluation_date": "2024-01-15",
+        "environment": "production",
+        "version": "v2.1"
+    }
+)
+```
+
+### Custom Parameter Mapping
+
+```python
+# Map evaluator parameters to your task output structure
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name"),  # Needs: user_query, rag_response
+        Conciseness(model="openai/gpt-4o", credential="your-credential-name"),      # Needs: response
+    ],
+    score_fn_kwargs_mapping={
+        # Map evaluator parameters to task output keys
+        "user_query": lambda x: x["inputs"]["question"],  # Lambda for nested values
+        "rag_response": "answer",       # Simple key mapping
+        "response": "answer",           # Multiple evaluators can use same output
+        "context": lambda x: x["extras"].get("context", "")  # With defaults
+    }
+)
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem**: Cannot connect to Fiddler instance
+
+**Solution**:
+
+1. Verify your URL is correct (e.g., `https://your-org.fiddler.ai`)
+2. Ensure your access token is valid and not expired
+3. Check network connectivity: `curl -I https://your-org.fiddler.ai`
+4. Regenerate token from Fiddler UI: **Settings** > **Credentials**
+
+### Import Errors
+
+**Problem**: `ModuleNotFoundError: No module named 'fiddler_evals'`
+
+**Solution**:
+
+```bash
+# Verify installation
+pip list | grep fiddler-evals
+
+# Reinstall if needed
+pip uninstall fiddler-evals
+pip install fiddler-evals
+
+# Check Python version (requires 3.10+)
+python --version
+```
+
+### Experiment Failures
+
+**Problem**: Evaluators failing with parameter errors
+
+**Solution**:
+
+1. Check `score_fn_kwargs_mapping` matches evaluator requirements
+2. Verify task output format matches expected structure
+3. Test evaluators individually:
+
+```python
+from fiddler_evals.evaluators import AnswerRelevance
+
+evaluator = AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name")
+score = evaluator.score(
+    user_query="What is AI?",
+    rag_response="AI is artificial intelligence"
+)
+print(f"Score: {score.value}, Reasoning: {score.reasoning}")
+```
+
+### Performance Issues
+
+**Problem**: Experiment running slowly
+
+**Solution**:
+
+```python
+# Use parallel processing
+results = evaluate(
+    dataset=dataset,
+    task=my_llm_task,
+    evaluators=[
+        AnswerRelevance(model="openai/gpt-4o", credential="your-credential-name"),
+        Conciseness(model="openai/gpt-4o", credential="your-credential-name"),
+    ],
+    max_workers=4  # Adjust based on your system
+)
+
+# Or process in smaller batches
+for i in range(0, len(all_test_cases), 100):
+    batch = all_test_cases[i:i+100]
+    batch_dataset = Dataset.create(name=f"batch_{i}")
+    batch_dataset.insert(batch)
+    results = evaluate(dataset=batch_dataset, ...)
+```
+
+## Related Integrations
+
+* [**Evals SDK Quick Start**](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start) - Detailed setup guide with code examples
+* [**Evals SDK Reference**](/api/fiddler-evals-sdk/evals.md) - Complete SDK API documentation
+* [**LangGraph SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) - Runtime monitoring for LangGraph agents
+* [**Strands Agents SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md) - Monitor Strands Agents
+* [**Python Client SDK**](/api/fiddler-python-client-sdk/python-client.md) - Full platform API access
+
+## Next Steps
+
+1. [**Quick Start Guide**](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start) - Complete tutorial with working examples
+2. [**Getting Started with Experiments**](/getting-started/experiments.md) - Understand experiment concepts and best practices
+3. [**SDK API Reference**](/api/fiddler-evals-sdk/evals.md) - Explore all available classes and methods
+
+
+---

@@ -1,0 +1,327 @@
+# Monitoring Agentic Content Generation
+
+Ensure quality, safety, and brand compliance in content generation agents using a combination of Fiddler's built-in evaluators for baseline quality and custom `CustomJudge` evaluators for domain-specific governance.
+
+**Use this cookbook when:** You have content generation agents (writing reports, customer communications, marketing copy) and need automated quality gates to replace manual review of every draft.
+
+**Time to complete**: \~20 minutes
+
+```mermaid
+graph LR
+    A["Generated\nContent"] --> B["Built-In Evaluators"]
+    A --> C["Custom Judges"]
+
+    subgraph "Baseline Quality"
+        B --> D["Relevance"]
+        B --> E["Coherence"]
+        B --> F["Conciseness"]
+    end
+
+    subgraph "Domain Governance"
+        C --> G["Brand Voice"]
+        C --> H["Compliance"]
+    end
+
+    D --> I{"Quality\nGate"}
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+
+    I -->|Pass| J["APPROVED"]
+    I -->|Fail| K["REJECTED"]
+    I -->|Marginal| L["REVIEW"]
+
+    style J fill:#6f9,stroke:#333
+    style K fill:#f96,stroke:#333
+    style L fill:#ffd,stroke:#333
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals pandas`
+  {% endhint %}
+
+***
+
+## The Content Generation Challenge
+
+Enterprise content generation agents produce volume that exceeds human review capacity. Without automated quality gates, teams face:
+
+* **Reviewer fatigue** — manually reviewing hundreds of drafts per day
+* **Inconsistent quality** — different reviewers apply different standards
+* **Brand drift** — subtle changes in tone or style go undetected
+
+The solution: combine Fiddler's built-in evaluators (quality, safety) with custom LLM-as-a-Judge evaluators (brand voice, compliance) for automated governance.
+
+## Recommended Evaluators
+
+### Built-In Evaluators (Baseline Quality)
+
+| Evaluator            | What It Measures                               | Value                 |
+| -------------------- | ---------------------------------------------- | --------------------- |
+| **Answer Relevance** | Does the output address the input instruction? | Instruction adherence |
+| **Coherence**        | Logical flow and clarity                       | Narrative quality     |
+| **Conciseness**      | Brevity without losing meaning                 | Message clarity       |
+| **Sentiment**        | Positive, negative, or neutral tone            | Brand alignment       |
+| **Prompt Safety**    | 11 safety dimensions (toxicity, bias, etc.)    | Risk mitigation       |
+
+### Custom Evaluators (Domain-Specific Governance)
+
+| Evaluator             | What It Measures                          | Value                          |
+| --------------------- | ----------------------------------------- | ------------------------------ |
+| **Brand Voice Match** | Adherence to company style guide          | Automated brand governance     |
+| **Bias Detection**    | Potential bias across multiple dimensions | Compliance and risk mitigation |
+
+***
+
+{% stepper %}
+{% step %}
+**Set Up Built-In Evaluators**
+
+{% hint style="info" %}
+Replace `URL`, `TOKEN`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import pandas as pd
+from fiddler_evals import init
+from fiddler_evals.evaluators import (
+    AnswerRelevance,
+    Coherence,
+    Conciseness,
+    CustomJudge,
+)
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+LLM_CREDENTIAL_NAME = 'your-llm-credential'
+LLM_MODEL_NAME = 'openai/gpt-4o'
+
+init(url=URL, token=TOKEN)
+
+# Built-in evaluators for baseline quality
+relevance = AnswerRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME)
+coherence = Coherence(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME)
+conciseness = Conciseness(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME)
+```
+
+{% endstep %}
+
+{% step %}
+**Create a Brand Voice Match Judge**
+
+Use `CustomJudge` to evaluate content against your company's style guide:
+
+```python
+brand_voice_judge = CustomJudge(
+    prompt_template="""
+        Determine whether the provided content adheres to the provided
+        brand guidelines.
+
+        Content: {{ content }}
+        Brand Guidelines: {{ brand_guidelines }}
+    """,
+    output_fields={
+        'voice_match_score': {
+            'type': 'string',
+            'choices': ['Perfect Match', 'Minor Deviations', 'Off-Brand'],
+        },
+        'reasoning': {'type': 'string'},
+    },
+    model=LLM_MODEL_NAME,
+    credential=LLM_CREDENTIAL_NAME,
+)
+```
+
+{% hint style="info" %}
+See [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) for a deep-dive into `prompt_template`, `output_fields`, and iterative prompt improvement.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Evaluate Generated Content**
+
+```python
+# Example: your brand guidelines
+brand_guidelines = (
+    "Use professional, approachable tone. "
+    "Address customers as 'you'. "
+    "Avoid jargon, slang, and exclamation marks. "
+    "Keep sentences under 25 words."
+)
+
+# Sample content from your agent
+generated_content = [
+    {
+        'instruction': 'Write a welcome email for new customers',
+        'content': 'Welcome to our platform. We are glad you chose us. '
+            'Your account is ready and you can start exploring features '
+            'right away.',
+    },
+    {
+        'instruction': 'Write a welcome email for new customers',
+        'content': 'OMG WELCOME!!! You are going to LOVE this!! '
+            'Our platform is literally the BEST thing ever!!!',
+    },
+    {
+        'instruction': 'Explain the refund process',
+        'content': 'To request a refund, navigate to your order history, '
+            'select the item, and click Request Refund. Processing takes '
+            '3-5 business days.',
+    },
+]
+
+# Evaluate each piece of content
+for item in generated_content:
+    # Built-in evaluators
+    rel_score = relevance.score(
+        user_query=item['instruction'],
+        rag_response=item['content'],
+    )
+    coh_score = coherence.score(prompt=item['instruction'], response=item['content'])
+    con_score = conciseness.score(response=item['content'])
+
+    # Custom brand voice judge
+    brand_scores = brand_voice_judge.score(inputs={
+        'content': item['content'],
+        'brand_guidelines': brand_guidelines,
+    })
+    brand_dict = {s.name: s for s in brand_scores}
+
+    print(f"\nInstruction: {item['instruction'][:50]}...")
+    print(f"  Relevance:  {rel_score.label} ({rel_score.value})")
+    print(f"  Coherence:  {coh_score.label}")
+    print(f"  Conciseness: {con_score.label}")
+    print(f"  Brand Voice: {brand_dict['voice_match_score'].label}")
+    print(f"    Reason: {brand_dict['reasoning'].label}")
+```
+
+**Expected output:**
+
+```
+Instruction: Write a welcome email for new customers...
+  Relevance:  high (1.0)
+  Coherence:  high
+  Conciseness: high
+  Brand Voice: Perfect Match
+    Reason: Professional tone, addresses customer directly, no jargon or
+    exclamation marks, sentences are concise.
+
+Instruction: Write a welcome email for new customers...
+  Relevance:  medium (0.5)
+  Coherence:  low
+  Conciseness: low
+  Brand Voice: Off-Brand
+    Reason: Uses all-caps, multiple exclamation marks, slang ("OMG",
+    "literally"), and informal tone — violates all brand guidelines.
+
+Instruction: Explain the refund process...
+  Relevance:  high (1.0)
+  Coherence:  high
+  Conciseness: high
+  Brand Voice: Perfect Match
+    Reason: Clear, professional instructions with appropriate tone and
+    sentence length.
+```
+
+{% endstep %}
+
+{% step %}
+**Build a Quality Gate**
+
+Combine evaluator scores into an automated quality gate that flags content for human review:
+
+```python
+def quality_gate(instruction, content, brand_guidelines):
+    """Automated quality gate for content generation agents.
+
+    Returns 'APPROVED', 'REVIEW', or 'REJECTED' with reasons.
+    """
+    issues = []
+
+    # Check relevance
+    rel = relevance.score(user_query=instruction, rag_response=content)
+    if rel.value < 0.5:
+        issues.append(f'Low relevance ({rel.label})')
+
+    # Check coherence
+    coh = coherence.score(prompt=instruction, response=content)
+    if coh.value < 0.5:
+        issues.append(f'Low coherence ({coh.label})')
+
+    # Check brand voice
+    brand = brand_voice_judge.score(inputs={
+        'content': content,
+        'brand_guidelines': brand_guidelines,
+    })
+    brand_dict = {s.name: s for s in brand}
+    voice = brand_dict['voice_match_score'].label
+    if voice == 'Off-Brand':
+        issues.append(f'Off-brand content')
+    elif voice == 'Minor Deviations':
+        issues.append(f'Minor brand deviations')
+
+    if not issues:
+        return 'APPROVED', []
+    elif any('Off-Brand' in i or 'Low' in i for i in issues):
+        return 'REJECTED', issues
+    else:
+        return 'REVIEW', issues
+
+
+# Run the quality gate
+for item in generated_content:
+    status, issues = quality_gate(
+        item['instruction'], item['content'], brand_guidelines,
+    )
+    print(f"{status}: {item['content'][:60]}...")
+    if issues:
+        print(f"  Issues: {', '.join(issues)}")
+```
+
+**Expected output:**
+
+```
+APPROVED: Welcome to our platform. We are glad you chose us. Your ...
+REJECTED: OMG WELCOME!!! You are going to LOVE this!! Our platform...
+  Issues: Low coherence (low), Off-brand content
+APPROVED: To request a refund, navigate to your order history, sel...
+```
+
+{% endstep %}
+{% endstepper %}
+
+***
+
+## Production Monitoring
+
+To deploy these evaluators in production:
+
+1. **Evaluator Rules**: Configure built-in evaluators (Answer Relevance, Coherence, Conciseness) as Evaluator Rules in your Agentic Monitoring application. See [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules).
+2. **Custom Judges in Experiments**: Run the Brand Voice Match judge as a recurring experiment against sampled production outputs to track brand compliance over time.
+3. **Alerting**: Set up alerts on evaluator score degradation to catch systemic quality drift after model updates or prompt changes.
+
+***
+
+## Next Steps
+
+* [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) — Deep-dive into `CustomJudge` capabilities
+* [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) — Deploy evaluators in production
+* [Evals SDK Integration](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/evals-sdk) — Integration patterns for agentic workflows
+
+***
+
+**Related**: [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) — Configure evaluators for production monitoring
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

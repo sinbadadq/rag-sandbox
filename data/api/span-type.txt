@@ -1,0 +1,16 @@
+# SpanType
+
+Constants for Fiddler OpenTelemetry span types.
+
+## AGENT *= 'agent'*
+
+## CHAIN *= 'chain'*
+
+## TOOL *= 'tool'*
+
+## LLM *= 'llm'*
+
+## OTHER *= 'other'*
+
+
+---

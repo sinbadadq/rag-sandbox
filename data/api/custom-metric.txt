@@ -1,0 +1,175 @@
+# CustomMetric
+
+Custom metric for monitoring business-specific and domain-specific KPIs.
+
+CustomMetric enables creation of user-defined metrics that calculate specific values from model data using SQL-like expressions. Custom metrics extend Fiddler's built-in monitoring capabilities to support business requirements, domain-specific quality measures, and complex performance indicators.
+
+## Example
+
+```python
+# Business conversion rate metric
+conversion_rate = CustomMetric(
+    name="weekly_conversion_rate",
+    model_id=model.id,
+    definition="sum(if(prediction_score > 0.7 and converted == 1, 1, 0)) / sum(if(prediction_score > 0.7, 1, 0))",
+    description="Conversion rate for high-confidence predictions"
+).create()
+
+# Data quality metric
+missing_rate = CustomMetric(
+    name="feature_missing_rate",
+    model_id=model.id,
+    definition="sum(if(is_null(income), 1, 0)) / count(income)",
+    description="Percentage of records with missing income values"
+).create()
+
+# Fairness metric
+fairness_metric = CustomMetric(
+    name="demographic_parity",
+    model_id=model.id,
+    definition="abs((sum(if(gender == 'Male', predicted_churn, 0)) / sum(if(gender == 'Male', 1, 0))) - (sum(if(gender == 'Female', predicted_churn, 0)) / sum(if(gender == 'Female', 1, 0))))",
+    description="Demographic parity difference between gender groups"
+).create()
+
+# Use in alert rule
+alert_rule = AlertRule(
+    name="conversion_rate_alert",
+    model_id=model.id,
+    metric_id=conversion_rate.id,
+    priority=Priority.HIGH,
+    compare_to=CompareTo.TIME_PERIOD,
+    condition=AlertCondition.LESSER,
+    bin_size=BinSize.DAY,
+    critical_threshold=0.15,  # Alert if conversion drops below 15%
+    compare_bin_delta=7
+).create()
+```
+
+{% hint style="info" %}
+Custom metrics are calculated during data ingestion and monitoring cycles. Complex expressions may impact performance, so optimize for efficiency. Test expressions thoroughly before using in production alert rules.
+{% endhint %}
+
+## create()
+
+Create a new CustomMetric on the Fiddler platform.
+
+Registers this CustomMetric with the Fiddler platform. The expression must have a name, model\_id, and definition specified before calling create().
+
+## Returns
+
+The same CustomMetric instance with updated server-side attributes (id, created\_at, etc.).
+
+## Raises
+
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+* **Conflict** -- If a CustomMetric with the same name already exists for this model.
+
+**Return type:** *CustomMetric*
+
+## delete()
+
+Delete this CustomMetric from the Fiddler platform.
+
+Permanently removes the CustomMetric. This action cannot be undone. Any alert rules or monitors using this CustomMetric must be deleted first.
+
+## Raises
+
+* **NotFound** -- If the CustomMetric no longer exists.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+* **Conflict** -- If the CustomMetric is still being used by alert rules or monitors. **Return type:** None
+
+## *classmethod* from\_name(name, model\_id)
+
+Retrieve a CustomMetric by name and model.
+
+Fetches a CustomMetric from the Fiddler platform using its name and associated model ID.
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description                               |
+| ---------- | ------ | -------- | ------- | ----------------------------------------- |
+| `name`     | `str`  | ✗        | `None`  | The name of the CustomMetric to retrieve. |
+| `model_id` | \`UUID | str\`    | ✗       | `None`                                    |
+
+## Returns
+
+The CustomMetric instance for the provided parameters.
+
+## Raises
+
+* **NotFound** -- If no CustomMetric exists with the specified name and model.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+**Return type:** *CustomMetric*
+
+## *classmethod* get(id\_)
+
+Retrieve a CustomMetric by its unique identifier.
+
+Fetches a CustomMetric from the Fiddler platform using its UUID.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+The CustomMetric instance with all its configuration and metadata.
+
+## Raises
+
+* **NotFound** -- If no CustomMetric exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+**Return type:** *CustomMetric*
+
+## *classmethod* get\_organization\_id()
+
+Get the organization UUID from the global connection.
+
+## Returns
+
+Unique identifier of the organization associated with the current connection.
+
+**Return type:** UUID
+
+## *classmethod* get\_organization\_name()
+
+Get the organization name from the global connection.
+
+## Returns
+
+Name of the organization associated with the current connection.
+
+**Return type:** str
+
+## *classmethod* list(model\_id)
+
+List all CustomMetric instances for a model.
+
+Retrieves all CustomMetric instances associated with a specific model.
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description |
+| ---------- | ------ | -------- | ------- | ----------- |
+| `model_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## Yields
+
+CustomMetric instances for each CustomMetric in the model.
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API. **Return type:** *Iterator*\[*CustomMetric*]
+
+## **init**(name, model\_id, definition, description=None)
+
+Construct a custom metric instance.
+
+**Return type:** None
+
+
+---

@@ -1,0 +1,144 @@
+# RAG Health Diagnostics
+
+## The RAG Debugging Challenge
+
+Retrieval-Augmented Generation (RAG) applications fail in specific ways that generic metrics cannot diagnose. When a RAG system produces a poor response, the failure could originate in any of three stages:
+
+1. **Retrieval** — The system retrieved irrelevant or insufficient documents
+2. **Generation** — The LLM generated content not grounded in the retrieved documents
+3. **Query understanding** — The response doesn't address what the user actually asked
+
+Without targeted diagnostics, debugging RAG failures is manual trial-and-error — inspecting retrieved documents, re-running queries, and guessing where the pipeline broke. RAG Health Metrics transforms this into targeted root cause analysis.
+
+## The RAG Health Metrics Triad
+
+RAG Health Metrics is a purpose-built diagnostic framework consisting of three evaluators that work together to pinpoint exactly where RAG pipelines fail:
+
+| Evaluator                | What It Measures                                     | Scoring                             | Inputs                                                          |
+| ------------------------ | ---------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
+| **Answer Relevance 2.0** | Does the response address the user's query?          | High (1.0), Medium (0.5), Low (0.0) | `user_query`, `rag_response` (+ optional `retrieved_documents`) |
+| **Context Relevance**    | Are the retrieved documents relevant to the query?   | High (1.0), Medium (0.5), Low (0.0) | `user_query`, `retrieved_documents`                             |
+| **RAG Faithfulness**     | Is the response grounded in the retrieved documents? | Yes (1.0) / No (0.0)                | `user_query`, `rag_response`, `retrieved_documents`             |
+
+All three evaluators return detailed `reasoning` explaining the score, enabling you to understand not just *what* failed but *why*.
+
+### Availability
+
+| Evaluator            | Agentic Monitoring | Experiments | LLM Observability |
+| -------------------- | ------------------ | ----------- | ----------------- |
+| Answer Relevance 2.0 | Yes                | Yes         | Yes               |
+| Context Relevance    | Yes                | Yes         | **No**            |
+| RAG Faithfulness     | Yes                | Yes         | Yes               |
+
+{% hint style="warning" %}
+**Context Relevance** is available in Agentic Monitoring and Experiments only. It is not available in LLM Observability.
+{% endhint %}
+
+## Diagnostic Workflow
+
+Use the three evaluators together to diagnose specific failure modes in your RAG pipeline:
+
+| What the metrics tell you         | Why it's happening                    | Next Step                                        |
+| --------------------------------- | ------------------------------------- | ------------------------------------------------ |
+| High relevance + Low faithfulness | Hallucinations despite being on-topic | Check if retrieval provided sufficient grounding |
+| High faithfulness + Low relevance | Grounded but didn't answer the query  | Check if retrieval provided relevant information |
+| Low Context Relevance             | Retrieval pulling wrong documents     | Fix retrieval mechanism                          |
+
+### Scenario 1: Hallucination (High Relevance, Low Faithfulness)
+
+The response addresses the user's question (high Answer Relevance) but includes claims not supported by the retrieved documents (low RAG Faithfulness). This indicates the LLM is generating plausible-sounding content rather than grounding its response in the provided context.
+
+**Root cause:** Generation layer — the LLM is not sufficiently constrained by the retrieved documents.
+
+**Actions to investigate:**
+
+* Review the system prompt — does it instruct the LLM to only use provided context?
+* Check if the retrieved documents contain enough detail to answer the question
+* Consider adding explicit grounding instructions to the prompt
+
+### Scenario 2: Off-Topic Response (Low Relevance, High Faithfulness)
+
+The response accurately reflects the retrieved documents (high RAG Faithfulness) but doesn't answer what the user asked (low Answer Relevance). The LLM faithfully summarized the wrong information.
+
+**Root cause:** Retrieval layer — the retrieved documents are relevant enough to generate a response, but don't contain the information needed to answer the specific query.
+
+**Actions to investigate:**
+
+* Review the retrieval query — is it capturing the user's intent?
+* Check if the knowledge base contains the needed information
+* Consider improving query expansion or embedding quality
+
+### Scenario 3: Bad Retrieval (Low Context Relevance)
+
+The retrieved documents are not relevant to the user's query at all (low Context Relevance). Downstream evaluators may score unpredictably because the entire pipeline is working with the wrong source material.
+
+**Root cause:** Retrieval mechanism — the vector search, keyword matching, or hybrid retrieval is pulling wrong documents.
+
+**Actions to investigate:**
+
+* Review the embedding model — does it capture semantic similarity for your domain?
+* Check chunking strategy — are documents split at appropriate boundaries?
+* Examine the retrieval query formulation — is the user's intent preserved?
+* Consider re-indexing with a domain-adapted embedding model
+
+## Using RAG Health Metrics
+
+### In Experiments (Evals SDK)
+
+Evaluate RAG pipelines systematically against test datasets:
+
+```python
+from fiddler_evals import evaluate
+from fiddler_evals.evaluators import AnswerRelevance, ContextRelevance, RAGFaithfulness
+
+evaluators = [
+    AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),      # Is the response relevant? (High/Medium/Low)
+    ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),     # Are retrieved docs relevant? (High/Medium/Low)
+    RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential"),      # Is the response grounded? (Yes/No)
+]
+
+results = evaluate(
+    dataset=dataset,
+    task=my_rag_task,
+    evaluators=evaluators,
+    score_fn_kwargs_mapping={
+        "user_query": lambda x: x["inputs"]["user_query"],
+        "rag_response": "rag_response",
+        "retrieved_documents": lambda x: x["inputs"]["retrieved_documents"],
+    }
+)
+```
+
+### In Agentic Monitoring
+
+Configure Evaluator Rules to continuously evaluate production RAG spans. Navigate to your application's **Evaluator Rules** tab and add rules for Answer Relevance, Context Relevance, and RAG Faithfulness. Map the evaluator inputs to your span attributes.
+
+See [Evaluator Rules](/evaluate-and-test/evaluator-rules.md) for step-by-step configuration instructions.
+
+## RAG Faithfulness vs FTL Faithfulness
+
+Fiddler provides two separate faithfulness evaluators with different architectures:
+
+| Feature                      | RAG Faithfulness                                    | FTL Faithfulness                                        |
+| ---------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| **Type**                     | LLM-as-a-Judge                                      | Proprietary Fast Trust Model                            |
+| **Class**                    | `RAGFaithfulness`                                   | `FTLResponseFaithfulness`                               |
+| **Inputs**                   | `user_query`, `rag_response`, `retrieved_documents` | `context`, `response`                                   |
+| **Outputs**                  | `label` (yes/no), `value` (1/0), `reasoning`        | `faithful_prob` (0.0–1.0)                               |
+| **Best for**                 | RAG pipeline diagnostics, comprehensive evaluation  | Guardrails, real-time monitoring, low-latency use cases |
+| **Part of RAG Health triad** | Yes                                                 | No                                                      |
+
+Choose RAG Faithfulness when you need detailed reasoning and diagnostic context as part of the RAG Health Metrics triad. Choose FTL Faithfulness when you need sub-100ms latency for production guardrails.
+
+## Complementary Metrics
+
+RAG Health Metrics works alongside Fiddler's existing 80+ LLM metrics. RAG systems fail in specific ways that generic metrics cannot diagnose — RAG Health Metrics provides the targeted diagnostics, while metrics like toxicity, PII detection, coherence, and sentiment provide complementary quality and safety coverage.
+
+## Next Steps
+
+* [RAG Health Metrics Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md) — End-to-end hands-on guide
+* [Experiments Getting Started](/getting-started/experiments.md#rag-system-evaluation) — RAG evaluation use case
+* [Evaluator Rules](/evaluate-and-test/evaluator-rules.md) — Configure production monitoring
+
+
+---

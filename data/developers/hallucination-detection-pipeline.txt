@@ -1,0 +1,315 @@
+# Detecting Hallucinations in RAG
+
+Build a hallucination detection pipeline that combines pre-deployment evaluation with the Evals SDK and continuous production monitoring through LLM Observability enrichments and Evaluator Rules.
+
+**Use this cookbook when:** You want to monitor your RAG application for hallucinations across both testing and production environments.
+
+**Time to complete**: \~25 minutes
+
+```mermaid
+graph LR
+    subgraph "Layer 1: Pre-Deployment"
+        A["Design Test Cases"] --> B["Run Diagnostic\nEvaluation"]
+        B --> C["Classify\nFailure Modes"]
+    end
+
+    subgraph "Layer 2: Production"
+        D["Evaluator Rules\n(Agentic)"]
+        E["LLM Obs\nEnrichments"]
+    end
+
+    C --> D
+    C --> E
+    D --> F["Alerts &\nInvestigation"]
+    E --> F
+
+    style C fill:#ffd,stroke:#333
+    style F fill:#f96,stroke:#333
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals fiddler-client pandas`
+  {% endhint %}
+
+***
+
+## The Two-Layer Approach
+
+Hallucination detection works best as a two-layer pipeline:
+
+| Layer              | Tool                                | Purpose                                                   |
+| ------------------ | ----------------------------------- | --------------------------------------------------------- |
+| **Pre-deployment** | Evals SDK                           | Test against known scenarios, validate with golden labels |
+| **Production**     | LLM Observability + Evaluator Rules | Continuous monitoring of live traffic                     |
+
+***
+
+## Layer 1: Pre-Deployment Evaluation
+
+{% stepper %}
+{% step %}
+**Set Up and Connect**
+
+Use the RAG Health Metrics triad to distinguish hallucinations from other failure modes:
+
+{% hint style="info" %}
+Replace `URL`, `TOKEN`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import pandas as pd
+from fiddler_evals import init, evaluate, Project, Application, Dataset
+from fiddler_evals.evaluators import (
+    AnswerRelevance,
+    ContextRelevance,
+    RAGFaithfulness,
+)
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+LLM_CREDENTIAL_NAME = 'your-llm-credential'
+LLM_MODEL_NAME = 'openai/gpt-4o'
+
+init(url=URL, token=TOKEN)
+
+project = Project.get_or_create(name='hallucination_detection')
+app = Application.get_or_create(
+    name='rag-hallucination-test',
+    project_id=project.id,
+)
+dataset = Dataset.get_or_create(
+    name='hallucination-scenarios',
+    application_id=app.id,
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Create Hallucination-Focused Test Cases**
+
+Design test cases that specifically probe for hallucination patterns:
+
+```python
+hallucination_scenarios = pd.DataFrame(
+    [
+        {
+            'scenario': 'Grounded response',
+            'user_query': 'What is the return policy?',
+            'retrieved_documents': [
+                'Returns accepted within 30 days with receipt.',
+            ],
+            'rag_response': 'You can return items within 30 days '
+                'if you have a receipt.',
+        },
+        {
+            'scenario': 'Fabricated details',
+            'user_query': 'What is the return policy?',
+            'retrieved_documents': [
+                'Returns accepted within 30 days with receipt.',
+            ],
+            'rag_response': 'You can return items within 60 days. '
+                'No receipt needed. We also offer free shipping on returns.',
+        },
+        {
+            'scenario': 'Insufficient context',
+            'user_query': 'What are the shipping costs?',
+            'retrieved_documents': [
+                'We ship to all 50 US states.',
+            ],
+            'rag_response': 'Standard shipping is $5.99 and express '
+                'shipping is $12.99.',
+        },
+    ]
+)
+
+dataset.insert_from_pandas(
+    df=hallucination_scenarios,
+    input_columns=['user_query', 'retrieved_documents', 'rag_response'],
+    metadata_columns=['scenario'],
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Run the Diagnostic Evaluation**
+
+```python
+def passthrough_task(inputs, extras, metadata):
+    return {
+        'rag_response': inputs['rag_response'],
+        'retrieved_documents': inputs['retrieved_documents'],
+    }
+
+result = evaluate(
+    dataset=dataset,
+    task=passthrough_task,
+    evaluators=[
+        RAGFaithfulness(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+        AnswerRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+        ContextRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+    ],
+    score_fn_kwargs_mapping={
+        'user_query': lambda x: x['inputs']['user_query'],
+        'retrieved_documents': 'retrieved_documents',
+        'rag_response': 'rag_response',
+    },
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Interpret Results**
+
+Use the diagnostic workflow to classify failures:
+
+```python
+for r in result.results:
+    scores = {s.evaluator_name: s for s in r.scores}
+    scenario = r.dataset_item.metadata.get('scenario', 'unknown')
+
+    faithfulness = scores.get('rag_faithfulness')
+    relevance = scores.get('answer_relevance')
+    context = scores.get('context_relevance')
+
+    # Classify the failure mode
+    if faithfulness and faithfulness.value == 0:
+        diagnosis = 'HALLUCINATION'
+    elif context and context.value < 0.5:
+        diagnosis = 'BAD RETRIEVAL'
+    elif relevance and relevance.value < 0.5:
+        diagnosis = 'OFF-TOPIC'
+    else:
+        diagnosis = 'HEALTHY'
+
+    print(f'{scenario}: {diagnosis}')
+    if faithfulness:
+        print(f'  Faithfulness: {faithfulness.label} — {faithfulness.reasoning}')
+```
+
+**Expected output:**
+
+```
+Grounded response: HEALTHY
+  Faithfulness: yes — The response accurately reflects the return policy
+  stated in the retrieved document.
+
+Fabricated details: HALLUCINATION
+  Faithfulness: no — The response claims a 60-day return window and no
+  receipt requirement, but the source document states 30 days with receipt.
+
+Insufficient context: HALLUCINATION
+  Faithfulness: no — The response provides specific prices ($5.99, $12.99)
+  that are not supported by the retrieved document.
+```
+
+{% hint style="info" %}
+**Reading the diagnosis:** The triad distinguishes *why* a response failed:
+
+* **HALLUCINATION** = Faithfulness fails (response fabricates information)
+* **BAD RETRIEVAL** = Context Relevance fails (wrong documents retrieved)
+* **OFF-TOPIC** = Answer Relevance fails (response doesn't address the question)
+  {% endhint %}
+  {% endstep %}
+  {% endstepper %}
+
+***
+
+## Layer 2: Production Monitoring
+
+{% tabs %}
+{% tab title="Option A: Evaluator Rules (Agentic)" %}
+For applications using Agentic Monitoring, configure Evaluator Rules to continuously evaluate production spans:
+
+1. Navigate to your application's **Evaluator Rules** tab
+2. Add a rule for **RAG Faithfulness**
+3. Map evaluator inputs to your span attributes:
+   * `user_query` → your query span attribute
+   * `rag_response` → your response span attribute
+   * `retrieved_documents` → your context span attribute
+4. Set alert thresholds (e.g., alert when faithfulness drops below 80%)
+
+See [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) for step-by-step instructions.
+{% endtab %}
+
+{% tab title="Option B: LLM Observability Enrichments" %}
+For applications using LLM Observability, configure enrichments during model onboarding to monitor for hallucinations:
+
+```python
+import fiddler as fdl
+
+fiddler_enrichments = [
+    # FTL Faithfulness for low-latency hallucination detection
+    fdl.Enrichment(
+        name='Faithfulness',
+        enrichment='ftl_response_faithfulness',
+        columns=['source_docs', 'response'],
+        config={
+            'context_field': 'source_docs',
+            'response_field': 'response',
+            'threshold': 0.5,
+        },
+    ),
+    # Safety enrichments
+    fdl.Enrichment(
+        name='FTL Safety',
+        enrichment='ftl_prompt_safety',
+        columns=['question', 'response'],
+    ),
+    # Embeddings for drift detection
+    fdl.TextEmbedding(
+        name='Prompt TextEmbedding',
+        source_column='question',
+        column='Enrichment Prompt Embedding',
+    ),
+]
+```
+
+{% hint style="warning" %}
+LLM Observability uses **FTL Faithfulness** (`ftl_response_faithfulness`), a proprietary Fast Trust Model for low-latency scoring. This is a **different evaluator** from the RAG Faithfulness used in Layer 1 — it has different inputs (`context`, `response`) and outputs probability scores (`faithful_prob` 0.0–1.0) rather than binary labels. For detailed diagnostic reasoning, use **RAG Faithfulness** via Evaluator Rules or the Evals SDK.
+{% endhint %}
+{% endtab %}
+{% endtabs %}
+
+***
+
+## Combining Both Layers
+
+The most effective hallucination detection pipeline uses both layers:
+
+| Stage             | What to Do                                 | Tool                                   |
+| ----------------- | ------------------------------------------ | -------------------------------------- |
+| **Development**   | Test against known hallucination scenarios | Evals SDK + RAG Faithfulness           |
+| **Pre-release**   | Run experiments comparing pipeline changes | Evals SDK + full diagnostic triad      |
+| **Production**    | Continuous monitoring with alerting        | Evaluator Rules or LLM Obs enrichments |
+| **Investigation** | Deep-dive into flagged events              | Evals SDK `.score()` on specific cases |
+
+***
+
+## Next Steps
+
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Conceptual guide to failure mode diagnosis
+* [RAG Evaluation Fundamentals](/developers/cookbooks/rag-evaluation-fundamentals.md) — Direct evaluation with `.score()` API
+* [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) — Configure production monitoring rules
+
+***
+
+**Source notebooks**:
+
+* [Fiddler Cookbook: RAG Evaluation Fundamentals](https://github.com/fiddler-labs/fiddler-examples/blob/main/cookbooks/Fiddler_Cookbook_RAG_Evaluation_Fundamentals.ipynb)
+* [Fiddler Quickstart: LLM Chatbot](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Chatbot.ipynb)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

@@ -1,0 +1,18 @@
+# get\_current\_span
+
+Get currently active span as Fiddler wrapper (inside a traced function).
+
+Gets the span from the current context and verifies it belongs to Fiddler's tracer to maintain isolation from other OpenTelemetry tracers.
+
+## Returns
+
+Current span wrapper or None if no active span or not a Fiddler span.
+
+## Parameters
+
+| Parameter | Type                                             | Required | Default | Description                                           |
+| --------- | ------------------------------------------------ | -------- | ------- | ----------------------------------------------------- |
+| `as_type` | `Literal['span', 'generation', 'chain', 'tool']` | ✗        | `span`  | Wrapper type ('span', 'generation', 'chain', 'tool'). |
+
+
+---

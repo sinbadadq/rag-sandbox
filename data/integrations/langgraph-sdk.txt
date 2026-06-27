@@ -1,0 +1,940 @@
+# Fiddler LangGraph SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-langgraph)](https://pypi.org/project/fiddler-langgraph/)
+
+Instrument your LangGraph agent applications and custom AI workflows with OpenTelemetry-based tracing for comprehensive agentic observability. The Fiddler LangGraph SDK provides three instrumentation approaches — auto-instrumentation for LangGraph workflows, decorator-based tracing for custom functions, and manual span creation for fine-grained control — capturing every step from thought to action to execution.
+
+## What you'll need
+
+* Fiddler account (cloud or on-premises)
+* Python 3.10, 3.11, 3.12, or 3.13
+* LangGraph or LangChain application
+* Fiddler API key and application ID
+
+## Quick start
+
+Get monitoring in 3 steps:
+
+```bash
+# Step 1: Install
+pip install fiddler-langgraph
+```
+
+```python
+# Step 2: Initialize the Fiddler client
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+fdl_client = FiddlerClient(
+    application_id='your-app-id',  # Must be valid UUID4
+    api_key='your-api-key',
+    url='https://your-instance.fiddler.ai'
+)
+
+# Step 3: Instrument your application
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Your existing LangGraph code runs normally
+# Traces will automatically be sent to Fiddler
+```
+
+That's it! Your agent traces are now flowing to Fiddler.
+
+{% hint style="info" %}
+This Quick Start uses auto-instrumentation for LangGraph applications. For custom functions or fine-grained control, see [Instrumentation Methods](#instrumentation-methods) below.
+{% endhint %}
+
+## What gets monitored
+
+The LangGraph SDK automatically captures:
+
+### Hierarchical tracing
+
+* **Application Level** - Overall system performance and health
+* **Session Level** - User interaction and conversation flows
+* **Agent Level** - Individual agent behavior and decisions
+* **Span Level** - Tool calls, LLM requests, state transitions
+
+### Agent lifecycle stages
+
+Every agent operation is tracked through five observable stages:
+
+1. **Thought** - Data ingestion, context retrieval, information interpretation
+2. **Action** - Planning processes, tool selection, decision-making
+3. **Execution** - Task performance, API calls, external integrations
+4. **Reflection** - Self-evaluation, learning signals, adaptation
+5. **Alignment** - Trust validation, safety checks, policy enforcement
+
+### Captured data
+
+* Agent state transitions and decision points
+* Tool invocations with inputs and outputs
+* LLM API calls with prompts and responses
+* Execution times and latency metrics
+* Error traces and exception handling
+* Custom metadata and tags
+
+## Application setup
+
+Before instrumenting your application, you must create an application in Fiddler and obtain your Application ID:
+
+### 1. Create your application in Fiddler
+
+Log in to your Fiddler instance and navigate to **GenAI Applications**, then click **Add Application** and follow the onboarding wizard to create your application.
+
+<figure><img src="/files/dNshtxStDp4Zmc4up4R1" alt="GenAI Applications page with Add Application button"><figcaption></figcaption></figure>
+
+### 2. Copy your Application ID
+
+After creating your application, copy the **Application ID** from the GenAI Applications page using the copy icon next to the ID. This must be a valid UUID4 format (for example, `550e8400-e29b-41d4-a716-446655440000`). You'll need this for initialization.
+
+<figure><img src="/files/cpstzzZS03ndFdnC36Qz" alt="GenAI Applications page showing Application ID column with copy icons"><figcaption></figcaption></figure>
+
+### 3. Get your access token
+
+Go to **Settings** > **Credentials** and copy your access token. You'll need this for initialization.
+
+<figure><img src="/files/KFutozROWJPxr13H36Mi" alt="Fiddler Settings- Credentials tab showing admin&#x27;s access token"><figcaption></figcaption></figure>
+
+## Detailed setup
+
+### Installation
+
+```bash
+pip install fiddler-langgraph
+```
+
+**Framework Compatibility:**
+
+* **LangGraph:** >= 0.3.28 and <= 1.1.0 OR **LangChain:** >= 0.3.28 and <= 1.1.0
+* **Python:** 3.10, 3.11, 3.12, or 3.13
+* **OpenTelemetry:** API and SDK >= 1.19.0 and <= 1.39.1 (installed automatically)
+
+### Configuration
+
+#### Direct initialization (Recommended)
+
+```python
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+fdl_client = FiddlerClient(
+    application_id='your-app-id',        # Required (UUID4 format)
+    api_key='your-api-key',              # Required when otlp_enabled=True (default)
+    url='https://your-instance.fiddler.ai'  # Required when otlp_enabled=True (default)
+)
+
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+```
+
+#### Using environment variables
+
+You can use environment variables instead of hardcoding credentials:
+
+```python
+import os
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+fdl_client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL")
+)
+
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+```
+
+**Environment Variables Reference:**
+
+| Variable                 | Description               | Example                                |
+| ------------------------ | ------------------------- | -------------------------------------- |
+| `FIDDLER_API_KEY`        | Your Fiddler API key      | `fid_...`                              |
+| `FIDDLER_APPLICATION_ID` | Your application UUID4    | `550e8400-e29b-41d4-a716-446655440000` |
+| `FIDDLER_URL`            | Your Fiddler instance URL | `https://your-instance.fiddler.ai`     |
+
+## Instrumentation methods
+
+The Fiddler LangGraph SDK provides three instrumentation approaches. Choose the one that fits your application:
+
+| Approach                                            | Best For                                 | Key API                                   |
+| --------------------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| [Auto-Instrumentation](#auto-instrumentation-1)     | LangGraph and LangChain applications     | `LangGraphInstrumentor`                   |
+| [Decorator-Based](#decorator-based-instrumentation) | Custom Python functions, mixed workflows | `@trace()`, `get_current_span()`          |
+| [Manual](#manual-instrumentation)                   | Fine-grained span lifecycle control      | `start_as_current_span()`, `start_span()` |
+
+{% hint style="info" %}
+You can combine all three approaches in the same application. For example, use auto-instrumentation for your LangGraph graph and decorators for custom helper functions that the graph calls.
+{% endhint %}
+
+### Auto-Instrumentation
+
+Auto-instrumentation captures LangGraph and LangChain workflows automatically. Initialize the instrumentor once, and all graph invocations produce traces with no additional code changes.
+
+```python
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+instrumentor = LangGraphInstrumentor(client)
+instrumentor.instrument()
+
+# Your LangGraph/LangChain code runs normally — traces are captured automatically
+```
+
+**When to use:** Your application uses LangGraph `StateGraph` or LangChain runnables and you want comprehensive tracing with zero instrumentation code.
+
+See the [Quick Start](#quick-start) section above for a complete walkthrough, or the [Advanced Usage](#advanced-usage) section for context enrichment and production configuration.
+
+### Decorator-based instrumentation
+
+Use the `@trace()` decorator to instrument individual Python functions. This is the recommended approach for custom functions that are not part of a LangGraph graph, such as standalone LLM calls, tool implementations, or orchestration logic.
+
+```python
+from openai import OpenAI
+from fiddler_langgraph import FiddlerClient, trace, get_current_span
+
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+openai_client = OpenAI()  # Assumes OPENAI_API_KEY is set in environment
+# vector_store: a pre-configured vector database client (e.g., Pinecone, Chroma, Weaviate)
+
+@trace(as_type="generation", model="gpt-4o", system="openai")
+def call_llm(prompt: str) -> str:
+    span = get_current_span(as_type="generation")
+    if span:
+        span.set_user_prompt(prompt)
+    response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    result = response.choices[0].message.content
+    if span:
+        span.set_completion(result)
+    return result
+
+@trace(as_type="tool", name="search_knowledge_base")
+def search_kb(query: str) -> list[str]:
+    span = get_current_span(as_type="tool")
+    if span:
+        span.set_tool_input({"query": query})
+    results = vector_store.search(query)
+    if span:
+        span.set_tool_output(results)
+    return results
+
+@trace(name="handle_request")
+def handle_request(user_input: str) -> str:
+    context = search_kb(user_input)       # Child span (tool)
+    response = call_llm(user_input)       # Child span (generation)
+    return response                        # Parent span auto-closes
+```
+
+**When to use:** You have custom Python functions — LLM wrappers, tool implementations, or orchestration logic — that you want to trace with full control over span metadata.
+
+#### `@trace()` Arguments
+
+| Argument         | Type            | Default       | Description                                                                           |
+| ---------------- | --------------- | ------------- | ------------------------------------------------------------------------------------- |
+| `name`           | `str`           | Function name | Custom span name                                                                      |
+| `as_type`        | `str`           | `"span"`      | Span type: `"span"`, `"generation"`, `"chain"`, or `"tool"`                           |
+| `capture_input`  | `bool`          | `True`        | Automatically capture function arguments as span input                                |
+| `capture_output` | `bool`          | `True`        | Automatically capture return value as span output                                     |
+| `model`          | `str`           | `None`        | LLM model name (sets `gen_ai.request.model`)                                          |
+| `system`         | `str`           | `None`        | LLM provider such as `"openai"` or `"anthropic"` (sets `gen_ai.system`)               |
+| `user_id`        | `str`           | `None`        | User identifier                                                                       |
+| `version`        | `str`           | `None`        | Service version string                                                                |
+| `client`         | `FiddlerClient` | `None`        | Explicit client instance (defaults to the [global singleton](#global-client-pattern)) |
+
+#### Accessing the current span
+
+Inside a decorated function, call `get_current_span()` to access the active span and add metadata:
+
+```python
+from fiddler_langgraph import get_current_span
+
+@trace(as_type="generation")
+def my_llm_call(prompt: str) -> str:
+    span = get_current_span(as_type="generation")
+    if span:
+        span.set_user_prompt(prompt)
+        span.set_model("gpt-4o")
+        span.set_system("openai")
+    # ... make your LLM call ...
+    if span:
+        span.set_completion(result)
+        span.set_usage(input_tokens=50, output_tokens=120)
+    return result
+```
+
+Pass `as_type` to get a type-specific wrapper with semantic helper methods. See [Span Types and Helper Methods](#span-types-and-helper-methods) for the full list.
+
+{% hint style="info" %}
+Always check `if span:` before calling helper methods. `get_current_span()` returns `None` if no Fiddler span is active — for example, during unit tests or when the client is not initialized.
+{% endhint %}
+
+#### Async support
+
+The `@trace()` decorator works with both sync and async functions. No additional configuration is needed:
+
+```python
+@trace(as_type="generation", model="gpt-4o", system="openai")
+async def async_llm_call(prompt: str) -> str:
+    span = get_current_span(as_type="generation")
+    if span:
+        span.set_user_prompt(prompt)
+    response = await openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    result = response.choices[0].message.content
+    if span:
+        span.set_completion(result)
+    return result
+```
+
+#### Automatic parent-child relationships
+
+Nested decorated functions create proper span hierarchies automatically. The outer function becomes the parent span, and inner calls become child spans:
+
+```python
+@trace(name="agent_workflow", as_type="chain")
+def run_agent(query: str) -> str:
+    context = retrieve_docs(query)    # Child span
+    answer = generate_answer(context) # Child span
+    return answer                     # Parent span
+
+@trace(as_type="tool")
+def retrieve_docs(query: str) -> list[str]:
+    # Automatically a child of "agent_workflow"
+    return vector_db.search(query)
+
+@trace(as_type="generation", model="gpt-4o")
+def generate_answer(context: list[str]) -> str:
+    # Also a child of "agent_workflow"
+    return llm.generate(context)
+```
+
+### Manual instrumentation
+
+Create spans manually using context managers or explicit start/end calls. This gives you full control over span lifecycle — useful for dynamic span creation, conditional instrumentation, or code where decorator syntax does not apply.
+
+#### Context manager (automatic lifecycle)
+
+Use `start_as_current_span()` to create a span that ends automatically when the block exits:
+
+```python
+from openai import OpenAI
+from fiddler_langgraph import FiddlerClient
+
+openai_client = OpenAI()  # Assumes OPENAI_API_KEY is set in environment
+
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+with client.start_as_current_span("llm_call", as_type="generation") as span:
+    span.set_model("gpt-4o")
+    span.set_system("openai")
+    span.set_user_prompt("What is the capital of France?")
+
+    response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "What is the capital of France?"}]
+    )
+
+    span.set_completion(response.choices[0].message.content)
+    span.set_usage(
+        input_tokens=response.usage.prompt_tokens,
+        output_tokens=response.usage.completion_tokens
+    )
+# Span ends automatically here
+```
+
+#### Explicit span control
+
+Use `start_span()` when you need to manage span lifecycle manually — for example, in callback-driven or event-based code:
+
+```python
+span = client.start_span("background_task", as_type="tool")
+try:
+    span.set_tool_name("data_processor")
+    span.set_tool_input({"file": "data.csv"})
+    result = process_file("data.csv")
+    span.set_tool_output(result)
+finally:
+    span.end()  # Must call end() explicitly
+```
+
+{% hint style="warning" %}
+Always call `span.end()` when using `start_span()`. Forgetting to end a span causes a resource leak. Prefer `start_as_current_span()` unless you need explicit lifecycle control.
+{% endhint %}
+
+**When to use:** You need explicit control over when spans start and end — for example, in callback-driven code, conditional spans, or complex control flow where decorators do not fit.
+
+### Span types and helper methods
+
+Both decorator and manual instrumentation support four span types. Set the `as_type` parameter to select a type, which determines which semantic helper methods are available on the span wrapper.
+
+| Type           | Wrapper Class       | Use For                                       |
+| -------------- | ------------------- | --------------------------------------------- |
+| `"span"`       | `FiddlerSpan`       | Generic operations, orchestration             |
+| `"generation"` | `FiddlerGeneration` | LLM calls (prompts, completions, token usage) |
+| `"chain"`      | `FiddlerChain`      | Multi-step workflows, processing chains       |
+| `"tool"`       | `FiddlerTool`       | Tool or function calls (name, input, output)  |
+
+#### Common methods (all types)
+
+| Method                        | Description                                               |
+| ----------------------------- | --------------------------------------------------------- |
+| `set_input(data)`             | Set input data (auto-serializes dicts and lists to JSON)  |
+| `set_output(data)`            | Set output data (auto-serializes dicts and lists to JSON) |
+| `set_attribute(key, value)`   | Set a custom span attribute                               |
+| `set_agent_name(name)`        | Set the agent name (`gen_ai.agent.name`)                  |
+| `set_agent_id(id)`            | Set the agent ID (`gen_ai.agent.id`)                      |
+| `set_conversation_id(id)`     | Set the conversation ID (`gen_ai.conversation.id`)        |
+| `record_exception(exception)` | Record an error on the span                               |
+
+#### Generation methods (`FiddlerGeneration`)
+
+| Method                                                 | Sets Attribute            |
+| ------------------------------------------------------ | ------------------------- |
+| `set_model(name)`                                      | `gen_ai.request.model`    |
+| `set_system(provider)`                                 | `gen_ai.system`           |
+| `set_system_prompt(text)`                              | `gen_ai.llm.input.system` |
+| `set_user_prompt(text)`                                | `gen_ai.llm.input.user`   |
+| `set_completion(text)`                                 | `gen_ai.llm.output`       |
+| `set_usage(input_tokens, output_tokens, total_tokens)` | `gen_ai.usage.*`          |
+| `set_context(text)`                                    | `gen_ai.llm.context`      |
+| `set_messages(messages)`                               | `gen_ai.input.messages`   |
+| `set_output_messages(messages)`                        | `gen_ai.output.messages`  |
+| `set_tool_definitions(definitions)`                    | `gen_ai.tool.definitions` |
+
+#### Tool methods (`FiddlerTool`)
+
+| Method                              | Sets Attribute            |
+| ----------------------------------- | ------------------------- |
+| `set_tool_name(name)`               | `gen_ai.tool.name`        |
+| `set_tool_input(data)`              | `gen_ai.tool.input`       |
+| `set_tool_output(data)`             | `gen_ai.tool.output`      |
+| `set_tool_definitions(definitions)` | `gen_ai.tool.definitions` |
+
+For complete API documentation, see the [LangGraph SDK API Reference](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/README.md).
+
+## Context isolation
+
+The Fiddler LangGraph SDK maintains its own isolated OpenTelemetry context. Fiddler traces do not interfere with other OpenTelemetry tracers that may be active in your application, and vice versa.
+
+Each `FiddlerClient` creates a private `Context` instance. All span creation, parent-child linking, and context propagation happen within this isolated context. When you use `@trace()`, `start_as_current_span()`, or `start_span()`, the SDK manages context attachment and detachment automatically.
+
+You can verify whether a span belongs to Fiddler using `is_fiddler_span()`:
+
+```python
+from fiddler_otel.utils import is_fiddler_span
+from opentelemetry import trace
+
+otel_span = trace.get_current_span()
+if is_fiddler_span(otel_span):
+    print("This span belongs to Fiddler")
+```
+
+This isolation matters if your application uses other OpenTelemetry-based observability tools (such as Datadog, Honeycomb, or custom OTel exporters). Fiddler traces remain completely separate, so you can run multiple tracing systems side by side without conflicts.
+
+## Global client pattern
+
+The Fiddler SDK uses a singleton pattern for `FiddlerClient`. The first client created in your process is automatically registered as the global default. Retrieve it anywhere using `get_client()`:
+
+```python
+from fiddler_langgraph import FiddlerClient, get_client
+
+# Initialize once (automatically registered as global singleton)
+client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+
+# Retrieve anywhere in your application
+def some_utility_function():
+    fdl_client = get_client()  # Returns the same client instance
+    with fdl_client.start_as_current_span("utility_op") as span:
+        span.set_attribute("source", "utility")
+        # ... your logic ...
+```
+
+The `@trace()` decorator uses `get_client()` internally, so you do not need to pass a client to each decorated function. As long as a `FiddlerClient` has been created somewhere in your application, all `@trace()` decorators and `get_current_span()` calls work automatically.
+
+{% hint style="info" %}
+There is no `set_current_client()` function. The singleton is set automatically during `FiddlerClient` initialization. If you create multiple clients, only the first one becomes the global default. Pass an explicit `client` argument to `@trace()` to use a different client.
+{% endhint %}
+
+## Advanced usage
+
+### Adding context and metadata
+
+Enrich traces with custom context and conversation tracking:
+
+```python
+from fiddler_langgraph import set_llm_context, set_conversation_id
+import uuid
+
+# Set descriptive context for LLM processing
+set_llm_context(model, 'Customer support conversation')
+
+# Set conversation ID for tracking multi-turn conversations
+conversation_id = str(uuid.uuid4())
+set_conversation_id(conversation_id)
+```
+
+### Custom span and session attributes
+
+Add custom attributes to individual spans or entire sessions:
+
+```python
+from fiddler_langgraph import add_span_attributes, add_session_attributes
+
+# Add attributes to specific spans
+add_span_attributes({
+    "user_id": "user_123",
+    "request_type": "billing_inquiry"
+})
+
+# Add attributes that persist across all spans in a session
+add_session_attributes({
+    "session_type": "premium",
+    "feature_flags": ["new_ui", "advanced_mode"]
+})
+```
+
+### Sampling configuration
+
+Control trace sampling for high-volume applications:
+
+```python
+from opentelemetry.sdk.trace import sampling
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+# Sample 10% of traces
+sampler = sampling.TraceIdRatioBased(0.1)
+
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai",
+    sampler=sampler
+)
+
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+```
+
+For production deployments, consider these sampling strategies:
+
+* **High-volume applications:** Sample 5-10% (`TraceIdRatioBased(0.05)`)
+* **Development/testing:** Sample 100% (default - no sampler specified)
+* **Cost optimization:** Sample 1-5% (`TraceIdRatioBased(0.01)`)
+
+### Production configuration
+
+For high-volume production applications, configure span limits and batch processing:
+
+```python
+import os
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+# Configure batch processing BEFORE initializing FiddlerClient
+os.environ['OTEL_BSP_MAX_QUEUE_SIZE'] = '500'         # Increased from default 100
+os.environ['OTEL_BSP_SCHEDULE_DELAY_MILLIS'] = '500'  # Faster export than default 1000ms
+os.environ['OTEL_BSP_MAX_EXPORT_BATCH_SIZE'] = '50'   # Larger batches than default 10
+
+# Increase span limits to capture more data
+production_limits = SpanLimits(
+    max_events=128,                   # Default: 32
+    max_span_attributes=128,          # Default: 32
+    max_span_attribute_length=8192,   # Default: 2048
+)
+
+# Sample 5-10% of traces
+production_sampler = sampling.TraceIdRatioBased(0.05)
+
+fdl_client = FiddlerClient(
+    application_id=os.getenv("FIDDLER_APPLICATION_ID"),
+    api_key=os.getenv("FIDDLER_API_KEY"),
+    url=os.getenv("FIDDLER_URL"),
+    span_limits=production_limits,
+    sampler=production_sampler,
+    compression=Compression.Gzip,
+)
+
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+```
+
+### Offline / S3 Routing Mode
+
+Use this mode when traces must be routed through an intermediate store (such as Amazon S3) before reaching Fiddler, rather than being sent directly. This is the correct approach when your security or network policies require all data to pass through a controlled intermediary.
+
+* **`otlp_enabled=False`** — disables all direct OTLP export to Fiddler. `api_key` and `url` are not required in this mode.
+* **`otlp_json_capture_enabled=True`** — writes traces to local `.json` files in standard OTLP JSON format (`ExportTraceServiceRequest` envelope). These files are directly consumable by the Fiddler S3 connector with no reformatting.
+* **`application_id` is still required** — even though no data is sent to Fiddler directly, the S3 connector uses the `application_id` embedded in the trace files to route ingested traces to the correct application in Fiddler.
+
+```python
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+# No api_key or url needed — traces go to local files only
+fdl_client = FiddlerClient(
+    application_id="YOUR_APPLICATION_ID",   # UUID4 — required for S3 connector routing
+    otlp_enabled=False,                      # Disables direct export to Fiddler
+    otlp_json_capture_enabled=True,          # Writes OTLP JSON files locally
+    otlp_json_output_dir="./fiddler_traces", # Directory for output files (default: 'fiddler_traces')
+)
+
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Your LangGraph code runs normally — traces are written to ./fiddler_traces/*.json
+```
+
+Upload the generated `.json` files from `otlp_json_output_dir` to your S3 bucket. The Fiddler S3 connector reads them directly.
+
+{% hint style="info" %}
+Each batch of spans is written to a separate timestamped `.json` file in the output directory. The directory is created automatically if it does not exist.
+{% endhint %}
+
+{% hint style="warning" %}
+**Do not confuse `console_tracer` or `jsonl_capture_enabled` with this mode.** Both of those flags are **additive** — they add a local output on top of the existing OTLP export to Fiddler but do not disable it. Only `otlp_enabled=False` fully stops direct export to Fiddler.
+{% endhint %}
+
+### Flush and shutdown handling
+
+The SDK uses OpenTelemetry's batch span processor, which buffers spans in memory and exports them on a schedule. To avoid losing buffered spans when your process exits, use explicit flush and shutdown:
+
+* **Process exit:** The SDK registers an `atexit` handler that flushes and shuts down the tracer when the process exits. For short scripts or environments where `atexit` may not run (e.g. SIGKILL, forked processes), call `force_flush()` and `shutdown()` explicitly—for example in a `try`/`finally` or signal handler.
+* **Long-running servers (e.g. FastAPI, uvicorn):** On graceful shutdown (SIGTERM), call the Fiddler client's shutdown so pending spans are exported before the process exits. From async code use `ashutdown()` (or `aflush()` then `ashutdown()`) so the event loop is not blocked; the sync `force_flush()` and `shutdown()` can block for up to the flush timeout (default 30 seconds).
+
+**Sync (scripts or signal handler):**
+
+```python
+# Ensure spans are sent before exit (e.g. in finally or SIGTERM handler)
+fdl_client.shutdown()
+```
+
+**Async (e.g. FastAPI/uvicorn lifespan):**
+
+```python
+# In your app's shutdown/lifespan handler (e.g. on SIGTERM)
+await fdl_client.ashutdown()
+```
+
+**Context manager (scripts):** Use `with FiddlerClient(...) as client:` so `shutdown()` is called automatically when the block exits.
+
+## Example applications
+
+### Multi-agent travel planner
+
+```python
+from langgraph.graph import StateGraph, END
+from langchain_openai import ChatOpenAI
+from typing import TypedDict
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+# Initialize Fiddler monitoring
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Define your agent graph
+class TravelState(TypedDict):
+    destination: str
+    budget: float
+    itinerary: list
+
+# Research agent
+def research_agent(state: TravelState):
+    # Agent logic - automatically traced
+    return {"research_complete": True}
+
+# Booking agent
+def booking_agent(state: TravelState):
+    # Agent logic - automatically traced
+    return {"bookings": [...]}
+
+# Build graph
+graph = StateGraph(TravelState)
+graph.add_node("research", research_agent)
+graph.add_node("booking", booking_agent)
+graph.add_edge("research", "booking")
+graph.add_edge("booking", END)
+
+# Run - traces automatically sent to Fiddler
+app = graph.compile()
+result = app.invoke({"destination": "Paris", "budget": 5000})
+```
+
+[**View the Advanced Observability Notebook →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Advanced_Observability.ipynb) | [**Custom Instrumentation Notebook →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LangGraph_Custom_Instrumentation.ipynb)
+
+### Customer support agent with tools
+
+```python
+from langchain.tools import Tool
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+# Initialize Fiddler monitoring
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Define tools - calls automatically traced
+tools = [
+    Tool(name="search_kb", func=search_knowledge_base),
+    Tool(name="create_ticket", func=create_support_ticket),
+    Tool(name="escalate", func=escalate_to_human)
+]
+
+# Create agent - instrumentation is automatic
+model = ChatOpenAI(model="gpt-4o")
+agent = create_react_agent(model, tools)
+
+# Run agent - full trace in Fiddler
+response = agent.invoke({
+    "messages": [{"role": "user", "content": "My order is delayed"}]
+})
+```
+
+## Viewing your data
+
+After running your instrumented application:
+
+1. **Navigate to Fiddler UI** - `https://your-instance.fiddler.ai`
+2. **Select "GenAI Applications"** - View your application
+3. **Inspect traces** - Drill down from application → session → agent → span
+4. **Analyze patterns** - Use analytics to identify bottlenecks and errors
+
+### Key metrics tracked
+
+* **Latency**: P50, P95, P99 response times across agents
+* **Error Rate**: Percentage of failed agent executions
+* **Token Usage**: LLM token consumption per agent/session
+* **Tool Calls**: Frequency and success rate of tool invocations
+* **State Transitions**: Agent decision path analysis
+
+## Troubleshooting
+
+### Application not showing as "Active"
+
+**Check your configuration:**
+
+* Ensure your application executes instrumented code
+* Verify your Fiddler access token and application ID are correct
+* Check network connectivity to your Fiddler instance
+
+**Enable console tracer for debugging:**
+
+```python
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai",
+    console_tracer=True  # Also prints spans to console; OTLP export to Fiddler continues
+)
+```
+
+{% hint style="info" %}
+`console_tracer=True` is **additive** — span data is printed to stdout **and** continues to be exported to Fiddler via OTLP. Setting this to `True` does **not** disable or suppress the OTLP export to Fiddler. Use it to visually confirm spans are being created during local development.
+{% endhint %}
+
+### Network connectivity issues
+
+**Verify connectivity to your Fiddler instance:**
+
+```bash
+curl -I https://your-instance.fiddler.ai
+```
+
+**Check firewall settings:**
+
+* Ensure HTTPS traffic on port 443 is allowed
+* Verify your Fiddler instance URL is correct
+
+### Import errors
+
+**Problem:** `ModuleNotFoundError: No module named 'fiddler_langgraph'`
+
+**Solution:** Ensure you've installed the correct package:
+
+```bash
+pip install fiddler-langgraph
+```
+
+**Problem:** `ImportError: cannot import name 'LangGraphInstrumentor'`
+
+**Solution:** Ensure you have the correct import path:
+
+```python
+from fiddler_langgraph import LangGraphInstrumentor
+```
+
+### Version compatibility issues
+
+**Verify your versions match requirements:**
+
+```bash
+python --version  # Should be 3.10, 3.11, 3.12, or 3.13
+pip show langgraph  # Should be >= 0.3.28 and <= 1.1.0
+```
+
+**If you have version conflicts:**
+
+```bash
+pip install langgraph>=0.3.28,<=1.1.0
+```
+
+### Invalid application ID
+
+**Problem:** `ValueError: application_id must be a valid UUID4`
+
+**Solution:** Ensure your Application ID is in proper UUID4 format:
+
+```python
+# ❌ This will fail
+fdl_client = FiddlerClient(
+    application_id="invalid-id",  # Not a valid UUID4
+    api_key="your-access-token",
+    url="https://instance.fiddler.ai"
+)
+
+# ✅ Correct format
+fdl_client = FiddlerClient(
+    application_id="550e8400-e29b-41d4-a716-446655440000",  # Valid UUID4
+    api_key="your-access-token",
+    url="https://instance.fiddler.ai"
+)
+```
+
+Copy the Application ID directly from the Fiddler dashboard to avoid formatting issues.
+
+### Agent shows as "UNKNOWN\_AGENT"
+
+**For LangChain applications**, ensure you're setting the agent name in the config parameter:
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+
+# Define your LangChain runnable
+chat_app_chain = prompt | llm | StrOutputParser()
+
+# Run with agent name configuration
+response = chat_app_chain.invoke({
+    "input": user_input,
+    "history": messages,
+}, config={"configurable": {"agent_name": "service_chatbot"}})
+```
+
+{% hint style="info" %}
+**Note:** LangGraph applications automatically extract agent names. This manual configuration is only needed for LangChain applications.
+{% endhint %}
+
+## OpenTelemetry compatibility
+
+The LangGraph SDK is built on OpenTelemetry Protocol (OTLP). The SDK uses standard OpenTelemetry components, allowing you to:
+
+* Integrate with existing observability infrastructure
+* Export traces to multiple backends (with custom configuration)
+* Use custom OTEL collectors and processors
+
+All telemetry data follows OpenTelemetry semantic conventions for AI/ML workloads.
+
+## Related integrations
+
+* [**Fiddler Evals SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md) - Evaluate LangGraph agent quality offline
+* [**Python Client SDK**](/api/fiddler-python-client-sdk/python-client.md) - Additional monitoring capabilities
+
+## Migration guides
+
+### From LangSmith
+
+```python
+# Before (LangSmith)
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = "ls_..."
+
+# After (Fiddler - both can run simultaneously)
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Your LangGraph code remains unchanged
+```
+
+### From manual tracing
+
+If you've built custom tracing, migration is straightforward:
+
+```python
+# Before (manual timing/logging)
+import time
+start = time.time()
+result = my_agent.run()
+duration = time.time() - start
+log_to_system(duration, result)
+
+# After (Fiddler SDK - automatic instrumentation)
+# Initialize Fiddler client and instrumentor (once)
+fdl_client = FiddlerClient(
+    application_id="your-app-id",
+    api_key="your-api-key",
+    url="https://your-instance.fiddler.ai"
+)
+instrumentor = LangGraphInstrumentor(fdl_client)
+instrumentor.instrument()
+
+# Remove all manual timing/logging code
+result = my_agent.run()  # Automatic instrumentation
+```
+
+## API reference
+
+Full SDK documentation:
+
+* [**LangGraph SDK Reference**](/api/fiddler-langgraph-sdk/langgraph.md) - Complete class and method documentation
+
+## Next steps
+
+Now that your application is instrumented:
+
+1. **Explore the data:** Check your Fiddler dashboard for traces, metrics, and performance insights
+2. **Learn advanced features:** See our [Advanced Usage Guide](https://app.gitbook.com/s/jZC6ysdlGhDKECaPCjwm/tutorials/agentic-and-llm-monitoring/langgraph-sdk-advanced) for complex multi-agent scenarios
+3. **Review the SDK reference:** Check the [Fiddler LangGraph SDK Reference](/api/fiddler-langgraph-sdk/langgraph.md) for complete documentation
+4. **Optimize for production:** Review configuration options for high-volume applications
+
+
+---

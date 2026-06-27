@@ -1,0 +1,150 @@
+# Fiddler Trust Service
+
+The Fiddler Trust Service is a specialized infrastructure component of the Fiddler AI platform that hosts purpose-built large language models (LLMs) designed specifically for AI monitoring and guardrail use cases. These dedicated models, known as Fiddler Trust Models, are optimized to evaluate LLM outputs with significantly higher efficiency than general-purpose LLMs while maintaining comparable quality assessments.
+
+This service provides computational infrastructure that powers both Fiddler's observability features (by generating quality metrics for LLM outputs) and its real-time protection capabilities (through Fiddler Guardrails). By using purpose-built models rather than general-purpose LLMs, the Fiddler Trust Service delivers evaluations with lower latency, reduced costs, and improved reliability compared to using third-party LLM APIs.
+
+The Fiddler Trust Service operates as a managed service within the Fiddler platform ecosystem, handling the secure processing of customer LLM inputs and outputs to generate trust metrics and enforce guardrail policies.
+
+## Trust Models
+
+Trust Models are specialized large language models (LLMs) designed specifically for evaluating and scoring AI system outputs across multiple quality, safety, and reliability dimensions. In the broader AI/ML context, trust models serve as dedicated evaluation systems that assess whether AI-generated content meets established standards for accuracy, safety, ethical alignment, and business requirements.
+
+Unlike general-purpose LLMs that are optimized for content generation, trust models are fine-tuned for evaluation tasks, enabling them to provide consistent, rapid assessments of AI outputs with lower computational overhead. These models evaluate dimensions such as factual accuracy, harmfulness detection, bias identification, and alignment with intended use cases, making them essential components for AI governance and risk management in production environments.
+
+Trust models play a critical role in AI safety by providing automated, scalable mechanisms for content evaluation that would otherwise require extensive human review, enabling organizations to maintain quality standards while operating AI systems at scale.
+
+### Performance Characteristics
+
+> **⚡ Performance at Scale**
+>
+> 10-100x faster than general-purpose LLMs Real-time evaluation capabilities Reduced operational costs
+
+Fiddler Trust Models deliver 10-100x faster processing speeds than general-purpose LLMs while maintaining comparable assessment quality, enabling real-time monitoring and guardrail applications with significantly lower computational overhead.
+
+The Trust Service processes evaluations with significantly lower latency and computational overhead, making it feasible to monitor high-volume LLM applications in production environments. This performance optimization translates directly to reduced operational costs and improved system responsiveness, particularly important for real-time guardrail implementations where evaluation speed directly impacts user experience.
+
+## How Fiddler Uses Trust Service
+
+The Fiddler Trust Service serves as the computational backbone for Fiddler's LLM monitoring and guardrail capabilities. It hosts the specialized Fiddler Trust Models that power two primary functions within the platform:
+
+For observability features, the service processes LLM inputs and outputs to generate specialized metrics that evaluate output quality, safety, and alignment. These metrics are then integrated into Fiddler's monitoring dashboards and alerting systems.
+
+For real-time protection through Fiddler Guardrails, the service evaluates potential LLM outputs against customizable safety policies before they reach end users, filtering out problematic content and providing detailed explanation of policy violations.
+
+By maintaining this service as an internal component, Fiddler ensures consistent, reliable performance with optimized costs compared to solutions that rely on external LLM APIs for similar functionality.
+
+### Evaluation Metrics Coverage
+
+> **📊 Comprehensive Evaluation**
+>
+> 14+ evaluation dimensions Safety, quality, and accuracy metrics Customizable thresholds
+
+Fiddler Trust Models assess LLM outputs across multiple critical dimensions to provide comprehensive quality and safety evaluations:
+
+**Safety and Risk Metrics:**
+
+* Toxicity detection and harmful content identification
+* Jailbreak attempt recognition and prompt injection detection
+* Personally identifiable information (PII) exposure assessment
+* Profanity and inappropriate content filtering
+
+**Quality and Accuracy Metrics:**
+
+* FTL Faithfulness — proprietary Fast Trust Model for groundedness evaluation against source material (uses `context` and `response` inputs)
+* Answer relevance and context relevance scoring
+* Coherence and logical consistency assessment
+* Conciseness and response appropriateness
+
+{% hint style="info" %}
+**RAG Health Metrics:** In addition to Fast Trust Model-based metrics, Fiddler provides **RAG Health Metrics** — a diagnostic triad of LLM-as-a-Judge evaluators (Answer Relevance 2.0, Context Relevance, RAG Faithfulness) for comprehensive RAG pipeline evaluation. These evaluators use external LLMs rather than the Trust Service. See [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) for details.
+{% endhint %}
+
+**Specialized Assessments:**
+
+* Sentiment analysis and emotional tone evaluation
+* Topic classification and content categorization
+* Language detection and multilingual support
+* Custom regex matching and banned keyword detection
+
+This comprehensive metric coverage enables organizations to monitor LLM applications against their specific quality standards and risk tolerance levels.
+
+## Why Fiddler Trust Service Is Important
+
+The Fiddler Trust Service addresses several critical challenges in LLM monitoring and governance. By providing specialized models optimized for evaluation tasks, it enables more efficient, cost-effective, and reliable monitoring than solutions dependent on general-purpose LLMs.
+
+This service is essential for organizations that need to maintain real-time visibility into their LLM applications while ensuring outputs meet safety and quality standards. It enables faster detection of issues, more comprehensive monitoring coverage, and stronger protections against potentially harmful outputs.
+
+As LLM deployments scale across the enterprise, the Trust Service's efficiency becomes increasingly valuable, reducing both operational costs and computational overhead compared to traditional evaluation approaches.
+
+* **Performance Optimization**: Fiddler Trust Models are specifically optimized for evaluation tasks, delivering similar quality assessments as general-purpose LLMs but with significantly lower latency and computational requirements.
+* **Cost Efficiency**: By using purpose-built models rather than larger general-purpose LLMs, the Trust Service reduces the computational resources required for comprehensive LLM monitoring, translating to lower operational costs.
+* **Reliability**: As a dedicated service maintained by Fiddler, the Trust Service provides more consistent availability and performance than solutions dependent on third-party API calls, which may have rate limits or service disruptions.
+* **Comprehensive Coverage**: The Trust Service supports both post-deployment monitoring (observability) and pre-deployment protection (guardrails), providing a unified approach to LLM governance throughout the application lifecycle.
+* **Specialized Evaluation**: Unlike general metrics, the Trust Service provides specialized assessments tailored specifically to LLM outputs, measuring dimensions like hallucination, alignment, toxicity, and quality that are unique to generative AI systems.
+* **Scalability**: As organizations deploy more LLM applications, the efficiency of the Trust Service enables monitoring at scale without proportional increases in computational overhead or costs.
+* **Privacy and Security**: By processing evaluations within Fiddler's infrastructure rather than sending data to third-party APIs, the Trust Service helps organizations maintain stronger data privacy and security controls.
+
+### Security and Privacy Benefits
+
+> **🔒 Enterprise Security**
+>
+> Air-gapped deployment ready No external API dependencies Full data sovereignty
+
+The Fiddler Trust Service processes all evaluations within Fiddler's managed infrastructure, ensuring customer data never leaves the secure environment. This approach supports compliance with GDPR, HIPAA, and industry-specific standards while enabling air-gapped deployments for organizations with strict security requirements.
+
+By eliminating external API dependencies, the Trust Service reduces security vulnerabilities and removes third-party availability risks, enabling comprehensive LLM monitoring without compromising data governance policies.
+
+## Challenges
+
+Effective LLM monitoring and protection present several technical and operational challenges that the Fiddler Trust Service is designed to address.
+
+* **Evaluation Latency**: Traditional approaches to LLM evaluation using other LLMs introduce significant latency, which the Trust Service addresses through specialized, efficient models optimized for evaluation tasks.
+* **Computational Cost**: Evaluating LLM outputs at scale using general-purpose models can be prohibitively expensive, a challenge mitigated by the Trust Service's more efficient purpose-built models.
+* **Coverage vs. Performance**: Organizations often face tradeoffs between comprehensive monitoring coverage and system performance, which the Trust Service helps balance through optimized evaluation approaches.
+* **Evaluation Quality**: Simpler metrics may fail to capture nuanced issues in LLM outputs, while the Trust Service provides sophisticated evaluations that maintain high correlation with human judgments.
+* **Real-time Protection**: Implementing guardrails without introducing significant latency is challenging, addressed by the Trust Service's efficient models and optimized processing pipeline.
+* **Customization Needs**: Different organizations have varying standards for acceptable content, requiring flexible evaluation systems that can be tailored to specific use cases and policies.
+* **Integration Complexity**: Adding monitoring to existing LLM deployments can be complex, a challenge the Trust Service addresses through streamlined integration options and APIs.
+
+## Frequently Asked Questions
+
+**Q: What advantages do Fiddler Trust Models offer over using general-purpose LLMs for evaluation?**
+
+Fiddler Trust Models provide similar quality assessments as general-purpose LLMs but with significantly lower latency, reduced computational requirements, lower costs, and more consistent availability since they don't depend on third-party APIs that may have rate limits or service disruptions.
+
+**Q: Can I use the Fiddler Trust Service for both monitoring and real-time protection?**
+
+Yes, the Fiddler Trust Service powers both observability features (monitoring metrics) and real-time protection through Fiddler Guardrails. You can implement either or both capabilities depending on your specific needs.
+
+**Q: What types of metrics does the Trust Service provide?**
+
+The Trust Service generates specialized metrics for LLM outputs including safety evaluations (detecting harmful, unethical, or inappropriate content), faithfulness assessments (measuring hallucination and factual accuracy), and other quality dimensions like coherence, relevance, and alignment with intended use.
+
+**Q: How does the Trust Service integrate with my existing LLM applications?**
+
+For monitoring, you can publish LLM inputs and outputs to Fiddler's platform either through batch uploads or real-time API calls. For guardrails protection, you integrate the [Guardrails](/reference/glossary/guardrails.md) API directly into your application flow, sending potential outputs for evaluation before displaying them to users.
+
+**Q: Is the Fiddler Trust Service available as a standalone offering?**
+
+The Fiddler Guardrails component of the Trust Service is available as a standalone offering, while the monitoring metrics are integrated into Fiddler's comprehensive observability platform.
+
+## Related Terms
+
+* [Trust Score](/reference/glossary/trust-score.md)
+* [Guardrails](/reference/glossary/guardrails.md)
+* [Embedding Visualization](/reference/glossary/embedding-visualization.md)
+* [Data Drift](/reference/glossary/data-drift.md)
+
+## Related Resources
+
+* [LLM Monitoring Overview](/welcome/readme.md)
+* [LLM-based Metrics Guide](/observability/llm/llm-based-metrics.md)
+* [Embedding Visualization with UMAP](/observability/llm/embedding-visualization-with-umap.md)
+* [Selecting Enrichments](/observability/llm/selecting-enrichments.md)
+* [Enrichments Documentation](/observability/llm/enrichments.md)
+* [Guardrails for Proactive Application Protection](/reference/glossary/guardrails.md)
+* [Fiddler Fast Trust Metrics](/observability/llm/llm-based-metrics.md#fiddler-fast-trust-metrics)
+
+
+---

@@ -1,0 +1,104 @@
+# Introduction
+
+**Version:** 3.10.0
+
+## Overview
+
+Complete API reference documentation for the fiddler package.
+
+## Components
+
+### Connection
+
+Connection management and initialization
+
+* [Connection](/api/fiddler-python-client-sdk/connection/connection.md)
+* [ConnectionMixin](/api/fiddler-python-client-sdk/connection/connection-mixin.md)
+
+### Constants
+
+Constants module documentation
+
+* [AlertCondition](/api/fiddler-python-client-sdk/constants/alert-condition.md)
+* [AlertThresholdAlgo](/api/fiddler-python-client-sdk/constants/alert-threshold-algo.md)
+* [BinSize](/api/fiddler-python-client-sdk/constants/bin-size.md)
+* [CompareTo](/api/fiddler-python-client-sdk/constants/compare-to.md)
+* [Priority](/api/fiddler-python-client-sdk/constants/priority.md)
+* [BaselineType](/api/fiddler-python-client-sdk/constants/baseline-type.md)
+* [WindowBinSize](/api/fiddler-python-client-sdk/constants/window-bin-size.md)
+* [EnvType](/api/fiddler-python-client-sdk/constants/env-type.md)
+* [JobStatus](/api/fiddler-python-client-sdk/constants/job-status.md)
+* [ArtifactStatus](/api/fiddler-python-client-sdk/constants/artifact-status.md)
+* [CustomFeatureType](/api/fiddler-python-client-sdk/constants/custom-feature-type.md)
+* [DataType](/api/fiddler-python-client-sdk/constants/data-type.md)
+* [ModelInputType](/api/fiddler-python-client-sdk/constants/model-input-type.md)
+* [ModelTask](/api/fiddler-python-client-sdk/constants/model-task.md)
+* [ArtifactType](/api/fiddler-python-client-sdk/constants/artifact-type.md)
+* [DeploymentType](/api/fiddler-python-client-sdk/constants/deployment-type.md)
+* [DownloadFormat](/api/fiddler-python-client-sdk/constants/download-format.md)
+* [ExplainMethod](/api/fiddler-python-client-sdk/constants/explain-method.md)
+
+### Entities
+
+Core entity classes for interacting with the platform
+
+* [AlertRecord](/api/fiddler-python-client-sdk/entities/alert-record.md)
+* [AlertRule](/api/fiddler-python-client-sdk/entities/alert-rule.md)
+* [Baseline](/api/fiddler-python-client-sdk/entities/baseline.md)
+* [BaselineCompact](/api/fiddler-python-client-sdk/entities/baseline-compact.md)
+* [CustomMetric](/api/fiddler-python-client-sdk/entities/custom-metric.md)
+* [Segment](/api/fiddler-python-client-sdk/entities/segment.md)
+* [Dataset](/api/fiddler-python-client-sdk/entities/dataset.md)
+* [DatasetCompact](/api/fiddler-python-client-sdk/entities/dataset-compact.md)
+* [File](/api/fiddler-python-client-sdk/entities/file.md)
+* [Job](/api/fiddler-python-client-sdk/entities/job.md)
+* [Model](/api/fiddler-python-client-sdk/entities/model.md)
+* [ModelCompact](/api/fiddler-python-client-sdk/entities/model-compact.md)
+* [ModelDeployment](/api/fiddler-python-client-sdk/entities/model-deployment.md)
+* [Project](/api/fiddler-python-client-sdk/entities/project.md)
+* [ProjectCompact](/api/fiddler-python-client-sdk/entities/project-compact.md)
+* [Webhook](/api/fiddler-python-client-sdk/entities/webhook.md)
+
+### Exceptions
+
+Exceptions module documentation
+
+* [ApiError](/api/fiddler-python-client-sdk/exceptions/api-error.md)
+* [AsyncJobFailed](/api/fiddler-python-client-sdk/exceptions/async-job-failed.md)
+* [Conflict](/api/fiddler-python-client-sdk/exceptions/conflict.md)
+* [ConnError](/api/fiddler-python-client-sdk/exceptions/conn-error.md)
+* [ConnTimeout](/api/fiddler-python-client-sdk/exceptions/conn-timeout.md)
+* [HttpError](/api/fiddler-python-client-sdk/exceptions/http-error.md)
+* [IncompatibleClient](/api/fiddler-python-client-sdk/exceptions/incompatible-client.md)
+* [NotFound](/api/fiddler-python-client-sdk/exceptions/not-found.md)
+* [Unsupported](/api/fiddler-python-client-sdk/exceptions/unsupported.md)
+
+### Schemas
+
+Schemas module documentation
+
+* [CustomFeature](/api/fiddler-python-client-sdk/schemas/custom-feature.md)
+* [Enrichment](/api/fiddler-python-client-sdk/schemas/enrichment.md)
+* [ImageEmbedding](/api/fiddler-python-client-sdk/schemas/image-embedding.md)
+* [Multivariate](/api/fiddler-python-client-sdk/schemas/multivariate.md)
+* [TextEmbedding](/api/fiddler-python-client-sdk/schemas/text-embedding.md)
+* [VectorFeature](/api/fiddler-python-client-sdk/schemas/vector-feature.md)
+* [DeploymentParams](/api/fiddler-python-client-sdk/schemas/deployment-params.md)
+* [Column](/api/fiddler-python-client-sdk/schemas/column.md)
+* [ModelSchema](/api/fiddler-python-client-sdk/schemas/model-schema.md)
+* [ModelSpec](/api/fiddler-python-client-sdk/schemas/model-spec.md)
+* [ModelTaskParams](/api/fiddler-python-client-sdk/schemas/model-task-params.md)
+* [DatasetDataSource](/api/fiddler-python-client-sdk/schemas/dataset-data-source.md)
+* [EventIdDataSource](/api/fiddler-python-client-sdk/schemas/event-id-data-source.md)
+* [RowDataSource](/api/fiddler-python-client-sdk/schemas/row-data-source.md)
+* [XaiParams](/api/fiddler-python-client-sdk/schemas/xai-params.md)
+
+### Utils
+
+Utils module documentation
+
+* [create\_columns\_from\_df](/api/fiddler-python-client-sdk/utils/create-columns-from-df.md)
+* [group\_by](/api/fiddler-python-client-sdk/utils/group-by.md)
+
+
+---

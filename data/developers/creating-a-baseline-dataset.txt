@@ -1,0 +1,97 @@
+# Creating a Baseline Dataset
+
+Fiddler requires a baseline to detect data drift in production data. Baselines serve as a point of reference for Fiddler to understand what data distributions the model expects to see for all of its inputs and outputs. In other words, a baseline is a **representative sample** of the data you expect to see in production. It represents the ideal data that your model works best on. For this reason, in most cases, **a baseline dataset should be sampled from your model’s training set.**
+
+A few things to remember when designing baselines:
+
+> * It’s important to include **enough data** to ensure you have a representative sample of the expected data distributions. If using the training data for your baseline, you don't necessarily need all the training data, but rather enough to properly denote the minimums, maximums, and each distinct categorical value to be encountered.
+> * You may want to consider **including extreme values (min/max)** of each column in your training set so you can adequately monitor range violations in production data. However, if you choose not to, you can manually specify these ranges before onboarding your model (see [customizing your dataset schema](/developers/client-library-reference/model-onboarding/customizing-your-model-schema.md)).
+
+## Types of Baselines
+
+There are four (4) types of baselines in Fiddler:
+
+1. **Static Pre-production** - A static pre-production baseline is created by publishing a dataset to Fiddler. Typically, these datasets are training datasets or subsets thereof. Training data is an excellent baseline as it represents the data the model should expect to receive in production. You may also choose to use testing datasets or samples of production inference data as well.
+2. **Static Production** - Using time ranges, previously ingested inference logs can be defined to define a static production baseline. For example, you can define a baseline as a point of reference from every event or inference ingested from March 2024. It is worth noting that static production baselines are not immutable. For example, if new events are published into the time range of the baseline, the distributions defined by the baseline will be recalculated.
+3. **Rolling Production** - A rolling production baseline provides a dynamic reference point that shifts with time, like a sliding window that always reflects a fixed period prior to the present moment. For example, with a one-month rolling baseline, today's data is compared with data from exactly one month ago, and this comparison window automatically shifts forward each day. Unlike static baselines, which remain fixed, rolling baselines maintain a consistent time distance from your current data, making them ideal for analyzing recurring patterns in your production environment.
+4. **Default Static** - Fiddler always creates this type of baseline for you for every model. This ensures Fiddler can deliver drift calculations even if no other baseline type was defined. This default baseline is named *default\_static\_baseline* and gets created at the time of initial model schema creation. It is defined as a static production baseline using the time range starting 12 months before the Fiddler model object creation date and ending 3 months after that date. It is worth noting that default static production baselines are not immutable like static production baselines. For example, if new events are published into the time range of the baseline, the distributions defined by the baseline will be recalculated, and this may have some impact on previously calculated drift values used in Alerts and Charts.
+
+An example of how to create each type of baseline can be found below.
+
+### Static Pre-production Baseline
+
+A baseline gets created when you upload your pre-production dataset as shown in the example below. Note that `dataset_name` is used to specify the baseline name and the environment is set to PRE\_PRODUCTION to indicate this is not monitored, time-series data.
+
+```python
+baseline_publish_job = model.publish(
+    source=sample_data_df,
+    environment=fdl.EnvType.PRE_PRODUCTION,
+    dataset_name=STATIC_BASELINE_NAME,
+)
+print(
+    f'Initiated pre-production dataset upload with Job ID = {baseline_publish_job.id}'
+)
+```
+
+### Static Production Baseline
+
+```python
+static_prod_baseline = fdl.Baseline(
+    name='static_prod_1',
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.STATIC,
+    start_time=(datetime.now() - timedelta(days=0.5)).timestamp(),
+    end_time=(datetime.now() - timedelta(days=0.25)).timestamp(),
+)
+static_prod_baseline.create()
+
+print(f'Static production baseline created with id - {static_prod_baseline.id}')
+```
+
+### Rolling Production Baseline
+
+```python
+rolling_prod_baseline = fdl.Baseline(
+    name='rolling_prod_1',
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.ROLLING,
+    window_bin_size=fdl.WindowBinSize.WEEK,
+    offset_delta=4,
+)
+rolling_prod_baseline.create()
+
+print(f'Rolling production baseline created with id - {rolling_prod_baseline.id}')
+```
+
+#### Default Static Baseline
+
+(*Note: while this example doesn't illustrate explicitly creating a default baseline, it illustrates when the default static baseline gets created.*)
+
+```python
+model = fdl.Model.from_data(
+    name=MODEL_NAME,
+    project_id=project.id,
+    source=sample_data_df,
+    spec=model_spec,
+    task=model_task,
+    task_params=task_params,
+    event_id_col=id_column,
+    event_ts_col=timestamp_column,
+)
+
+model.create()
+# Default static production baseline created automatically at this point
+# with a time range between 12 months prior to and 3 months after today's date
+```
+
+### List A Model's Baselines
+
+```python
+for baseline in fdl.Baseline.list(model_id=model.id):
+    print(f'Baseline: {baseline.id} - {baseline.name}')
+```
+
+
+---

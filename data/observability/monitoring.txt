@@ -1,0 +1,268 @@
+# Overview
+
+The future of AI is agentic—autonomous systems that reason, plan, and coordinate across multiple agents to solve complex problems. Fiddler Observability is built for this future, providing comprehensive monitoring across traditional ML models, LLM applications, and emerging multi-agent systems.
+
+## The Challenge: Exponential Complexity
+
+As AI evolves from static models to autonomous agents, observability complexity grows exponentially:
+
+* **Multi-agent systems require 26x more monitoring resources** than single-agent applications
+* **Non-deterministic behavior** breaks traditional APM frameworks designed for predictable code
+* **Cascading failures** across agent hierarchies create unprecedented debugging challenges
+* **90% of enterprises** cite security, trust, and compliance as top concerns for agentic AI
+
+Fiddler provides the unified observability platform that scales from simple models to complex agentic workflows—all powered by the same Trust Service foundation.
+
+## Agentic Observability
+
+Fiddler's agentic observability provides hierarchical visibility into multi-agent systems, tracking the complete lifecycle of autonomous reasoning and coordination.
+
+### The Five Observable Stages
+
+Every agent operates through five distinct stages that require specialized monitoring:
+
+```mermaid
+graph LR
+    Thought[1. Thought<br/>Ingest, Retrieve, Interpret] --> Action[2. Action<br/>Plan and Select Tools]
+    Action --> Execute[3. Execution<br/>Perform Tasks]
+    Execute --> Reflect[4. Reflection<br/>Evaluate and Adapt]
+    Reflect --> Align[5. Alignment<br/>Enforce Trust & Safety]
+
+    Align -.->|Next Iteration| Thought
+
+    style Thought fill:#e1f5ff
+    style Action fill:#fff4e6
+    style Execute fill:#e6ffe6
+    style Reflect fill:#f0e6ff
+    style Align fill:#ffe6e6
+```
+
+**Stage-by-Stage Observability:**
+
+1. **Thought**: Monitor how agents ingest data, retrieve context, and interpret information
+2. **Action**: Track planning processes, tool selection, and decision-making logic
+3. **Execution**: Observe task performance, API calls, and external integrations
+4. **Reflection**: Capture self-evaluation, learning signals, and adaptation decisions
+5. **Alignment**: Verify trust, safety, and policy enforcement at every step
+
+### Hierarchical Monitoring Architecture
+
+Agentic systems operate across multiple levels of abstraction. Fiddler provides observability at each layer:
+
+```mermaid
+graph TD
+    App[Application Level<br/>Overall system performance & health]
+    App --> Session1[Session Level<br/>User interaction & conversation flow]
+    App --> Session2[Session Level<br/>Parallel user sessions]
+
+    Session1 --> Agent1[Agent Level<br/>Individual agent behavior & decisions]
+    Session1 --> Agent2[Agent Level<br/>Multi-agent coordination]
+
+    Agent1 --> Span1[Span Level<br/>Tool calls, LLM requests, actions]
+    Agent1 --> Span2[Span Level<br/>Granular operation tracing]
+    Agent2 --> Span3[Span Level<br/>Inter-agent communication]
+
+    style App fill:#0891b2,color:#fff
+    style Session1 fill:#06b6d4
+    style Session2 fill:#06b6d4
+    style Agent1 fill:#22d3ee
+    style Agent2 fill:#22d3ee
+    style Span1 fill:#a5f3fc
+    style Span2 fill:#a5f3fc
+    style Span3 fill:#a5f3fc
+```
+
+**Hierarchical Root Cause Analysis:**
+
+* Trace issues from user-facing symptoms down to individual tool calls
+* Understand cross-agent dependencies and coordination failures
+* Analyze patterns across sessions to identify systemic issues
+* Full context preservation for debugging non-deterministic behavior
+
+### Framework & Integration Support
+
+**Supported Frameworks:**
+
+* **LangGraph** - Full SDK integration with native tracing
+* **Strands Agents** - Strands agent application monitoring
+* **OpenTelemetry** - Standard instrumentation for custom agents
+* **Custom Agents** - Fiddler Client SDK for any framework
+
+## Unified Observability Platform
+
+All Fiddler observability capabilities—from traditional ML to agentic systems—are powered by a unified Trust Service architecture:
+
+```mermaid
+graph TB
+    subgraph Trust[Fiddler Trust Service]
+        Safety[Fast Safety Model<br/>11 Dimensions]
+        PII[Fast PII Model<br/>35+ Entities]
+        Faith[Fast Faithfulness<br/>Hallucination Detection]
+        Custom[Custom Metrics<br/>Domain-Specific]
+    end
+
+    Trust --> ML[ML Observability<br/>Drift, Performance, Integrity]
+    Trust --> LLM[LLM Observability<br/>Quality, Safety, RAG]
+    Trust --> Agent[Agentic Observability<br/>Lifecycle, Coordination, Trust]
+
+    ML --> Dash[Unified Dashboards & Analytics]
+    LLM --> Dash
+    Agent --> Dash
+
+    style Trust fill:#f0f0f0
+    style Safety fill:#e1f5ff
+    style PII fill:#e1f5ff
+    style Faith fill:#e1f5ff
+    style Custom fill:#e1f5ff
+    style ML fill:#fff4e6
+    style LLM fill:#e6ffe6
+    style Agent fill:#f0e6ff
+    style Dash fill:#ffe6e6
+```
+
+**Trust Service Advantages:**
+
+* **10-100x faster** than general-purpose LLMs for evaluation tasks
+* **Purpose-built models** optimized for safety, quality, and accuracy assessment
+* **Consistent, deterministic** evaluation at scale
+* **Air-gapped deployment** options for data sovereignty
+* **GDPR, HIPAA, CCPA** compliant monitoring
+
+## Core Capabilities
+
+### LLM Monitoring
+
+Comprehensive observability for generative AI applications with trust and safety at the core.
+
+**Key Features:**
+
+* **14+ Enrichment Metrics**: Auto-generated trust, safety, and quality scores
+* **RAG Monitoring**: Retrieval quality, source relevance, groundedness
+* **Embedding Analysis**: UMAP visualization, drift detection, clustering
+* **Prompt & Response Tracking**: Full conversation history and context
+
+**Trust & Safety Metrics:**
+
+* Safety (toxicity, jailbreaking, harmful content)
+* Privacy (PII/PHI detection across 35+ entity types)
+* Quality (faithfulness, coherence, conciseness, relevance)
+* Sentiment and tone analysis
+
+{% content-ref url="/pages/XSjzO9Al3sz7AWSjXeFh" %}
+[LLM Monitoring](/observability/llm.md)
+{% endcontent-ref %}
+
+### ML Model Observability
+
+Battle-tested monitoring for traditional machine learning models in production.
+
+**Key Features:**
+
+* **Drift Detection**: JSD and PSI metrics for distribution shifts
+* **Performance Tracking**: Accuracy, precision, recall, F1 across all deployments
+* **Data Integrity**: Missing values, type mismatches, range violations
+* **Traffic Monitoring**: Volume patterns and anomaly detection
+* **Vector Monitoring**: Specialized tools for embedding-based applications
+
+**Advanced Capabilities:**
+
+* Model segmentation and cohort analysis
+* Class imbalance handling
+* Statistical analysis (mean, std, distributions)
+* Model version comparison
+* Custom formula-based metrics
+
+{% content-ref url="/pages/3qPoydMeKvDtAHY7v0bm" %}
+[Monitoring Platform](/observability/platform.md)
+{% endcontent-ref %}
+
+### Analytics & Root Cause Analysis
+
+Deep-dive investigation tools for understanding performance issues and data quality problems.
+
+**Four-Part Analysis Experience:**
+
+1. **Events**: Browse sample of 1,000 recent events for pattern recognition
+2. **Data Drift**: Feature-by-feature drift breakdown with prediction impact
+3. **Data Integrity**: Violation summaries (range, type, missing value issues)
+4. **Analyze**: Interactive charts for performance and feature analytics
+
+**Chart Types:**
+
+* Performance Analytics (confusion matrices, prediction scatterplots)
+* Feature Analytics (distributions, correlations, feature matrices)
+* Metric Cards (single KPI visualization)
+
+{% content-ref url="/pages/UO0q56xBsuRosVAzCKxD" %}
+[Analytics](/observability/analytics.md)
+{% endcontent-ref %}
+
+### Dashboards & Visualization
+
+Customizable dashboards for monitoring your entire AI portfolio.
+
+**Features:**
+
+* **Auto-Generated Insights**: Every model gets an out-of-the-box dashboard
+* **Custom Dashboards**: Build your own views with flexible layouts
+* **Model Comparison**: Side-by-side performance tracking
+* **Multi-Column Plots**: Drift and integrity across all features
+* **Interactive Controls**: Date ranges, timezones, bin sizes, zoom
+* **Collaboration**: Save and share dashboards across teams
+
+{% content-ref url="/pages/Qd5CoyNdFN2wsIzUVN2y" %}
+[Dashboards](/observability/dashboards.md)
+{% endcontent-ref %}
+
+### Alerting & Response
+
+Proactive monitoring with intelligent alerting across all AI systems.
+
+**Alert Types:**
+
+* **Drift Alerts**: Detect distribution shifts in production data
+* **Data Integrity Alerts**: Flag missing values, type mismatches, range violations
+* **Performance Alerts**: Monitor accuracy degradation over time
+* **Custom Metric Alerts**: Formula-based alerts for business KPIs
+* **Traffic Alerts**: Volume and pattern anomaly detection
+
+**Alert Features:**
+
+* Warning and critical threshold configuration
+* Multiple notification channels (email, Slack, PagerDuty, webhooks)
+* Triggered revisions with real-time updates
+* Template-based alert creation
+* Alert history and audit logs
+
+## Getting Started
+
+### Choose Your Path
+
+**For LLM Applications:**
+
+* [LLM Monitoring Quick Start](/getting-started/llm-monitoring.md) - Set up enrichments and quality tracking
+* [LLM-Based Metrics Guide](/observability/llm/llm-based-metrics.md) - Configure trust and safety metrics
+
+**For Traditional ML Models:**
+
+* [ML Observability Quick Start](/getting-started/ml-observability.md) - Deploy drift detection and performance monitoring
+* [Monitoring Platform Guide](/observability/platform.md) - Configure alerts and data integrity checks
+
+**For Agentic Systems:**
+
+* [Agentic Monitoring Quick Start](/getting-started/agentic-monitoring.md) - Set up hierarchical tracing with LangGraph
+* [Agentic Observability Concepts](/reference/glossary/agentic-observability.md) - Understand the agent lifecycle and monitoring approach
+
+### Additional Resources
+
+**Platform Guides:**
+
+* [Analytics Deep Dive](/observability/analytics.md) - Root cause analysis and investigation
+* [Custom Dashboards](/observability/dashboards.md) - Build monitoring views for your team
+
+**Integration Documentation:**
+
+* [Python Client SDK Reference](/api/fiddler-python-client-sdk/python-client.md) - Programmatic access to all features
+
+
+---

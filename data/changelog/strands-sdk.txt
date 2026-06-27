@@ -1,0 +1,49 @@
+# Fiddler Strands Agent SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-strands)](https://pypi.org/project/fiddler-strands/)
+
+## 0.4
+
+### **0.4.0**
+
+*December 12, 2025*
+
+* **Enhancements**
+  * **Tool Definition Tracing**: Added `gen_ai.tool.definitions` span attribute to all child spans, providing visibility into tool schemas within agent traces.
+
+## 0.3
+
+### **0.3.0**
+
+*November 17, 2025*
+
+* **Enhancements**
+  * **API Export Fix**: Added `get_llm_context` to module exports — previously available but not importable from the top-level package.
+  * **Documentation**: Added comprehensive docstrings to all critical public APIs to support automatic documentation generation.
+  * **Examples**: Fixed missing example dependencies and Fiddler configuration setup.
+
+## 0.2
+
+### **0.2.0**
+
+*November 11, 2025*
+
+* **Enhancements**
+  * **LLM Context Management**: New `set_llm_context()` and `get_llm_context()` functions for setting additional context for LLM processing within Strands agent workflows.
+  * **System Prompt Telemetry**: System prompts are now included as part of telemetry events for backend processing.
+
+## 0.1
+
+### **0.1.0**
+
+*November 10, 2025*
+
+* **Initial Release**
+  * Core `StrandsAgentInstrumentor` with `instrument()` and `uninstrument()` for automatic OpenTelemetry instrumentation of Strands agents.
+  * **Conversation Tracking**: `set_conversation_id()` and `get_conversation_id()` for multi-turn conversation tracking.
+  * **Session Attributes**: `set_session_attributes()` and `get_session_attributes()` for adding custom metadata to trace sessions.
+  * **Span Attributes**: `set_span_attributes()` and `get_span_attributes()` for adding custom metadata to individual spans.
+  * Available as `pip install fiddler-strands`.
+
+
+---

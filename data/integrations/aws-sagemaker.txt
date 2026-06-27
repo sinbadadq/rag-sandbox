@@ -1,0 +1,171 @@
+# AWS SageMaker Partner AI App
+
+## Introduction
+
+This guide helps AWS administrators configure, deploy, and manage [Fiddler AI ](https://fiddler.ai/)as an Amazon SageMaker Partner AI App. Fiddler AI is an enterprise-grade AI Observability platform that helps monitor, explain, and analyze ML models, LLM applications, GenAI systems, and AI agents directly within your AWS environment.
+
+## What is a Partner AI App?
+
+Amazon SageMaker Partner AI Apps are fully managed AI/ML applications from AWS partners that run natively within your SageMaker environment. Think of them as pre-built, enterprise-ready applications that integrate seamlessly with your existing AWS infrastructure—no complex deployments or external accounts required.
+
+**Key Benefits**:
+
+* **Secure by Design**: Applications run entirely within your AWS account, maintaining your existing security boundaries and compliance requirements
+* **Unified Experience**: Access partner tools directly from SageMaker Studio alongside your notebooks, models, and datasets
+* **Simplified Procurement**: Subscribe through AWS Marketplace with consolidated billing on your AWS invoice
+* **Managed Infrastructure**: AWS handles the underlying infrastructure while you focus on using the application
+
+## How the Fiddler Partner AI App Works
+
+The Fiddler Partner AI App is a fully integrated component within your SageMaker environment. The following sections will explain how this integration works.
+
+### Architecture Overview
+
+1. **Deployment Model**: Fiddler runs as a fully managed, containerized application within your AWS account, requiring no operational support from your team. AWS handles all infrastructure management, updates, and maintenance while isolating your environment and securing access to your data and models.
+2. **Data Flow**:
+   * Your data never leaves your AWS environment
+   * Fiddler processes model predictions and monitoring data within your existing security boundaries, typically avoiding the need for additional security reviews
+   * All computations and storage remain under your AWS account's control
+3. **Integration Points**:
+   * **SageMaker Studio UI**: Launch Fiddler's web interface directly from Studio or via pre-signed URLs
+   * **Python SDK**: Connect to Fiddler from notebooks using authenticated API calls
+   * **Model Monitoring**: Monitor any model, including those deployed on SageMaker endpoints
+   * **S3 Storage**: Fiddler uses designated S3 buckets within your account for data persistence
+4. **Authentication & Authorization**:
+   * Leverages SageMaker's identity propagation to maintain user context
+   * Requires specific IAM permissions configured by your administrator
+   * No separate Fiddler-specific credentials needed for Studio access
+   * API access uses Fiddler tokens combined with AWS authentication
+
+## Prerequisites for Subscribing to the Fiddler Partner AI App
+
+Before deploying Fiddler AI, ensure you have:
+
+* An active AWS account with administrator privileges
+* An existing SageMaker AI domain if launching Fiddler from Studio is required
+* Appropriate IAM permissions to manage AWS Marketplace subscriptions
+* Basic understanding of AWS IAM roles and policies
+
+## Configure Required Permissions
+
+The official [Amazon SageMaker Partner AI Apps documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps.html) is the primary reference for preparing, subscribing to, and deploying the Fiddler Partner AI App. This guide assumes you have completed the documentation's Set up Partner AI Apps section, which covers permissions, authentication, and authorization requirements.
+
+### Important Considerations
+
+Before proceeding, be aware of these standard requirements and potential friction points:
+
+**Identity Configuration**:
+
+* Partner AI Apps require identity propagation to be correctly configured
+* Your SageMaker domain must use either IAM or IAM Identity Center authentication
+* The username format must match between your identity provider and the Fiddler admin configuration
+
+**Permission Requirements**:
+
+* Multiple IAM roles are required (admin role, execution role, and user roles)
+* AWS License Manager permissions are mandatory for Fiddler
+* The setup involves numerous individual IAM permissions across different services
+
+**Time and Complexity**:
+
+* Initial permission setup typically takes 30-60 minutes
+* Consider using our Quick Setup Script to automate this process
+* Some organizations may need security team approval for the required IAM policies
+
+**Common Gotchas**:
+
+* The execution role name cannot be changed after Fiddler deployment
+* Admin usernames entered during deployment cannot be modified later
+* Free trial deployments cannot be upgraded to paid subscriptions (requires redeployment)
+
+## Fiddler Subscription Options
+
+### Pricing Structure
+
+Fiddler Partner AI App pricing consists of two components:
+
+1. **Software License Costs**: Billed through AWS Marketplace
+   * **30-Day Free Trial**: Full functionality for up to 5 models with no software costs (infrastructure charges still apply)
+   * **Monthly Subscription**: Pay-as-you-go monthly pricing
+   * **Annual Subscription**: Discounted pricing with a 12-month commitment
+2. **Infrastructure Costs**: Billed separately by AWS based on usage
+   * Compute instances (EC2)
+   * Storage (EBS volumes)
+   * Data transfer
+   * Managed services (RDS, AMQ, etc.)
+   * These costs vary based on the tier size you select (Small, Medium, or Large) and your contract discounts
+
+### Subscription Tiers
+
+<table><thead><tr><th width="100">Tier</th><th width="363.5234375">Recommended Use Case</th><th>Estimated Monthly Infrastructure* Cost</th></tr></thead><tbody><tr><td>Small</td><td>Development, POCs, teams &#x3C;10 users</td><td>$500 - $1,000</td></tr><tr><td>Medium</td><td>Production workloads, teams 10-50 users</td><td>$1,500 - $3,000</td></tr><tr><td>Large</td><td>Enterprise deployments, teams 50+ users</td><td>$3,000 - $6,000</td></tr></tbody></table>
+
+\*Infrastructure costs are estimates and vary based on actual usage and AWS region
+
+### Trial vs. Paid Subscription
+
+**30-Day Free Trial**:
+
+* Full Fiddler functionality with no functionality restrictions on up to five models
+* No software license charges
+* Infrastructure costs still apply
+* Cannot be upgraded to paid (requires redeployment)
+* Ideal for evaluation and testing
+
+**Paid Subscription**:
+
+* Continuous access with no time limits
+* Includes AWS support for Partner AI Apps
+* Can be upgraded/downgraded between tiers
+* Suitable for production use cases
+
+## Subscribe to the Fiddler Partner AI App
+
+Below is a brief example of using the Amazon SageMaker console to subscribe to the Fiddler Partner AI App.
+
+1. With the admin account configured per the prerequisites, open your Amazon SageMaker AI Console and click the new *Partner AI Apps* link in the left-hand navigation to view the Partner AI Apps.
+
+   <figure><img src="/files/tjvJNhxkqbaGi6AGud6n" alt="Partner AI Apps listing page in SageMaker"><figcaption></figcaption></figure>
+2. Click the View details link to review the Fiddler details on contract pricing and estimated infrastructure costs.
+
+   <figure><img src="/files/zZlj80xKP4VN02Jsi279" alt="Fiddler Partner AI App detail page"><figcaption></figcaption></figure>
+3. Click the *Go to Marketplace to subscribe* link to purchase or select the free trial. Then click on the *View purchase options* or *Try for free* links to open the subscription page.
+
+   <figure><img src="/files/QFH9HrqgxUc8CK1uukin" alt="Fiddler Partner AI App page in AWS Marketplace"><figcaption></figcaption></figure>
+4. This page lets you select your desired contract length, license options, and costs. When you are ready to confirm your subscription, click the Subscribe button.
+
+   <figure><img src="/files/bWjUxmvrx8Fvx0Cacgo6" alt="Fiddler Partner AI App subscription options and purchase page"><figcaption></figcaption></figure>
+
+## Provision and Deploy the Fiddler Partner AI App
+
+The documentation's [Partner AI App Provisioning](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps-provision.html) section lists the general instructions for provisioning Partner AI Apps. The guide below is an example walkthrough of provisioning the Fiddler Partner AI App.
+
+1. The configuration and deployment process has six steps. Begin by choosing a name for your Fiddler SageMaker Partner AI App and selecting your desired maintenance time window.
+
+   <figure><img src="/files/C3lNpn9M8Gjnzg0TF1jc" alt="Step 1 of Fiddler Partner AI App provision and deploy wizard: app name"><figcaption></figcaption></figure>
+2. Add at least one and up to five users with Org Admin privileges within Fiddler. The username entered here must match the IAM username passed to Fiddler on launch.
+
+   <figure><img src="/files/g5zlsIkj2AHLa5E06JSs" alt="Step 2 of Fiddler Partner AI App provision and deploy wizard: add admin users"><figcaption></figcaption></figure>
+3. Select the execution role used by the Fiddler Partner AI App to run AWS resources and authenticate subscription licenses. This role is created following the [Set up Partner AI Apps](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-app-onboard.html) section of the AWS documentation.
+
+   <figure><img src="/files/WDSBhViOuUmDJs3w4GEv" alt="Step 3 of Fiddler Partner AI App provision and deploy wizard: select execution role"><figcaption></figcaption></figure>
+4. Ensure that the STS identity propagation section has *Enable STS* selected.
+
+   <figure><img src="/files/4bQ7dtzBh2htSAmAonQJ" alt="Step 4 of Fiddler Partner AI App provision and deploy wizard: STS identity option"><figcaption></figcaption></figure>
+5. Choose the tier size appropriate for your use cases, click *Next* to review, and then click the ***Deploy*** button to deploy the application. Allow time for this process to complete. It should be ready in under an hour.
+
+   <figure><img src="/files/1nggSJulpHASPSmvnkTY" alt="Step 5 of Fiddler Partner AI App provision and deploy wizard: choose infrastructure tier size"><figcaption></figcaption></figure>
+6. Please return to the Partner AI Apps > My Apps tab in the SageMaker console to check the status. The application can take 1-2 hours to complete the deployment process, at which point the status will be *Deployed*.
+
+   <figure><img src="/files/dwTPglZtQ8301nIjBt8h" alt="My Apps tab of SageMaker console&#x27;s Partner AI Apps page"><figcaption></figcaption></figure>
+
+## Next Steps
+
+Once your Fiddler Partner AI App is deployed:
+
+* **For Administrators**:
+  * Leverage the [Fiddler Partner AI App Quick Setup Script](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-quick-setup-script.md) to get started with all the required roles and policies for running Fiddler in Studio
+  * Get detailed information on IAM requirements, deployment tips, and troubleshooting with the [Admin Guide](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-admin-guide.md)
+* **For Users**: Learn how to access and use Fiddler with the [User Guide](/integrations/cloud-platforms-and-deployment/aws-sagemaker/partner-ai-app-user-guide.md)
+
+
+---

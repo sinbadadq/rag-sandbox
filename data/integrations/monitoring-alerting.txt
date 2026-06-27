@@ -1,0 +1,649 @@
+# Monitoring & Alerting Overview
+
+Route Fiddler AI observability alerts to your existing incident management and communication tools. Integrate with observability platforms, on-call systems, and team collaboration tools to ensure AI issues are detected, triaged, and resolved quickly.
+
+## Why Alert Integration Matters
+
+AI models fail in unique ways—drift, data quality issues, performance degradation, safety violations. Fiddler's alert integrations ensure your team responds immediately:
+
+* **Unified Incident Management** - AI alerts flow into the same systems as infrastructure alerts
+* **Faster Response Times** - On-call engineers notified via existing escalation policies
+* **Context-Rich Alerts** - Model context, affected predictions, and root cause analysis included
+* **Reduced Alert Fatigue** - Intelligent grouping and deduplication across tools
+* **Automated Remediation** - Trigger workflows to rollback models or scale resources
+
+## Integration Categories
+
+### 📊 Observability Platforms
+
+Send Fiddler metrics and alerts to enterprise observability platforms for unified monitoring.
+
+**Supported Platforms:**
+
+* [**Datadog**](/integrations/monitoring-and-alerting/monitoring-alerting/datadog-integration.md) - Application performance monitoring and infrastructure observability ✓ **GA**
+
+**Common Use Cases:**
+
+* Correlate AI model issues with infrastructure metrics
+* Build unified dashboards combining Fiddler + infrastructure data
+* Use Datadog's anomaly detection on Fiddler metrics
+* Alert on compound conditions (model drift + high latency)
+
+### 🚨 Incident Management
+
+Connect alerts to on-call systems for immediate engineer notification.
+
+**Supported Platforms:**
+
+* [**PagerDuty**](/integrations/monitoring-and-alerting/monitoring-alerting/pagerduty.md) - Incident management and on-call scheduling ✓ **GA**
+
+**Common Use Cases:**
+
+* Page on-call ML engineers for critical model failures
+* Escalate unresolved AI incidents automatically
+* Track MTTR (Mean Time To Resolution) for model issues
+* Integrate with incident runbooks and response workflows
+
+### 💬 Team Collaboration
+
+Send alerts to team communication tools for visibility and collaboration.
+
+**Supported Platforms:**
+
+* **Slack** - Team messaging and collaboration ✓ **GA** *(Coming Soon)*
+* **Microsoft Teams** - Enterprise communication platform ✓ **GA** *(Coming Soon)*
+
+**Common Use Cases:**
+
+* Notify ML team channel when drift is detected
+* Alert data science team on data quality issues
+* Share model performance reports automatically
+* Collaborative incident triage in team channels
+
+## Observability Platform Integrations
+
+### Datadog
+
+Integrate Fiddler with Datadog for unified application and AI monitoring.
+
+**Why Datadog + Fiddler:**
+
+* **Unified Dashboards** - Combine infrastructure, application, and AI model metrics
+* **Correlated Alerts** - Alert on compound conditions (e.g., "high model drift + high API latency")
+* **Service Map Integration** - See model health in Datadog service dependency graphs
+* **Anomaly Detection** - Leverage Datadog's ML-based alerting on Fiddler metrics
+
+**Key Features:**
+
+* **Metric Export** - Send Fiddler drift, performance, and data quality metrics to Datadog
+* **Event Streaming** - Stream model events (predictions, drift detections) as Datadog events
+* **Alert Forwarding** - Route Fiddler alerts to Datadog for unified incident management
+* **Tag Propagation** - Maintain consistent tagging across platforms (model, environment, team)
+
+**Status:** ✓ **GA** - Production-ready
+
+[**Get Started with Datadog →**](/integrations/monitoring-and-alerting/monitoring-alerting/datadog-integration.md)
+
+**Quick Start:**
+
+```python
+from fiddler import FiddlerClient
+
+client = FiddlerClient(api_key="fid_...")
+
+# Configure Datadog integration
+client.add_datadog_integration(
+    api_key="datadog_api_key",
+    app_key="datadog_app_key",
+    site="datadoghq.com",  # or datadoghq.eu
+
+    # Metric export configuration
+    export_metrics=True,
+    metric_prefix="fiddler.model.",
+    tags=["env:production", "team:ml-platform"],
+
+    # Event export configuration
+    export_events=True,
+    event_priority="normal"  # or "low"
+)
+```
+
+**Example Datadog Dashboard:**
+
+```yaml
+# Datadog dashboard combining infrastructure + AI metrics
+widgets:
+  - title: "Model Latency vs API Latency"
+    type: timeseries
+    queries:
+      - metric: fiddler.model.latency.p95
+        scope: model:fraud_detector
+      - metric: trace.flask.request.duration.p95
+        scope: service:fraud-api
+
+  - title: "Model Drift Detection"
+    type: query_value
+    queries:
+      - metric: fiddler.model.drift.score
+        aggregation: max
+    conditional_formats:
+      - comparator: ">"
+        value: 0.1
+        palette: "red"
+```
+
+## Incident Management Integrations
+
+### PagerDuty
+
+Route critical AI alerts to on-call engineers via PagerDuty.
+
+**Why PagerDuty + Fiddler:**
+
+* **On-Call Escalation** - Page the right ML engineer based on escalation policies
+* **Incident Deduplication** - Prevent alert storms from related model issues
+* **Incident Timeline** - Track when AI issues were detected, acknowledged, resolved
+* **Postmortem Integration** - Include model context in incident reports
+
+**Key Features:**
+
+* **Severity Mapping** - Map Fiddler alert criticality to PagerDuty severity levels
+* **Service Integration** - Associate alerts with PagerDuty services (e.g., "Fraud Detection Service")
+* **Custom Payloads** - Include model metadata, drift scores, affected predictions
+* **Bidirectional Updates** - Acknowledge/resolve incidents in PagerDuty or Fiddler
+
+**Status:** ✓ **GA** - Production-ready
+
+[**Get Started with PagerDuty →**](/integrations/monitoring-and-alerting/monitoring-alerting/pagerduty.md)
+
+**Quick Start:**
+
+```python
+from fiddler import FiddlerClient
+
+client = FiddlerClient(api_key="fid_...")
+
+# Configure PagerDuty integration
+client.add_pagerduty_integration(
+    integration_key="pagerduty_integration_key",
+    service_name="ML Models - Production",
+
+    # Alert routing rules
+    severity_mapping={
+        "critical": "critical",  # Fiddler → PagerDuty severity
+        "high": "error",
+        "medium": "warning",
+        "low": "info"
+    }
+)
+
+# Create alert with PagerDuty notification
+client.create_alert(
+    name="Critical Model Drift",
+    project="fraud-detection",
+    model="fraud_detector_v3",
+    metric="drift_score",
+    threshold=0.15,
+    severity="critical",
+    notification_channels=["pagerduty"]
+)
+```
+
+**Example PagerDuty Incident:**
+
+```json
+{
+  "incident_key": "fiddler_drift_fraud_detector_v3",
+  "type": "trigger",
+  "description": "High drift detected on fraud_detector_v3",
+  "details": {
+    "model": "fraud_detector_v3",
+    "project": "fraud-detection",
+    "drift_score": 0.23,
+    "affected_features": ["transaction_amount", "merchant_category"],
+    "time_window": "2024-11-10 14:00 - 14:30 UTC",
+    "fiddler_url": "https://app.fiddler.ai/projects/fraud-detection/models/fraud_detector_v3/drift"
+  },
+  "client": "Fiddler AI Observability",
+  "client_url": "https://app.fiddler.ai"
+}
+```
+
+## Team Collaboration Integrations
+
+### Slack *(Coming Soon)*
+
+**Planned Features:**
+
+* **Channel Notifications** - Post alerts to team Slack channels
+* **Interactive Messages** - Acknowledge, snooze, or resolve alerts from Slack
+* **Scheduled Reports** - Daily/weekly model performance summaries
+* **Threaded Discussions** - Collaborate on incident resolution in threads
+
+**Example Configuration:**
+
+```python
+# Future Slack integration API
+client.add_slack_integration(
+    webhook_url="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXX",
+    channel="#ml-alerts",
+    username="Fiddler",
+    icon_emoji=":robot_face:"
+)
+```
+
+### Microsoft Teams *(Coming Soon)*
+
+**Planned Features:**
+
+* **Adaptive Cards** - Rich, interactive alert notifications
+* **Team Channels** - Route alerts to relevant team channels
+* **Bot Commands** - Query model status from Teams chat
+* **Integration with Workflows** - Trigger Teams workflows on alerts
+
+## Alert Routing Patterns
+
+### Pattern 1: Severity-Based Routing
+
+Route alerts to different channels based on severity:
+
+```python
+# Critical alerts → PagerDuty (page on-call)
+client.create_alert(
+    name="Model Offline",
+    severity="critical",
+    notification_channels=["pagerduty"]
+)
+
+# High alerts → Slack (notify team)
+client.create_alert(
+    name="High Drift Detected",
+    severity="high",
+    notification_channels=["slack"]
+)
+
+# Medium alerts → Datadog (track as events)
+client.create_alert(
+    name="Minor Data Quality Issue",
+    severity="medium",
+    notification_channels=["datadog"]
+)
+```
+
+### Pattern 2: Team-Based Routing
+
+Different teams get different alerts:
+
+```python
+# ML Engineering team
+client.create_alert(
+    name="Model Performance Degradation",
+    project="fraud-detection",
+    notification_channels=["slack"],
+    slack_channel="#ml-engineering",
+    tags=["team:ml-engineering"]
+)
+
+# Data Engineering team
+client.create_alert(
+    name="Data Pipeline Failure",
+    project="fraud-detection",
+    notification_channels=["slack"],
+    slack_channel="#data-engineering",
+    tags=["team:data-engineering"]
+)
+
+# On-Call team (escalation)
+client.create_alert(
+    name="Critical Model Failure",
+    project="fraud-detection",
+    notification_channels=["pagerduty"],
+    pagerduty_service="ml-models-production",
+    tags=["team:on-call"]
+)
+```
+
+### Pattern 3: Composite Alerting
+
+Alert on compound conditions across multiple platforms:
+
+```python
+# Example: Alert if BOTH model drift is high AND API latency is high
+# (Indicates model update needed + production impact)
+
+# Configure in Datadog (using Fiddler + Datadog metrics)
+datadog_composite_alert = {
+    "name": "Model Drift + High Latency",
+    "query": """
+        avg(last_5m):fiddler.model.drift.score{model:fraud_detector} > 0.1
+        AND
+        avg(last_5m):trace.flask.request.duration.p95{service:fraud-api} > 500
+    """,
+    "message": "@pagerduty-ml-oncall Model drift detected with production latency impact",
+    "tags": ["model:fraud_detector", "alert:composite"]
+}
+```
+
+## Metric Export Patterns
+
+### Export Fiddler Metrics to Datadog
+
+```python
+from fiddler import FiddlerClient
+
+client = FiddlerClient(api_key="fid_...")
+
+# Configure metric export
+client.configure_metric_export(
+    destination="datadog",
+    metrics=[
+        "drift_score",
+        "data_quality_score",
+        "prediction_latency_p95",
+        "prediction_count",
+        "error_rate"
+    ],
+    export_interval=60,  # seconds
+    tags=["source:fiddler", "env:production"]
+)
+```
+
+**Exported Metrics:**
+
+* `fiddler.model.drift.score` - Overall drift score (0-1)
+* `fiddler.model.drift.feature.<feature_name>` - Per-feature drift
+* `fiddler.model.performance.<metric>` - Model performance metrics
+* `fiddler.model.data_quality.score` - Data quality score
+* `fiddler.model.predictions.count` - Prediction volume
+* `fiddler.model.predictions.latency` - Prediction latency percentiles
+
+### Query Fiddler Metrics in Datadog
+
+```python
+# Datadog Metrics Query Language (MQL)
+queries = {
+    "high_drift_models": """
+        avg:fiddler.model.drift.score{*} by {model} > 0.1
+    """,
+    "low_performance_models": """
+        avg:fiddler.model.performance.accuracy{*} by {model} < 0.85
+    """,
+    "high_volume_models": """
+        sum:fiddler.model.predictions.count{*} by {model}.as_count()
+    """
+}
+```
+
+## Alert Lifecycle Management
+
+### Alert States
+
+Fiddler alerts transition through these states:
+
+```
+Triggered → Acknowledged → Investigating → Resolved → Closed
+                ↓                                      ↑
+            Escalated --------------------------------┘
+```
+
+**Synchronization with External Tools:**
+
+* **PagerDuty**: Bidirectional state sync (acknowledge, resolve)
+* **Datadog**: Event-based updates
+* **Slack**: Interactive message updates
+
+### Alert Deduplication
+
+Prevent alert storms with intelligent deduplication:
+
+```python
+# Configure deduplication rules
+client.configure_alert_deduplication(
+    project="fraud-detection",
+    model="fraud_detector_v3",
+
+    # Group related alerts
+    grouping_window=300,  # seconds
+    grouping_keys=["model", "metric"],
+
+    # Suppress similar alerts
+    suppression_window=3600,  # seconds
+    max_alerts_per_window=3
+)
+```
+
+## Custom Webhook Integrations
+
+For platforms not natively supported, use generic webhooks:
+
+```python
+# Send alerts to any webhook endpoint
+client.add_webhook_integration(
+    name="custom-alerting-system",
+    url="https://your-system.com/webhook/fiddler",
+    method="POST",
+    headers={
+        "Authorization": "Bearer your-token",
+        "Content-Type": "application/json"
+    },
+    payload_template={
+        "alert_name": "{{alert.name}}",
+        "model": "{{model.name}}",
+        "severity": "{{alert.severity}}",
+        "timestamp": "{{alert.timestamp}}",
+        "details": "{{alert.details}}"
+    }
+)
+
+# Use webhook in alerts
+client.create_alert(
+    name="Custom Alert",
+    notification_channels=["webhook:custom-alerting-system"]
+)
+```
+
+**Webhook Payload Example:**
+
+```json
+{
+  "alert_name": "High Drift Detected",
+  "model": "fraud_detector_v3",
+  "project": "fraud-detection",
+  "severity": "high",
+  "timestamp": "2024-11-10T14:32:01Z",
+  "metric": "drift_score",
+  "current_value": 0.23,
+  "threshold": 0.15,
+  "fiddler_url": "https://app.fiddler.ai/projects/fraud-detection/models/fraud_detector_v3",
+  "affected_features": ["transaction_amount", "merchant_category"],
+  "recommended_actions": [
+    "Investigate feature distribution changes",
+    "Consider model retraining",
+    "Review data pipeline for issues"
+  ]
+}
+```
+
+## Monitoring Integration Health
+
+### Track Integration Status
+
+```python
+# Check integration health
+integrations = client.list_integrations()
+for integration in integrations:
+    status = client.get_integration_health(integration.name)
+    print(f"{integration.name}: {status.status}")
+    print(f"  Last successful send: {status.last_success}")
+    print(f"  Failed alerts (24h): {status.failed_count}")
+```
+
+### Alerts on Integration Failures
+
+```python
+# Alert if alert delivery fails
+client.create_meta_alert(
+    name="Alert Delivery Failure",
+    trigger="integration_failure",
+    integration="pagerduty",
+    threshold=3,  # failures
+    time_window=3600,  # seconds
+    notification_channels=["email"]  # use different channel!
+)
+```
+
+## Best Practices
+
+### Alert Fatigue Prevention
+
+**1. Use Appropriate Severity Levels:**
+
+```python
+# Reserve "critical" for page-worthy issues
+severity_guidelines = {
+    "critical": "Model offline, safety violations, production outages",
+    "high": "Significant drift, performance degradation",
+    "medium": "Minor data quality issues, gradual drift",
+    "low": "Informational, trend observations"
+}
+```
+
+**2. Implement Alert Throttling:**
+
+```python
+client.create_alert(
+    name="Drift Detection",
+    threshold=0.1,
+    evaluation_window=300,  # 5 minutes
+    cooldown_period=3600,   # Don't re-alert for 1 hour
+    max_alerts_per_day=5    # Cap daily alerts
+)
+```
+
+**3. Use Alert Grouping:**
+
+```python
+# Group related alerts into single notification
+client.configure_alert_grouping(
+    group_name="Feature Drift Alerts",
+    alerts=["drift_feature_1", "drift_feature_2", "drift_feature_3"],
+    send_as_digest=True,
+    digest_interval=1800  # 30 minutes
+)
+```
+
+### Incident Response Runbooks
+
+Include runbook links in alert payloads:
+
+```python
+client.create_alert(
+    name="High Model Drift",
+    metadata={
+        "runbook_url": "https://wiki.company.com/ml/runbooks/drift-response",
+        "on_call_team": "ml-platform",
+        "escalation_policy": "ml-models-production",
+        "sla": "30 minutes to acknowledge, 2 hours to investigate"
+    }
+)
+```
+
+## Security & Compliance
+
+### Secure Credential Management
+
+**Never hardcode credentials:**
+
+```python
+import os
+
+# Use environment variables
+client.add_pagerduty_integration(
+    integration_key=os.environ['PAGERDUTY_INTEGRATION_KEY']
+)
+
+# Or use secret management systems
+from secret_manager import get_secret
+client.add_datadog_integration(
+    api_key=get_secret('datadog-api-key'),
+    app_key=get_secret('datadog-app-key')
+)
+```
+
+### Alert Data Privacy
+
+**PII Redaction in Alerts:**
+
+```python
+client.configure_alert_privacy(
+    redact_pii=True,
+    pii_fields=["email", "ssn", "phone_number"],
+    redaction_string="[REDACTED]"
+)
+```
+
+### Audit Logging
+
+**Track alert delivery:**
+
+```python
+# Query alert delivery audit log
+audit_log = client.get_alert_audit_log(
+    start_time="2024-11-01",
+    end_time="2024-11-10",
+    include_payload=True
+)
+
+for entry in audit_log:
+    print(f"Alert: {entry.alert_name}")
+    print(f"Delivered to: {entry.channel}")
+    print(f"Status: {entry.status}")
+    print(f"Timestamp: {entry.timestamp}")
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Alerts Not Delivered:**
+
+* Verify integration credentials are valid and not expired
+* Check network connectivity from Fiddler to external platform
+* Ensure webhook endpoints are reachable (not blocked by firewall)
+* Validate alert thresholds are actually being triggered
+
+**Duplicate Alerts:**
+
+* Enable alert deduplication with appropriate time windows
+* Check if multiple notification channels are configured
+* Verify integration isn't configured twice
+
+**Missing Alert Context:**
+
+* Ensure `include_context=True` in alert configuration
+* Check payload template includes necessary fields
+* Verify external platform supports rich payloads (some SMS gateways don't)
+
+## Integration Selector
+
+Choose the right integration for your use case:
+
+| Your Need                  | Recommended Integration   | Why                                        |
+| -------------------------- | ------------------------- | ------------------------------------------ |
+| On-call engineer paging    | **PagerDuty**             | Escalation policies, incident management   |
+| Infrastructure correlation | **Datadog**               | Unified metrics, correlated dashboards     |
+| Team notifications         | **Slack** *(Coming Soon)* | Channel-based, collaborative triage        |
+| Custom internal tools      | **Generic Webhooks**      | Flexible, integrate with any HTTP endpoint |
+| Multi-tool strategy        | **Datadog + PagerDuty**   | Metrics + incidents in one workflow        |
+
+## Related Integrations
+
+* [**Cloud Platforms**](/integrations/cloud-platforms-and-deployment/cloud-platforms.md) - Deploy Fiddler on AWS, Azure, GCP
+* [**Data Platforms**](/integrations/data-platforms-and-pipelines/data-platforms.md) - Ingest data from Snowflake, Kafka
+* [**ML Platforms**](/integrations/ml-platforms-and-tools/ml-platforms.md) - Integrate with Databricks, MLflow
+* [**Agentic AI**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) - Monitor LangGraph and Strands Agents
+
+***
+
+
+---

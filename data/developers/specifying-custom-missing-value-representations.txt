@@ -1,0 +1,27 @@
+# Custom Missing Values
+
+Your data may contain missing values represented in nonstandard ways instead of `null` or `NaN`. For example, an upstream system might use "-1.0" or "-999" in a Float column to indicate missing data. Fiddler lets you specify custom missing value representations for each column when defining your model schema.
+
+## Customize Missing Data Values in Your Schema
+
+To specify which values should be treated as nulls when publishing data to Fiddler:
+
+You can modify your ModelSchema object just before onboarding your model to include details about which values should be replaced with nulls when publishing data to Fiddler.
+
+```python
+# Assume an instantiated Fiddler Model:
+# model = Model.from_data(...)
+
+# Modify your ModelSchema object before calling model.create()
+model.schema['my_column'].replace_with_nulls = [
+  '-1.0',
+  '-999'
+]
+```
+
+This configuration tells Fiddler to automatically consider these values as `null` when processing your data and generating data integrity metrics.
+
+For more information, see our in-depth [guide](/developers/client-library-reference/model-onboarding/customizing-your-model-schema.md) on customizing your model schema before creating your Fiddler model.
+
+
+---

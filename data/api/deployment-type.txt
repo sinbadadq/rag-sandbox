@@ -1,0 +1,16 @@
+# DeploymentType
+
+Model deployment types for explainability services.
+
+**Values:**
+
+* `BASE_CONTAINER` - BASE\_CONTAINER
+
+Base container deployment with standard environment.
+
+## MANUAL *= 'MANUAL'*
+
+Manual deployment configuration.
+
+
+---

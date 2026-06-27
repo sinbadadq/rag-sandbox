@@ -1,0 +1,8 @@
+# FiddlerResourceAttributes
+
+Constants for Fiddler OpenTelemetry resource attributes.
+
+## APPLICATION\_ID *= 'application.id'*
+
+
+---

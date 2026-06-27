@@ -1,0 +1,23 @@
+# Safety
+
+This Quick Start Notebook introduces Fiddler Guardrails' Safety Detection capabilities, an essential component of our enterprise solution for protecting LLM applications. Learn how to implement the Safety Model, which identifies harmful, sensitive, or jailbreaking content in both inputs and outputs of your generative AI systems.
+
+Inside you'll find:
+
+* Step-by-step implementation instructions
+* Code examples for safety evaluation
+* Practical demonstration of harmful content detection
+* Sample inputs and outputs with risk score interpretation
+
+Before running the notebook, get your API key from the sign-up page below. See the documentation and FAQs for more help with getting started.
+
+[Get Started with Your Free Guardrails →](https://www.fiddler.ai/free-guardrails)
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Guardrails_Trial_Safety.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Guardrails_Trial_Safety.ipynb).
+
+
+---

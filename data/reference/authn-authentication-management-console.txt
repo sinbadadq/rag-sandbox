@@ -1,0 +1,221 @@
+# Authentication Management
+
+## AuthN Management Console Guide
+
+This guide provides step-by-step instructions for using the Fiddler AuthN management console to configure authentication methods and manage users.
+
+### Overview
+
+The Fiddler AuthN management console is a dedicated interface for authentication administration that allows you to:
+
+* Configure Single Sign-On (SSO) integrations with identity providers
+* Manage user accounts for email authentication
+* Assign administrative roles for authentication management
+* Monitor authentication settings and user status
+
+The console uses our new identity and access management framework, to provide secure and flexible authentication capabilities for the Fiddler platform.
+
+### How to Sign In to the AuthN Console
+
+The AuthN console is accessed through a separate URL from your main Fiddler instance.
+
+**To access the AuthN console:**
+
+1. Navigate to your AuthN console URL. The URL format is your Fiddler base URL with `authn-` prepended:
+   * If your Fiddler URL is `https://acme.cloud.fiddler.ai`
+   * Your AuthN console URL is `https://authn-acme.cloud.fiddler.ai`
+2. For a new deployment and the first user sign-in:
+   1. If you are using email authentication use the credentials provided by your Fiddler representative during initial setup or those you created using the email invitation sent during onboarding
+   2. If you are using SSO your user account will be created automatically on your first sign-in
+3. Select your organization from the dropdown menu
+   * You may see a *fiddler* organization, but this is reserved for system use
+   * Select your company's organization from the available options
+
+### Understanding the Root User
+
+The **root user** is the default authentication administrator created during your Fiddler deployment setup. This user is reserved for Fiddler use with deployments managed by Fiddler. Fiddler will use the root user account to either configure your SSO integration or will assign one or more of your organization's users for managing your authentication set up moving forward.
+
+### Understanding AuthN Roles
+
+There are two roles specific to the AuthN management console and not to the Fiddler application: the Org Owner and the Org User Manager roles. The Org Owner can configure settings at the organization level which includes the authentication configuration and the ability to assign roles to other users. The Org User Manager is limited to managing user access to Fiddler.
+
+#### Org Owner Role Capabilities
+
+Users with the Org Owner role can perform all authentication management tasks, including:
+
+* **Identity Provider Management**: Configure and manage SSO integrations with external identity providers
+* **User Management**: Create, modify, and deactivate user accounts
+* **Role Assignment**: Grant Org Owner or Org User Manager roles to other users
+* **Authentication Methods**: Configure email authentication and SSO options
+
+### How to Assign the Org Owner Role
+
+The Org Owner role provides full administrative access to authentication management. Assign this role to users who need to manage identity provider integrations, additional Org Owners or Org User Managers, and user accounts.
+
+**To assign the Org Owner role:**
+
+1. Sign in to the AuthN console with an existing Org Owner account
+2. Navigate to the **Organizations** tab in the main navigation and ensure your organization is selected
+3. Locate the user account you want to modify
+4. Select the **+** button on the top right to open the role assignment window
+5. Select **Org Owner** from the available roles
+6. Select the *Add* button to confirm the role assignment
+
+<figure><img src="/files/rMoLSydnIyvKa51qt4NY" alt="AuthN console role assignment modal"><figcaption></figcaption></figure>
+
+**Important Considerations:**
+
+* Ensure at least one user always maintains the Org Owner role to prevent administrative lockout
+* Org Owner users have full access to authentication settings—assign this role only to trusted administrators
+* Users with Org Owner roles can manage both SSO integrations and email authentication users
+
+### Assign the Org User Manager Role
+
+The Org User Manager role provides limited administrative access focused on user management. This role is designed for administrators who need to manage users but should not have access to identity provider configuration.
+
+To assign the Org User Manager role **f**ollow the same process as described for the Org owner role.
+
+#### Org User Manager Capabilities and Limitations
+
+**Org User Manager users can:**
+
+* **Create Users**: Add new user accounts for email authentication
+* **Manage User Status**: Activate and deactivate user accounts
+* **Reset Passwords**: Assist users with password-related issues
+* **Send Invitations**: Issue setup invitations for email authentication
+* **View User Information**: Access user account details and authentication status
+
+**Org User Manager users cannot:**
+
+* **Configure Identity Providers**: Cannot create or modify SSO integrations
+* **Edit IdP Settings**: Cannot access identity provider configuration
+* **Manage Organization Settings**: Cannot modify authentication policies
+* **Assign Administrative Roles**: Cannot grant Org Owner or Org User Manager roles to other users
+
+#### When to Use Org User Manager
+
+The Org User Manager role is ideal for:
+
+* Help desk personnel who assist with user account issues
+* Team leads who need to add new team members using email authentication
+* Administrators in mixed environments where some users authenticate via email rather than SSO
+* Situations where you want to delegate user management without granting full administrative access
+
+### User Management for Email Authentication
+
+**Important**: Users only need to be manually created and managed in the AuthN console when using email authentication. SSO users are automatically provisioned when they first sign in through their identity provider.
+
+#### When Manual User Management Is Required
+
+Manual user creation and management is necessary for:
+
+* Organizations using email authentication instead of SSO
+* Mixed authentication environments where some users need email authentication
+* Adding users who don't have access to your organization's identity provider
+* Creating service accounts or special-purpose accounts
+
+#### Email Authentication User Lifecycle
+
+**User Creation Process:**
+
+1. **Access Console**: Navigate to the AuthN console with appropriate administrative privileges
+2. **Create Account**: Use the **Users** section to add new user accounts
+3. **Send Invitation**: Users receive setup instructions via email
+4. **User Activation**: Users complete their account setup and choose authentication methods
+5. **Fiddler Access**: After authentication setup, users can access the Fiddler platform
+
+<figure><img src="/files/MFlG3qQLPVCcUtF3Pbgo" alt="Authn console add new user form"><figcaption><p>Add New User Form</p></figcaption></figure>
+
+<figure><img src="/files/JlKcm1w4SHP8iyB6PKIh" alt="authn-console-user-list"><figcaption><p>Organization Users List</p></figcaption></figure>
+
+**Ongoing Management:**
+
+* **Account Status**: Monitor and modify user account status as needed
+* **Password Support**: Assist users with password resets and authentication issues
+* **Role Assignment**: Coordinate with Fiddler application administrators for platform role assignments
+
+### Navigation and Interface Overview
+
+#### Main Console Sections
+
+* **Home**: Organization overview and quick access to common tasks
+* **Users**: User account management for email authentication
+* **Organizations**: Role assignment and organization-level settings
+* **Settings**: Authentication configuration and identity provider management
+  * **Login and Access**: Authentication method configuration
+  * **Identity Providers**: SSO integration setup and management
+
+### Best Practices and Security Recommendations
+
+#### Administrative Role Management
+
+* **Multiple Org Owners**: Maintain at least two users with Org Owner roles to prevent administrative lockout
+* **Role Separation**: Use Org User Manager roles for personnel who only need user management capabilities
+* **Regular Review**: Periodically audit administrative role assignments
+* **Documentation**: Maintain records of who has administrative access and why
+
+#### User Management
+
+* **Consistent Naming**: Establish clear naming conventions for user accounts
+* **Account Lifecycle**: Implement processes for user onboarding and offboarding
+* **Mixed Authentication**: Clearly document which users use email authentication versus SSO
+* **Security Policies**: Apply appropriate password and account security policies
+
+#### Identity Provider Integration
+
+* **Testing Environment**: Test SSO integrations before deploying to production
+* **Backup Authentication**: Maintain email authentication capabilities as a backup
+* **Configuration Documentation**: Document IdP configuration details for troubleshooting
+* **Regular Monitoring**: Monitor SSO integration status and user authentication patterns
+
+### Troubleshooting Common Issues
+
+#### Access Issues
+
+**Cannot Access AuthN Console:**
+
+* Verify the console URL format (`authn-` prefix)
+* Check network connectivity and firewall settings
+* Confirm user account has appropriate administrative role
+* Contact your Fiddler representative for credential verification
+
+#### User Management Issues
+
+**Cannot Create Users:**
+
+* Verify user account has Org Owner or Org User Manager role
+* Check that email authentication is enabled for your organization
+* Confirm user email addresses are unique and properly formatted
+
+**Invitation Emails Not Received:**
+
+* Verify email addresses are correct and properly formatted
+* Check spam and junk mail folders
+* Confirm email delivery settings in your organization's configuration
+* Resend invitations if necessary using console tools
+
+#### Role Assignment Issues
+
+**Cannot Assign Roles:**
+
+* Confirm you have Org Owner privileges (Org User Managers cannot assign roles)
+* Verify target user account exists and is active
+* Check that you're working in the correct organization context
+
+### Getting Support
+
+For additional assistance with the AuthN console:
+
+* **Documentation**: Reference specific identity provider integration guides for SSO setup
+* **Fiddler Support**: Contact your Fiddler representative with specific error messages or console screenshots
+* **System Logs**: Review authentication logs for troubleshooting authentication issues
+* **Best Practices**: Consult your organization's IT security team for authentication policy guidance
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

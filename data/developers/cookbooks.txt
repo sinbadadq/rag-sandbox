@@ -1,0 +1,51 @@
+# Overview
+
+Cookbooks are use-case oriented guides that demonstrate end-to-end workflows for solving real problems with Fiddler. Unlike quick starts (which introduce product features) or tutorials (which deep-dive into specific capabilities), cookbooks are organized by scenario — they show you how to combine multiple Fiddler features to achieve a practical goal.
+
+{% hint style="info" %}
+**Prerequisites for all cookbooks**
+
+* Fiddler account with API access
+* Python 3.10+
+* Fiddler Evals SDK: `pip install fiddler-evals`
+* LLM credential configured in **Settings > LLM Gateway**
+  {% endhint %}
+
+## RAG Evaluation & Monitoring
+
+| Cookbook                                                                                     | Use Case                                            | Key Features                                                     |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------- |
+| [RAG Evaluation Fundamentals](/developers/cookbooks/rag-evaluation-fundamentals.md)          | "I have a RAG app and want to evaluate its quality" | RAG Faithfulness, Answer Relevance, direct `.score()` API        |
+| [Running RAG Experiments at Scale](/developers/cookbooks/rag-experiments-at-scale.md)        | "I want to compare RAG pipeline configurations"     | Datasets, Experiments, `evaluate()`, golden label validation     |
+| [Detecting Hallucinations in RAG](/developers/cookbooks/hallucination-detection-pipeline.md) | "I want to monitor my RAG app for hallucinations"   | RAG Health triad, Evaluator Rules, LLM Observability enrichments |
+
+## Custom Evaluators
+
+| Cookbook                                                                             | Use Case                                     | Key Features                                                            |
+| ------------------------------------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------- |
+| [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) | "I need domain-specific evaluation criteria" | `CustomJudge`, prompt templates, `output_fields`, iterative improvement |
+
+## Agentic AI
+
+| Cookbook                                                                                     | Use Case                                                                     | Key Features                                                                 |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [Monitoring Agentic Content Generation](/developers/cookbooks/agentic-content-generation.md) | "I want to ensure quality and brand compliance in content generation agents" | Built-in evaluators + custom Brand Voice Match judge                         |
+| [Agentic Document Extraction](/developers/cookbooks/agentic-document-extraction.md)          | "I want to build a reliable, measurable document extraction pipeline"        | OpenTelemetry tracing, custom evaluators, Experiments, production monitoring |
+
+***
+
+## Related Resources
+
+* [Experiments Getting Started](/getting-started/experiments.md) — Product overview
+* [Experiments Quick Start](/developers/experiments/experiments-quick-start.md) — SDK setup and first experiment
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Conceptual guide to the diagnostic triad
+* [Evals SDK Advanced Guide](/developers/tutorials/experiments/evals-sdk-advanced.md) — Advanced patterns
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

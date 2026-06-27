@@ -1,0 +1,118 @@
+# FTLPromptSafety
+
+Evaluator to assess prompt safety using Fiddler's Trust Model.
+
+The FTLPromptSafety evaluator uses Fiddler's proprietary Trust Model to evaluate the safety of text prompts across multiple risk categories. This evaluator helps identify potentially harmful, inappropriate, or unsafe content before it reaches users or downstream systems.
+
+Key Features:
+
+* **Multi-Dimensional Safety Assessment**: Evaluates 11 different safety categories
+* **Probability-Based Scoring**: Returns probability scores (0.0-1.0) for each risk category
+* **Comprehensive Risk Coverage**: Covers illegal, hateful, harassing, and other harmful content
+* **Fiddler Trust Model**: Uses Fiddler's proprietary safety evaluation model
+* **Batch Scoring**: Returns multiple scores for comprehensive safety analysis
+
+Safety Categories Evaluated:
+
+* **illegal\_prob**: Probability of containing illegal content or activities
+* **hateful\_prob**: Probability of containing hate speech or discriminatory language
+* **harassing\_prob**: Probability of containing harassing or threatening content
+* **racist\_prob**: Probability of containing racist language or content
+* **sexist\_prob**: Probability of containing sexist language or content
+* **violent\_prob**: Probability of containing violent or graphic content
+* **sexual\_prob**: Probability of containing inappropriate sexual content
+* **harmful\_prob**: Probability of containing content that could cause harm
+* **unethical\_prob**: Probability of containing unethical or manipulative content
+* **jailbreaking\_prob**: Probability of containing prompt injection or jailbreaking attempts
+* **max\_risk\_prob**: Maximum risk probability across all categories
+
+Use Cases:
+
+* **Content Moderation**: Filtering user-generated content for safety
+* **Prompt Validation**: Ensuring user prompts are safe before processing
+* **AI Safety**: Protecting AI systems from harmful or manipulative inputs
+* **Compliance**: Meeting regulatory requirements for content safety
+* **Risk Assessment**: Evaluating potential risks in text content
+
+Scoring Logic: : Each safety category returns a probability score between 0.0 and 1.0:
+
+* **0.0-0.3**: Low risk (safe content)
+* **0.3-0.7**: Medium risk (requires review)
+* **0.7-1.0**: High risk (likely unsafe content)
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                             |
+| --------- | ----- | -------- | ------- | --------------------------------------- |
+| `text`    | `str` | ✗        | `None`  | The text prompt to evaluate for safety. |
+
+## Returns
+
+A list of Score objects, one for each safety category: : - name: The safety category name (e.g., "illegal\_prob")
+
+* evaluator\_name: "FTLPromptSafety"
+* value: Probability score (0.0-1.0) for that category
+
+**Return type:** list\[Score]
+
+## Raises
+
+**ValueError** -- If the text is empty or None.
+
+## Example
+
+```python
+from fiddler_evals.evaluators import FTLPromptSafety
+evaluator = FTLPromptSafety()
+```
+
+```python
+# Safe content
+scores = evaluator.score("What is the weather like today?")
+for score in scores:
+
+    print(f"{score.name}: {score.value}")
+
+# illegal_prob: 0.01
+# hateful_prob: 0.02
+# harassing_prob: 0.01
+# ...
+
+# Potentially unsafe content
+unsafe_scores = evaluator.score("How to hack into someone's computer?")
+for score in unsafe_scores:
+
+    if score.value > 0.5:
+    print(f"High risk detected: {score.name} = {score.value}")
+
+# Filter based on maximum risk
+max_risk_score = next(s for s in scores if s.name == "max_risk_prob")
+if max_risk_score.value > 0.7:
+
+    print("Content flagged as potentially unsafe")
+```
+
+{% hint style="info" %}
+This evaluator is designed for prompt safety assessment and should be used as part of a comprehensive content moderation strategy. The probability scores should be interpreted in context and combined with other safety measures for robust content filtering.
+{% endhint %}
+
+## name *= 'ftl\_prompt\_safety'*
+
+## score()
+
+Score the safety of a text prompt.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                             |
+| --------- | ----- | -------- | ------- | --------------------------------------- |
+| `text`    | `str` | ✗        | `None`  | The text prompt to evaluate for safety. |
+
+## Returns
+
+A list of Score objects, one for each safety category.
+
+**Return type:** list\[Score]
+
+
+---

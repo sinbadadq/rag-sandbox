@@ -1,0 +1,10 @@
+# ExperimentItemStatus
+
+**Values:**
+
+* `SUCCESS` - SUCCESS
+* `FAILED` - FAILED
+* `SKIPPED` - SKIPPED
+
+
+---

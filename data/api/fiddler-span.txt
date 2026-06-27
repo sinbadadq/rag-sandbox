@@ -1,0 +1,76 @@
+# FiddlerSpan
+
+Wrapper around OpenTelemetry span with simplified helper methods.
+
+Initialize wrapper around an OTel span or context manager.
+
+## **enter**()
+
+Enter context manager and start span.
+
+Note: Attribute propagation now happens automatically via FiddlerSpanProcessor.
+
+**Return type:** [*FiddlerSpan*](#fiddlerspan)
+
+## **exit**(exc\_type, exc\_val, exc\_tb)
+
+Exit context manager, record exceptions, and end span.
+
+**Return type:** *Literal*\[False]
+
+## end()
+
+Explicitly end the span. Must be called when using start\_span().
+
+**Return type:** None
+
+## set\_input()
+
+Set input data. Auto-serializes dicts/lists to JSON.
+
+**Return type:** None
+
+## set\_output()
+
+Set output data. Auto-serializes dicts/lists to JSON.
+
+**Return type:** None
+
+## set\_attribute()
+
+Set a custom attribute on the span.
+
+**Return type:** None
+
+## update()
+
+Bulk update multiple attributes.
+
+**Return type:** None
+
+## record\_exception()
+
+Record an exception on the span.
+
+**Return type:** None
+
+## set\_agent\_name()
+
+Set the agent name (gen\_ai.agent.name).
+
+**Return type:** None
+
+## set\_agent\_id()
+
+Set the agent ID (gen\_ai.agent.id).
+
+**Return type:** None
+
+## set\_conversation\_id()
+
+Set the conversation ID (gen\_ai.conversation.id).
+
+**Return type:** None
+
+
+---

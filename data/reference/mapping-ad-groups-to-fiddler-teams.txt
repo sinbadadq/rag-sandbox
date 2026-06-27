@@ -1,0 +1,255 @@
+# Mapping IdP Groups to Teams
+
+This guide describes how to configure automatic synchronization between your identity provider (IdP) groups and Fiddler teams using the [Fiddler AuthN management console](/reference/access-control/authn-authentication-management-console.md), enabling streamlined access control and role management.
+
+## Overview
+
+Group synchronization automatically maps users from your IdP groups to corresponding Fiddler teams and roles. This eliminates the need for manual user role assignment, ensuring that access permissions remain synchronized with your organizational structure.
+
+**Supported Identity Providers**:
+
+* Okta (OIDC and SAML)
+* Microsoft Entra ID (formerly Azure AD) with OIDC (requires additional configuration steps)
+* Ping Identity (SAML)
+
+{% hint style="info" %}
+Google OIDC does not support group synchronization due to limitations in Google's OIDC implementation.
+{% endhint %}
+
+## Prerequisites
+
+Before configuring group synchronization, ensure you have:
+
+* **SSO Integration**: A working SSO integration with a supported identity provider
+* **Administrator Access**: Both identity provider admin access and Fiddler AuthN admin "Org Owner" permissions
+* **Group Configuration**: Proper group setup in your identity provider with appropriate naming conventions
+* **User Assignment**: Users assigned to relevant groups in your identity provider
+
+## Group Naming Convention
+
+All identity provider groups must follow a set naming pattern to be recognized by Fiddler:
+
+```
+fiddler_<identifier>
+```
+
+The default group prefix is `fiddler_`, but this can be customized during the configuration process.
+
+{% hint style="info" %}
+**Team name constraints**: The identifier portion of the group name (used as the Fiddler team name) must satisfy these rules:
+
+* Must be at least 2 characters and no more than 256 characters long
+* Must start with a letter (`a`–`z` or `A`–`Z`)
+* May contain only: letters (`a`–`z`, `A`–`Z`), digits (`0`–`9`), underscores (`_`), and hyphens (`-`)
+
+Identifiers with uppercase characters (e.g., `DataScientists`, `ML_Engineers`) are valid; they are normalized to lowercase before the team is created (so `DataScientists` becomes `datascientists`, and `ML_Engineers` becomes `ml_engineers`). Examples of invalid identifiers: `123team` (must start with a letter), `team!` (contains disallowed character).
+{% endhint %}
+
+### Team Identifiers
+
+Any other identifier creates a corresponding team in Fiddler:
+
+* `fiddler_data_scientist` - Creates/assigns users to the "data\_scientist" team
+* `fiddler_ml_engineers` - Creates/assigns users to the "ml\_engineers" team
+* `fiddler_product_team` - Creates/assigns users to the "product\_team" team
+
+### Group Naming Examples
+
+| Identity Provider Group  | Result in Fiddler                        |
+| ------------------------ | ---------------------------------------- |
+| `fiddler_ORG_ADMIN`      | User assigned "Org Admin" role           |
+| `fiddler_ORG_MEMBER`     | User assigned "Org Member" role          |
+| `fiddler_data_scientist` | User added to "data\_scientist" team     |
+| `fiddler_finance_team`   | User added to "finance\_team" team       |
+| `fiddler_`               | **Invalid** - Will be ignored            |
+| `data_scientist`         | **Invalid** - Missing "fiddler\_" prefix |
+
+## Configuration Steps
+
+{% hint style="info" %}
+**Identity Provider-Specific Requirements**:
+
+**Okta**:
+
+* Ensure the `groups` scope is included in your OIDC application
+* Configure Groups claim in the "Sign On" section of your application
+
+**Microsoft Entra ID**:
+
+* Add the `groups` claim to your application's token configuration
+* Grant `GroupMember.Read.All` API permissions
+* Additional configuration steps are required (see the Advanced Configuration section)
+
+**Ping Identity**:
+
+* Configure group attribute mapping in your SAML application
+* Ensure group membership is included in SAML assertions
+  {% endhint %}
+
+{% stepper %}
+{% step %}
+**Configure Identity Provider Groups**
+
+1. Access your identity provider's admin console
+2. Create groups following the `fiddler_<identifier>` naming convention or choose your own prefix, e.g. `company_fiddler_`
+3. Assign appropriate users to each group
+4. Configure group claims/attributes in your SSO application
+   {% endstep %}
+
+{% step %}
+**Enable Group Sync in Fiddler AuthN Console**
+
+{% hint style="info" %}
+The URL to the AuthN management console is your Fiddler instance base URL, prepended with `authn-`. For example, if your base URL is `https://acme.cloud.fiddler.ai` then you can access the AuthN management console at `https://authn-acme.cloud.fiddler.ai`.
+{% endhint %}
+
+**Access Organization Settings**:
+
+1. Log into Fiddler with AuthN console "Org Owner" privileges
+2. Navigate to the *Organization* tab at the top
+3. Ensure that your organization is selected in the top left dropdown (this will never be "fiddler" which is reserved)
+4. Locate the *METADATA* section
+
+<figure><img src="/files/WIME0O7pXTmxQF91Q7fR" alt="Fiddler AuthN admin console organization home page"><figcaption></figcaption></figure>
+
+**Configure Group Sync Settings**:
+
+1. Select the *Edit* button in the *METADATA* section
+2. Configure these key-value pairs:
+   * *fiddler\_group\_prefix*: Set the group prefix (defaults to `fiddler_` unless manually modified)
+   * *fiddler\_group\_sync\_enabled*: Set to `true`
+3. Save your changes by selecting the *Save* disk icon adjacent to each key value pair
+
+<figure><img src="/files/kFMB3fwoBpWuxv5oLBkw" alt=""><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Configure Automatic Organization Role Mapping**
+
+{% hint style="info" %}
+Mapping users to Fiddler organization roles is optional. All new users will be Org Members by default, and the Org Admin role can be assigned in the Fiddler UI as needed.
+{% endhint %}
+
+Setting up automatic [organization role](/reference/access-control/role-based-access.md#understanding-roles) mappings uses these additional metadata keys:
+
+* *fiddler\_org\_admin\_mapper*: Custom mapping key for the Org Admin role
+* *fiddler\_org\_member\_mapper*: Custom mapping key for Org Member role
+
+**To configure automatic role mapping**:
+
+1. In the *METADATA* section, add the mapper keys as needed
+2. Set the values to match your identity provider's group naming convention, noting that the METADATA key values should not include the Fiddler group prefix, which is the default `fiddler_` in this example
+   1. Create a group in your IdP for Fiddler Org Admin users named `fiddler_org_admins`
+   2. Set the `fiddler_org_admin_mapper` metadata key value to `org_admins`
+   3. Create a group in your IdP for Fiddler Org Member users named fiddler\_org\_members
+   4. Set the `fiddler_org_member_mapper` metadata key value to `org_members`
+3. Save your changes by selecting the *Save* disk icon adjacent to each key value pair
+
+<figure><img src="/files/jGplgY2FhUtfRCr8kNpi" alt="Fiddler AuthN admin console add org mapper keys"><figcaption></figcaption></figure>
+{% endstep %}
+
+{% step %}
+**Verify Configuration**
+
+**Test Group Synchronization**:
+
+1. Log in with a test user who belongs to the mapped groups
+2. Verify the user is assigned to the correct Fiddler roles/teams
+3. Check that team memberships update when identity provider groups change
+4. Confirm that new groups create corresponding Fiddler teams automatically
+   {% endstep %}
+   {% endstepper %}
+
+## Advanced Configuration
+
+### Custom Group Prefixes
+
+You can customize the group prefix if `fiddler_` doesn't fit your naming conventions:
+
+1. In the Organization *METADATA* section, update `fiddler_group_prefix`
+2. For example, set to `company_fiddler_` to require groups like `company_fiddler_data_team`
+3. All group names in your identity provider must use your custom prefix
+
+### Team Hierarchy and Permissions
+
+#### Automatic Team Creation
+
+* Teams are automatically created when users with new group mappings first log in
+* Team names match the identifier portion of the group name
+* Teams inherit default permissions, which can be customized through the Fiddler UI
+
+#### Team Management:
+
+* Organization admins can modify team permissions through Fiddler settings
+* Project-specific access can be configured per team
+* Teams persist even if all members are removed
+
+## Troubleshooting
+
+### Common Issues
+
+#### Groups Not Synchronizing
+
+* **Verify Group Sync Enable**: Check that `fiddler_group_sync_enabled` is set to `true`
+* **Check Group Names**: Ensure groups follow the correct naming convention with your configured prefix
+* **Validate Claims**: Confirm your identity provider includes group claims in authentication tokens
+* **Review Permissions**: Verify your SSO application has appropriate permissions to read group membership
+
+#### Users Not Assigned to Correct Teams
+
+* **Group Membership**: Confirm users are actually members of the expected groups in your identity provider
+* **Name Matching**: Ensure group names exactly match the expected format (case-sensitive)
+* **Re-authentication**: Users may need to log out and back in for group changes to take effect
+
+#### Custom Role Mapping Issues
+
+* **Mapper Configuration**: Verify that custom role mapper keys are configured correctly in the *METADATA* section
+* **Group Assignment**: Ensure users are assigned to groups that match the custom mapper values
+
+## Best Practices
+
+### Identity Provider Management
+
+* **Consistent Naming**: Establish clear naming conventions for Fiddler-related groups
+* **Group Documentation**: Maintain documentation of group purposes and membership criteria
+* **Regular Audits**: Periodically review group memberships and access levels
+* **Change Management**: Implement processes for group creation, modification, and deletion
+
+### Fiddler Team Organization
+
+* **Logical Grouping**: Align Fiddler teams with your organizational structure and project needs
+* **Permission Planning**: Design team permissions to match job functions and access requirements
+* **Scalability**: Consider how your team structure will scale as your organization grows
+
+### Security Considerations
+
+* **Least Privilege**: Apply the principle of least privilege when designing group access levels
+* **Regular Reviews**: Conduct periodic access reviews to ensure appropriate permissions
+* **Separation of Duties**: Consider separating administrative and operational roles
+* **Audit Trails**: Monitor group membership changes and access patterns
+
+## Getting Help
+
+For additional assistance with group synchronization:
+
+* **Organization Settings**: Check the Organization METADATA section for configuration details
+* **Identity Provider Support**: Consult your identity provider's documentation for group configuration
+* **Fiddler Support**: Contact your Fiddler representative with group sync configuration details
+* **Testing Environment**: Use a test environment to validate group sync before production deployment
+
+## Related Documentation
+
+* [Role-Based Access Control](/reference/access-control/role-based-access.md) - Understanding Fiddler roles and permissions
+* [Okta OIDC SSO Integration](/reference/access-control/okta-integration.md) - Okta-specific group sync setup
+* [Microsoft Entra ID OIDC SSO Integration](/reference/access-control/single-sign-on-with-azure-ad.md) - Entra ID group sync configuration
+* [Ping Identity SAML SSO Integration](/reference/access-control/ping-identity-saml.md) - Ping Identity group sync setup
+* [General SSO Authentication Guide](/reference/access-control/sso-authentication-guide.md) - Overview of SSO concepts
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

@@ -1,0 +1,32 @@
+# IncompatibleClient
+
+Raised when the Python client version is incompatible with the Fiddler platform version.
+
+This exception occurs during connection initialization when the client library version is not compatible with the connected Fiddler platform version. This ensures that users are aware of version mismatches that could cause unexpected behavior or missing functionality.
+
+The exception includes both the client version and server version in the error message to help users understand what versions are involved in the incompatibility.
+
+## Examples
+
+Handling version incompatibility:
+
+```python
+try:
+    fdl.init(url="https://old-fiddler.com", token="token")
+
+except IncompatibleClient as e:
+    print(f"Version mismatch: {e.message}")
+    # Upgrade client or contact administrator
+```
+
+Typical error message format:
+
+```python
+"Python Client version (3.8.0) is not compatible with your
+Fiddler Platform version (3.5.0)."
+```
+
+## message *: str* *= 'Python Client version ({client\_version}) is not compatible with your Fiddler Platform version ({server\_version}).'*
+
+
+---

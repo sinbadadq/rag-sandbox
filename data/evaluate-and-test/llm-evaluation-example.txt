@@ -1,0 +1,182 @@
+# Compare LLM Outputs
+
+## Overview
+
+Making the right LLM model choice is critical for your application's success, but comparing models effectively requires more than intuition. This quick start demonstrates how to use Fiddler's pre-production evaluation environment to perform **systematic, side-by-side comparisons** of different LLM models using the same prompts and consistent evaluation metrics.
+
+## What You'll Learn
+
+In this hands-on notebook guide, you'll learn how to:
+
+* **Upload model outputs** from different LLMs (GPT-3.5 and Claude) to Fiddler's pre-production environment
+* **Define a consistent evaluation schema** that works across multiple models
+* **Apply Fiddler enrichments** for automated quality assessment:
+  * **FTL Faithfulness** - Detect hallucinations in RAG responses using Fiddler's Fast Trust Model
+  * **Sentiment Analysis** - Understand response tone
+  * **PII Detection** - Identify privacy risks
+  * **Embeddings** - Track semantic patterns and outliers
+
+{% hint style="info" %}
+**Looking for RAG-specific evaluation?** For comprehensive RAG pipeline diagnostics using Answer Relevance 2.0, Context Relevance, and RAG Faithfulness, see the [RAG Health Metrics Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md) and [RAG Evaluation Fundamentals Cookbook](/developers/cookbooks/rag-evaluation-fundamentals.md).
+{% endhint %}
+
+\* \*\*Build comparison dashboards\*\* using metric cards to visualize differences \* \*\*Make data-driven decisions\*\* about which model best fits your needs
+
+## Why Compare in Pre-Production?
+
+Pre-production evaluation lets you test models **before committing to production deployment**:
+
+* **Apples-to-apples comparison** - Same prompts, same metrics, consistent evaluation
+* **Cost optimization** - Identify the most cost-effective model that meets quality requirements
+* **Risk assessment** - Understand safety and quality trade-offs before production
+* **Informed decisions** - Replace guesswork with quantitative evidence
+
+## What You'll Build
+
+By the end of this guide, you'll have:
+
+1. **Two datasets** uploaded to Fiddler (GPT-3.5 and Claude outputs)
+2. **Consistent enrichments** applied to both datasets for fair comparison
+3. **Metric card dashboards** showing side-by-side model performance
+4. **Clear insights** into which model performs better for your use case
+
+## Prerequisites
+
+Before you begin:
+
+* **Fiddler account** with access to create projects
+* **Python environment** with Jupyter notebook support
+* **Fiddler Python client** (installed via pip)
+* **Sample data** (provided in the notebook from Fiddler examples repository)
+
+## Time to Complete
+
+**\~15 minutes** - Follow the interactive notebook for a guided experience
+
+## Get Started
+
+Choose your preferred environment:
+
+### Option 1: Google Colab (Recommended)
+
+Run the notebook directly in your browser with zero setup:
+
+[Open in Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Comparison.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+### Option 2: Local Jupyter Notebook
+
+Download and run locally in your own environment:
+
+[Download from GitHub →](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLM_Comparison.ipynb)
+
+## Workflow Overview
+
+The notebook walks through this experiment workflow:
+
+```mermaid
+graph LR
+    A[1. Connect to Fiddler] --> B[2. Create Project]
+    B --> C[3. Load Model Outputs]
+    C --> D[4. Configure Enrichments]
+    D --> E[5. Define Schema]
+    E --> F[6. Publish Datasets]
+    F --> G[7. Build Dashboards]
+    G --> H[8. Compare & Decide]
+
+    style A fill:#1976d2,color:#fff
+    style C fill:#1976d2,color:#fff
+    style D fill:#388e3c,color:#fff
+    style F fill:#388e3c,color:#fff
+    style H fill:#f57c00,color:#fff
+```
+
+### Step-by-Step Breakdown
+
+1. **Connect to Fiddler** - Initialize the Python client with your credentials
+2. **Create Project** - Set up a project to organize your evaluation
+3. **Load Model Outputs** - Read sample datasets containing GPT-3.5 and Claude responses
+4. **Configure Enrichments** - Enable automated quality metrics:
+   * Text embeddings for semantic analysis
+   * Faithfulness scoring for hallucination detection
+   * Sentiment analysis for response tone
+   * PII detection for privacy compliance
+5. **Define Schema** - Specify input/output columns and metadata
+6. **Publish Datasets** - Upload both model outputs to pre-production environment
+7. **Build Dashboards** - Create metric cards for visual comparison
+8. **Compare & Decide** - Analyze results to choose the best model
+
+## Key Features Demonstrated
+
+### Fiddler Enrichments
+
+The notebook demonstrates several powerful Fiddler enrichments:
+
+**Text Embeddings:**
+
+* Generate semantic representations of prompts, responses, and source documents
+* Track outliers and drift in your experiment datasets
+* Enable similarity-based analysis
+
+**Faithfulness Assessment:**
+
+* Automatically detect hallucinations in RAG-based responses
+* Compare how well each model grounds responses in source documents
+* Critical for applications requiring factual accuracy
+
+**Sentiment & Safety:**
+
+* Analyze response tone and sentiment
+* Detect PII leakage across models
+* Assess safety and compliance risks
+
+### Pre-Production Comparison
+
+**Side-by-Side Analysis:**
+
+* Upload multiple model outputs to the same project
+* Apply identical enrichments for fair comparison
+* Visualize differences with metric cards
+
+**Data-Driven Decisions:**
+
+* Quantitative metrics replace subjective judgment
+* Compare quality, safety, and consistency across models
+* Balance performance with cost considerations
+
+## Use Cases
+
+This comparison approach works for:
+
+* **Model selection** - Choose between GPT-4, Claude, Llama, or other LLMs
+* **Prompt optimization** - Compare different prompt strategies on the same model
+* **Version testing** - Evaluate new model versions before upgrading
+* **Cost optimization** - Find the most cost-effective model meeting quality standards
+* **RAG system tuning** - Compare retrieval strategies and grounding effectiveness
+
+## What Happens Next?
+
+After completing this quick start:
+
+1. **Analyze your results** - Use metric cards to understand performance differences
+2. **Iterate on your evaluation** - Add more test cases or different models
+3. **Scale to production** - Deploy the winning model with confidence
+4. **Continue monitoring** - Use Fiddler's production monitoring for ongoing quality tracking
+
+## Related Resources
+
+**Expand Your Experiment Capabilities:**
+
+* [Evals SDK Quick Start](/evaluate-and-test/evals-sdk-quick-start.md) - Build custom experiment workflows
+* [Prompt Specs Quick Start](/evaluate-and-test/prompt-specs-quick-start.md) - Create custom LLM-as-a-Judge evaluators
+* [Experiments Overview](/getting-started/experiments.md) - Comprehensive guide to Fiddler Experiments
+
+**Production Deployment:**
+
+* [Agentic Monitoring](/getting-started/agentic-monitoring.md) - Monitor LLM applications in production
+* [LLM Monitoring](/getting-started/llm-monitoring.md) - Track production LLM performance
+* [Guardrails](/getting-started/guardrails.md) - Add real-time safety validation
+
+
+---

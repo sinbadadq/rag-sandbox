@@ -1,0 +1,327 @@
+# Agentic AI Overview
+
+Monitor and evaluate your agentic AI applications with Fiddler's native SDKs and framework integrations. From auto-instrumented LangGraph agents to Strands agent applications, Fiddler provides comprehensive observability for the next generation of AI systems.
+
+## Why Agentic Observability Matters
+
+Agentic AI systems—autonomous agents that reason, plan, and coordinate—introduce exponential complexity compared to traditional AI applications:
+
+* **26x more monitoring resources** required than single-agent systems
+* **Non-deterministic behavior** makes traditional debugging approaches inadequate
+* **Multi-step workflows** require hierarchical tracing across agents, tools, and LLM calls
+* **Cascading failures** demand root cause analysis across distributed agent architectures
+
+Fiddler's agentic observability provides visibility into every stage of the agent lifecycle: Thought → Action → Execution → Reflection → Alignment.
+
+## Native SDKs
+
+Fiddler-built and maintained instrumentation libraries for production-grade agentic observability.
+
+### Fiddler OTel SDK
+
+Core OpenTelemetry instrumentation library for framework-agnostic GenAI observability. The foundation package that all other Fiddler integrations build on.
+
+**Best for:** Custom Python agents with no framework dependency, or any application where you want lightweight, decorator-based instrumentation
+
+**Key Features:**
+
+* `@trace` decorator for zero-boilerplate function instrumentation (sync and async)
+* Typed span wrappers: `FiddlerGeneration`, `FiddlerTool`, `FiddlerChain`
+* Context isolation — does not interfere with any existing OpenTelemetry setup
+* `set_conversation_id()` for multi-turn conversation tracking
+* JSONL local capture and console tracing for development
+
+[**Get Started with Fiddler OTel SDK →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md)
+
+### Fiddler LangChain SDK
+
+Auto-instrumentation for LangChain V1 agents built with `langchain.agents.create_agent`.
+
+**Best for:** LangChain V1 agents that use the `create_agent` API
+
+**Key Features:**
+
+* One call to `FiddlerLangChainInstrumentor.instrument()` auto-traces all agents
+* Clean, flat trace hierarchy: agent → LLM calls → tool calls, no noisy Chain wrappers
+* Full async support via `agent.ainvoke()`
+* Single-trace multi-agent nesting — sub-agents nest under delegation tool spans automatically
+* Retriever-as-tool support
+
+[**Get Started with Fiddler LangChain SDK →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md)
+
+### Fiddler LangGraph SDK
+
+Auto-instrument LangGraph applications with OpenTelemetry-based tracing.
+
+**Best for:** LangChain LangGraph agent applications with complex multi-agent workflows
+
+**Key Features:**
+
+* Automatic span creation for agent steps, tool calls, and LLM requests
+* Hierarchical tracing across Application → Session → Agent → Span levels
+* Zero-configuration setup with one environment variable
+* Full context preservation for debugging non-deterministic behavior
+
+[**Get Started with LangGraph SDK →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md)
+
+### Strands Agents SDK
+
+Native integration for Strands Agents applications.
+
+**Best for:** Teams building agents with the Strands framework
+
+**Key Features:**
+
+* Purpose-built for Strands agent architecture
+* Seamless integration with Strands agent runtime
+* Multi-agent coordination tracking
+* Platform-agnostic deployment (works on AWS, custom infrastructure, etc.)
+
+[**Get Started with Strands Agents SDK →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md)
+
+### LiteLLM Integration
+
+Zero-configuration integration for teams using LiteLLM — whether calling LLM providers directly via the SDK or routing traffic through a LiteLLM proxy gateway.
+
+**Best for:** Teams using LiteLLM SDK or proxy who want unified cost tracking and latency monitoring across all providers — with no Fiddler-specific package required
+
+**Key Features:**
+
+* **LiteLLM SDK**: Enable LiteLLM's built-in OTEL integration with one line (`litellm.callbacks = ["otel"]`) and point it at Fiddler — no extra packages needed
+* **LiteLLM Proxy**: Automatic detection of proxy OTel traces — no SDK or code changes needed in calling applications
+* Captures prompts, responses, token usage, cost metadata, and latency
+* Works with any LLM provider supported by LiteLLM (OpenAI, Anthropic, Bedrock, and more)
+
+[**Get Started with LiteLLM Integration →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md)
+
+### Fiddler Evals SDK
+
+LLM experiments framework with pre-built evaluators and custom eval support.
+
+**Best for:** Offline evaluation of LLM applications and agentic workflows
+
+**Key Features:**
+
+* 14+ pre-built evaluators (faithfulness, toxicity, PII, coherence, etc.)
+* Custom evaluator framework for domain-specific metrics
+* Batch evaluation for datasets
+* Integration with the Fiddler platform for tracking and comparison
+
+[**Get Started with Evals SDK →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md)
+
+## Platform SDKs
+
+Core API access for building custom integrations and monitoring workflows.
+
+### Python Client SDK
+
+Comprehensive Python client for all Fiddler platform capabilities.
+
+**Best for:** Custom integrations, ML model monitoring, programmatic access to Fiddler features
+
+**Key Features:**
+
+* Full API coverage for ML and LLM monitoring
+* Dataset uploads, model publishing, event ingestion
+* Alert configuration, dashboard management
+* Custom metrics and enrichments
+
+[**Python Client Documentation →**](/api/fiddler-python-client-sdk/python-client.md)
+
+### REST API
+
+Complete HTTP API for language-agnostic platform access.
+
+**Best for:** Non-Python environments, webhook integrations, custom tooling
+
+[**REST API Reference →**](/api/rest-api/rest-api.md)
+
+## Advanced Integrations
+
+### S3 Trace Ingestion
+
+Ingest pre-generated OTLP trace files from Amazon S3 into Fiddler without modifying your application. The S3 connector automatically discovers, parses, and forwards trace files to the Fiddler platform.
+
+**Key Features:**
+
+* Automatic file discovery — no manual trigger required
+* Supports both base64 and hex-encoded `traceId`/`spanId` fields
+* IAM role-based authentication (cross-account supported)
+* Per-file retry logic with status tracking via API
+* Compatible with any OTLP JSON producer
+
+[**Get Started with S3 Trace Ingestion →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/s3-trace-ingestion.md)
+
+### OpenTelemetry Integration
+
+Direct OTLP integration for custom agent frameworks and multi-framework environments.
+
+**Best for:** Multi-framework environments, custom agentic frameworks, advanced users requiring full instrumentation control
+
+**Key Features:**
+
+* Vendor-neutral telemetry using OpenTelemetry standards
+* Manual span creation for complete control over instrumentation
+* Multi-framework support for custom and emerging agent frameworks
+* Compatible with existing OpenTelemetry infrastructure
+* Attribute mapping to Fiddler semantic conventions
+
+{% hint style="info" %}
+**When to Use OpenTelemetry vs SDKs**
+
+Use OpenTelemetry integration for advanced use cases requiring manual control. For LangGraph and Strands applications, we recommend using the dedicated SDKs for easier setup and automatic instrumentation.
+{% endhint %}
+
+[**Get Started with OpenTelemetry →**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md)
+
+## Framework Support
+
+While Fiddler provides native SDKs for LangGraph and Strands, agentic applications can be monitored regardless of framework:
+
+### Supported Frameworks & Tools
+
+**AI Agent Frameworks:**
+
+* **LangGraph** - Native SDK with auto-instrumentation ✓
+* **LangChain V1** (`create_agent`) - Native SDK with auto-instrumentation ✓
+* **Custom Python agents** - [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) with `@trace` decorator ✓
+* **Other agentic frameworks** - [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) is the recommended path for any custom or unsupported framework
+
+**LLM Provider SDKs:**
+
+* **OpenAI SDK** - Track via Python Client or custom instrumentation
+* **Anthropic SDK** - Monitor Claude API calls via Python Client
+* **Strands Agents** - Native Strands Agents SDK ✓
+* **LiteLLM SDK / Proxy** - [Zero-configuration OTel integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md) ✓
+
+**Observability Standards:**
+
+* **OpenTelemetry** - [Full OTLP support](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) for custom instrumentation
+* **Custom Tracing** - Python Client API for framework-agnostic monitoring
+
+## Integration Selector
+
+Not sure which SDK to use? Here's a quick decision guide:
+
+| Your Use Case                       | Recommended Integration                                                                                              | Why                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| LangGraph agent application         | [**LangGraph SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md)                         | Auto-instrumentation, zero config, hierarchical tracing      |
+| LangChain V1 (`create_agent`)       | [**LangChain SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md)                         | One `instrument()` call, flat clean traces, full async       |
+| Custom Python agent, no framework   | [**Fiddler OTel SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md)                   | `@trace` decorator, typed span wrappers, context isolation   |
+| Strands Agents                      | **Strands Agents SDK**                                                                                               | Purpose-built for Strands framework                          |
+| LLM experiment workflows            | **Evals SDK**                                                                                                        | Pre-built evaluators, batch processing, tracking             |
+| LiteLLM SDK (direct calls)          | [**LiteLLM Integration**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md)             | One-line setup, no extra packages, native OTel support       |
+| LiteLLM proxy / gateway             | [**LiteLLM Integration**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md)             | Zero-code, auto-detects proxy traces, cost attribution       |
+| Multi-framework / raw OTel          | [**OpenTelemetry Integration**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) | Standards-based manual tracing, multi-framework environments |
+| ECS Fargate / air-gapped / S3 batch | [**S3 Trace Ingestion**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/s3-trace-ingestion.md)               | No direct connection needed, file-based async ingestion      |
+| Traditional ML monitoring           | **Python Client**                                                                                                    | ML-specific features, drift detection, explainability        |
+
+## Getting Started
+
+### Quick Start Paths
+
+1. **Custom Python Agents (Fiddler OTel SDK)**
+
+   ```bash
+   pip install fiddler-otel
+   ```
+
+   ```python
+   from fiddler_otel import FiddlerClient, trace
+
+   client = FiddlerClient(api_key="...", application_id="...", url="...")
+
+   @trace(as_type="generation")
+   def call_llm(prompt: str) -> str:
+       ...
+   ```
+
+   [Full Fiddler OTel SDK Guide →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md)
+2. **LangChain V1 Applications**
+
+   ```bash
+   pip install fiddler-langchain
+   ```
+
+   ```python
+   from fiddler_otel import FiddlerClient
+   from fiddler_langchain import FiddlerLangChainInstrumentor
+   import langchain.agents
+
+   client = FiddlerClient(api_key="...", application_id="...", url="...")
+   FiddlerLangChainInstrumentor(client=client).instrument()
+   # All create_agent() calls are now traced automatically
+   ```
+
+   [Full LangChain SDK Guide →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md)
+3. **LangGraph Applications**
+
+   ```bash
+   pip install fiddler-langgraph
+   ```
+
+   ```python
+   from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+   client = FiddlerClient(api_key="...", application_id="...", url="...")
+   LangGraphInstrumentor(client).instrument()
+   ```
+
+   [Full LangGraph Quick Start →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md)
+4. **Strands Agents**
+
+   ```python
+   pip install fiddler-strands
+   # Configure for your Strands Agent
+   ```
+
+   [Full Strands Agents SDK Quick Start →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/strands-sdk.md)
+5. **LLM Experiments**
+
+   ```python
+   pip install fiddler-evals
+   # Run experiments on your dataset
+   ```
+
+   [Full Evals Quick Start →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md)
+6. **LiteLLM SDK**
+
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+   export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <token>,fiddler-application-id=<app-uuid>"
+   export OTEL_RESOURCE_ATTRIBUTES="application.id=<app-uuid>"
+   ```
+
+   ```python
+   import litellm
+   litellm.callbacks = ["otel"]  # Traces flow to Fiddler automatically
+   ```
+
+   [Full LiteLLM SDK Quick Start →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md#litellm-sdk-integration)
+7. **LiteLLM Proxy**
+
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-fiddler-instance.com"
+   export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <token>,fiddler-application-id=<app-uuid>"
+   export OTEL_RESOURCE_ATTRIBUTES="application.id=<app-uuid>"
+   litellm --config config.yaml  # Traces flow to Fiddler automatically
+   ```
+
+   [Full LiteLLM Proxy Quick Start →](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/litellm-integration.md#litellm-proxy-integration)
+8. **Raw OpenTelemetry (Advanced)**
+
+   ```bash
+   pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+   # Configure OTLP endpoint and instrument your agent
+   ```
+
+   [Full OpenTelemetry Quick Start →](/developers/agentic-ai-monitoring/opentelemetry-quick-start.md)
+
+## What's Next?
+
+* [**Agentic Observability Concepts**](/reference/glossary/agentic-observability.md) - Understand the agent lifecycle and monitoring approach
+* [**Agentic Observability Quick Start**](/getting-started/agentic-monitoring.md) - Complete setup guide
+* [**Trust Service Overview**](/reference/glossary/trust-service.md) - Learn about the evaluation platform powering Fiddler
+
+
+---

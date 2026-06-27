@@ -1,0 +1,57 @@
+# DatasetCompact
+
+Lightweight dataset representation for listing and basic operations.
+
+A minimal dataset object containing only essential identifiers. Used by various operations to efficiently reference datasets without fetching full dataset details and metadata.
+
+This class provides a memory-efficient way to work with dataset references when you don't need the full dataset functionality but want to access basic information or fetch the complete dataset when needed.
+
+## Example
+
+```python
+# From dataset references in other entities
+baseline = Baseline.get(id_="baseline-uuid")
+dataset_ref = baseline.dataset  # Returns DatasetCompact
+
+# Access basic info
+print(f"Dataset: {dataset_ref.name}")
+print(f"ID: {dataset_ref.id}")
+
+# Fetch full details when needed
+full_dataset = dataset_ref.fetch()
+print(f"Rows: {full_dataset.row_count}")
+print(f"Model: {full_dataset.model_id}")
+```
+
+{% hint style="info" %}
+DatasetCompact objects are typically returned by other entities that reference datasets. Use .fetch() to get the complete Dataset instance when you need full functionality like row counts or model information.
+{% endhint %}
+
+## fetch()
+
+Fetch the complete Dataset instance.
+
+Retrieves the full Dataset object with all metadata, row counts, and model associations from the Fiddler platform using this compact dataset's ID.
+
+## Returns
+
+Complete dataset instance with all details and capabilities.
+
+**Return type:** [`Dataset`](/api/fiddler-python-client-sdk/entities/dataset.md)
+
+## Example
+
+```python
+# From dataset reference
+compact = baseline.dataset
+
+# Get full dataset details
+full_dataset = compact.fetch()
+
+# Now can access full functionality
+print(f"Dataset has {full_dataset.row_count} rows")
+print(f"Belongs to model: {full_dataset.model_id}")
+```
+
+
+---

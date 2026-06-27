@@ -1,0 +1,521 @@
+# Strands Agent SDK Quick Start
+
+## What You'll Learn
+
+In this guide, you'll learn how to:
+
+* Set up a Fiddler application for monitoring Strands agents
+* Install and configure the Strands Agents SDK
+* Instrument Strands agents with automatic telemetry
+* Use helper functions to add custom metadata
+* Verify monitoring is working correctly
+* Troubleshoot common integration issues
+
+**Time to complete**: \~15 minutes
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+* **Fiddler Account**: An active account with [access](/reference/access-control/role-based-access.md) to create applications
+* **Python 3.10+**: Verify your version:
+
+  ```bash
+  python --version
+  ```
+* **Strands Agents SDK**: Install the SDK (includes Strands agents and OpenTelemetry):
+
+  ```bash
+  # Using uv (recommended)
+  uv add fiddler-strands
+
+  # Or using pip
+  pip install fiddler-strands
+  ```
+* **OpenAI API Key**: For running the example agent:
+
+  ```bash
+  export OPENAI_API_KEY=<your-openai-key>
+  ```
+
+{% hint style="info" %}
+If you prefer using a notebook, download it directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Strands_Agent_Integration.ipynb) or open it in [Google Colab](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Strands_Agent_Integration.ipynb) to get started.
+{% endhint %}
+
+{% stepper %}
+{% step %}
+**Create a Fiddler Application**
+
+<figure><img src="/files/4hyv8EIyXW6vdcIgu3ol" alt="Fiddler GenAI Applications page"><figcaption></figcaption></figure>
+
+First, create a dedicated application in Fiddler to receive your agent traces.
+
+1. Sign in to your Fiddler instance
+2. Navigate to **GenAI Applications** in the left sidebar
+3. Click **Add Application**
+4. Enter the application details:
+   * **Name**: `strands-agent-monitoring`
+   * **Project**: Select a project from the dropdown or press *Enter* to create a new one
+5. Click **Create** and copy the **Application UUID** (you'll need this for configuration)
+   {% endstep %}
+
+{% step %}
+**Configure Environment Variables**
+
+Set up the required environment variables for Fiddler integration. Replace the placeholder values with your actual credentials.
+
+Instructions for generating or retrieving your personal access token can be found in the [Access guide](/reference/settings.md#credentials).
+
+```bash
+# Fiddler URL (adjust domain for your instance)
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://demo.fiddler.ai"
+
+# Your application UUID from Step 1
+export OTEL_RESOURCE_ATTRIBUTES=application.id=<APPLICATION_UUID>
+
+# Authentication headers (get access token from Fiddler settings)
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <BEARER_TOKEN>,fiddler-application-id=<APPLICATION_UUID>"
+
+# Your OpenAI API key
+export OPENAI_API_KEY=<OPENAI_KEY>
+```
+
+{% hint style="info" %}
+**Tip**: Save these environment variables in a `.env` file for easy reuse:
+{% endhint %}
+
+```bash
+# Save to .env file
+cat > .env << 'EOF'
+OTEL_EXPORTER_OTLP_ENDPOINT=http://demo.fiddler.ai
+OTEL_RESOURCE_ATTRIBUTES=application.id=<APPLICATION_UUID>
+OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer <BEARER_TOKEN>,fiddler-application-id=<APPLICATION_UUID>
+OPENAI_API_KEY=<OPENAI_KEY>
+EOF
+
+# Load in your shell
+source .env
+```
+
+{% endstep %}
+
+{% step %}
+**Set Up Strands Telemetry and Instrumentation**
+
+Now configure the Strands telemetry system with automatic Fiddler instrumentation using the SDK.
+
+Create `agent_monitoring.py`:
+
+```python
+import os
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+# Initialize Strands telemetry
+strands_telemetry = StrandsTelemetry()
+
+# Setup exporters
+strands_telemetry.setup_console_exporter()  # For local debugging
+strands_telemetry.setup_otlp_exporter()     # For Fiddler export
+
+# Enable automatic instrumentation with Fiddler integration
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+```
+
+**Configuration Breakdown**:
+
+* **Console Exporter**: Prints traces to terminal for debugging
+* **OTLP Exporter**: Sends traces to Fiddler via OpenTelemetry Protocol
+* **StrandsAgentInstrumentor**: Automatically instruments agents with proper attribute propagation and Fiddler integration
+
+**What the SDK Does Automatically**:
+
+* Injects logging hooks into Strands agents
+* Propagates agent attributes (name, ID, system prompt) to all child spans
+* Processes spans with Fiddler-specific enhancements
+* Handles all OpenTelemetry complexity behind the scenes
+  {% endstep %}
+
+{% step %}
+**Create and Instrument Your Agent**
+
+With telemetry configured, create a Strands agent that's fully instrumented for Fiddler monitoring.
+
+Add to `agent_monitoring.py`:
+
+```python
+from strands import Agent, tool
+from strands.models.openai import OpenAIModel
+
+# Initialize OpenAI model
+model = OpenAIModel(
+    client_args={"api_key": os.getenv("OPENAI_API_KEY")},
+    model_id="gpt-4o-mini"
+)
+
+# Define example tools
+@tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city.
+
+    Args:
+        city: The name of the city
+
+    Returns:
+        Weather information as a string
+    """
+    # In production, call a real weather API
+    return f"The weather in {city} is sunny with a temperature of 72°F"
+
+@tool
+def search_knowledge_base(query: str) -> str:
+    """Search the knowledge base for information.
+
+    Args:
+        query: The search query
+
+    Returns:
+        Relevant information from the knowledge base
+    """
+    # In production, implement actual search logic
+    return f"Search results for '{query}': [relevant documentation snippets]"
+
+# Create the agent with telemetry enabled
+agent = Agent(
+    model=model,
+    system_prompt="""You are a helpful assistant that can check weather
+    and search a knowledge base. Always be concise and accurate in your responses.""",
+    tools=[get_weather, search_knowledge_base]
+)
+
+# Use the agent
+if __name__ == "__main__":
+    # Example 1: Simple query
+    response = agent("What's the weather like in San Francisco?")
+    print(f"Response: {response}")
+
+    # Example 2: Knowledge base query
+    response = agent("Search for information about model monitoring")
+    print(f"Response: {response}")
+```
+
+Run your instrumented agent:
+
+```bash
+python agent_monitoring.py
+```
+
+{% endstep %}
+
+{% step %}
+**Verify Monitoring in Fiddler**
+
+After running your agent, verify that traces are appearing in Fiddler.
+
+1. Navigate to your application in Fiddler
+2. Click on the **Traces** tab
+3. You should see traces from your agent executions
+4. Click on a trace to view detailed span information
+5. Verify that agent attributes are present on spans (these are set automatically by the SDK):
+   * `gen_ai.agent.name` — optional, but if present should appear on all spans in the trace
+   * `gen_ai.agent.id` — optional, but if present should appear on all spans in the trace
+   * `system_prompt`
+
+**Success Indicators**:
+
+* ✅ Traces appear within 30 seconds of agent execution
+* ✅ Parent and child spans are properly linked
+* ✅ Agent attributes (`gen_ai.agent.name`, `gen_ai.agent.id`) appear consistently across all spans
+* ✅ Tool calls are captured as separate spans
+* ✅ System prompts are visible in trace metadata
+  {% endstep %}
+  {% endstepper %}
+
+## Troubleshooting
+
+### Traces Not Appearing in Fiddler
+
+**Issue**: No traces show up after running your agent.
+
+**Solutions**:
+
+1. **Verify environment variables**:
+
+   ```bash
+   echo $OTEL_EXPORTER_OTLP_ENDPOINT
+   echo $OTEL_RESOURCE_ATTRIBUTES
+   echo $OTEL_EXPORTER_OTLP_HEADERS
+   ```
+2. **Check network connectivity**:
+
+   ```bash
+   curl -I $OTEL_EXPORTER_OTLP_ENDPOINT
+   ```
+3. **Validate authentication**:
+   * Ensure your access token is valid and not expired
+   * Verify Application UUID matches your Fiddler application
+4. **Review console exporter output**:
+   * Check the terminal for trace output
+   * Look for error messages in console logs
+
+### Missing Agent Attributes on Child Spans
+
+**Issue**: Tool calls and sub-spans don't have agent context.
+
+**Solutions**:
+
+1. **Verify SDK instrumentation is enabled**:
+
+   ```python
+   # Should be in your code
+   from fiddler_strandsagents import StrandsAgentInstrumentor
+
+   StrandsAgentInstrumentor(strands_telemetry).instrument()
+   ```
+2. **Check instrumentation status**:
+
+   ```python
+   from fiddler_strandsagents import StrandsAgentInstrumentor
+
+   instrumentor = StrandsAgentInstrumentor(strands_telemetry)
+   print(f"Instrumented: {instrumentor.is_instrumented_by_opentelemetry}")
+   ```
+3. **Add custom attributes using helper functions**:
+
+   ```python
+   from fiddler_strandsagents import set_span_attributes
+
+   # Add custom attributes to ensure they appear on spans
+   set_span_attributes(agent, custom_attr="value")
+   set_span_attributes(model, environment="production")
+   ```
+
+### OTLP Export Errors
+
+**Issue**: Error messages about OTLP export failures.
+
+**Solutions**:
+
+1. **Check endpoint format**:
+
+   ```bash
+   # Should be https://, not include /v1/traces
+   export OTEL_EXPORTER_OTLP_ENDPOINT="http://demo.fiddler.ai"
+   ```
+2. **Verify headers format**:
+
+   ```bash
+   # Headers should be comma-separated key=value pairs
+   export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer TOKEN,fiddler-application-id=UUID"
+   ```
+3. **Test with a minimal example**:
+
+   ```python
+   from opentelemetry import trace
+   from opentelemetry.sdk.trace import TracerProvider
+   from opentelemetry.sdk.trace.export import BatchSpanProcessor
+   from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+   provider = TracerProvider()
+   processor = BatchSpanProcessor(OTLPSpanExporter())
+   provider.add_span_processor(processor)
+   trace.set_tracer_provider(provider)
+
+   tracer = trace.get_tracer(__name__)
+   with tracer.start_as_current_span("test-span"):
+       print("Test trace sent")
+   ```
+
+### Performance Issues
+
+**Issue**: Agent response times are slower after adding monitoring.
+
+**Solutions**:
+
+1. **Use batch span processor** (already default in StrandsTelemetry):
+
+   ```python
+   # Batching reduces overhead
+   from opentelemetry.sdk.trace.export import BatchSpanProcessor
+   ```
+2. **Disable console exporter in production**:
+
+   ```python
+   # Only use OTLP exporter
+   # strands_telemetry.setup_console_exporter()  # Comment out
+   strands_telemetry.setup_otlp_exporter()
+   ```
+3. **Adjust sampling rate** if needed:
+
+   ```python
+   from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+
+   # Sample 10% of traces
+   sampler = TraceIdRatioBased(0.1)
+   ```
+
+## Configuration Options
+
+### Basic Configuration
+
+For most use cases, the basic configuration is sufficient:
+
+```python
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+
+strands_telemetry = StrandsTelemetry()
+strands_telemetry.setup_otlp_exporter()
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+```
+
+### Adding Custom Metadata with Helper Functions
+
+The SDK provides helper functions to enrich your traces with custom business context:
+
+```python
+from fiddler_strandsagents import (
+    set_conversation_id,
+    set_session_attributes,
+    set_span_attributes,
+    set_llm_context
+)
+
+# Set conversation ID for tracking related interactions
+set_conversation_id(agent, 'session_1234567890')
+
+# Add session-level attributes for business context
+set_session_attributes(agent,
+    role='customer_support',
+    cost_center='travel_desk',
+    region='us-west'
+)
+
+# Add attributes to specific components (models or tools)
+set_span_attributes(model, model_id='gpt-4o-mini', temperature=0.7)
+set_span_attributes(search_tool, department='search', version='2.0')
+
+# Set LLM context for additional background information
+set_llm_context(model, 'Available hotels: Hilton, Marriott, Hyatt...')
+```
+
+**Helper Functions Available**:
+
+* `set_conversation_id(agent, conversation_id)` - Track multi-turn conversations
+* `set_session_attributes(agent, **kwargs)` - Add session-level business context
+* `set_span_attributes(obj, **kwargs)` - Add attributes to models, tools, or agents
+* `set_llm_context(model, context)` - Add background information for LLM interactions
+* `get_conversation_id(agent)` - Retrieve conversation ID
+* `get_session_attributes(agent)` - Retrieve session attributes
+* `get_span_attributes(obj)` - Retrieve span attributes
+* `get_llm_context(model)` - Retrieve LLM context
+
+### Advanced Configuration
+
+For production deployments with custom resource metadata and batch settings:
+
+```python
+import os
+from strands.telemetry import StrandsTelemetry
+from fiddler_strandsagents import StrandsAgentInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+
+# Create custom resource with additional metadata
+resource = Resource.create({
+    "service.name": "strands-agent-service",
+    "service.version": "1.0.0",
+    "deployment.environment": os.getenv("ENVIRONMENT", "production"),
+    "application.id": os.getenv("FIDDLER_APP_ID"),
+})
+
+# Initialize tracer provider with custom resource
+provider = TracerProvider(resource=resource)
+
+# Configure OTLP exporter with custom settings
+otlp_exporter = OTLPSpanExporter(
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+    headers={
+        "authorization": f"Bearer {os.getenv('FIDDLER_BEARER_TOKEN')}",
+        "fiddler-application-id": os.getenv("FIDDLER_APP_ID"),
+    },
+    timeout=10,  # Custom timeout in seconds
+)
+
+# Add batch processor with custom settings
+batch_processor = BatchSpanProcessor(
+    otlp_exporter,
+    max_queue_size=2048,        # Max spans in queue
+    max_export_batch_size=512,  # Spans per export batch
+    schedule_delay_millis=5000, # Export every 5 seconds
+)
+provider.add_span_processor(batch_processor)
+
+# Initialize Strands telemetry with custom provider
+strands_telemetry = StrandsTelemetry(tracer_provider=provider)
+
+# Enable Fiddler instrumentation
+StrandsAgentInstrumentor(strands_telemetry).instrument()
+```
+
+**Advanced Options Explained**:
+
+* **Custom Resource**: Add service metadata for better organization
+* **Batch Settings**: Tune for your throughput requirements
+* **Timeout Configuration**: Adjust for network conditions
+* **Environment Tagging**: Separate dev/staging/prod traces
+* **SDK Integration**: Works seamlessly with custom OpenTelemetry configurations
+
+### Multi-Agent Configuration
+
+For systems with multiple agents:
+
+```python
+from strands import Agent
+from strands.models.openai import OpenAIModel
+
+# Create multiple agents with distinct identities
+research_agent = Agent(
+    model=OpenAIModel(model_id="gpt-4o"),
+    system_prompt="You are a research specialist...",
+    tools=[search_tool, analyze_tool],
+    agent_id="research-agent",  # Unique identifier
+    agent_name="Research Specialist"
+)
+
+writing_agent = Agent(
+    model=OpenAIModel(model_id="gpt-4o"),
+    system_prompt="You are a writing specialist...",
+    tools=[write_tool, edit_tool],
+    agent_id="writing-agent",
+    agent_name="Writing Specialist"
+)
+
+# Agents will appear separately in Fiddler traces
+```
+
+**Multi-Agent Benefits**:
+
+* ✅ Distinct agent identification in traces
+* ✅ Separate performance metrics per agent
+* ✅ Clear visualization of agent interactions
+* ✅ Easier debugging of complex workflows
+
+## Next Steps
+
+Now that you have Strands agents integrated with Fiddler, explore these advanced capabilities:
+
+### Advanced Observability and Evaluation
+
+* [Experiments](/getting-started/experiments.md): Score and enrich your agent telemetry
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

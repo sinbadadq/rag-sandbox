@@ -1,0 +1,273 @@
+# Google SSO
+
+Learn how to integrate Fiddler with Google for seamless Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol.
+
+## Overview
+
+This integration allows your users to access Fiddler using their existing Google accounts. Users are automatically provisioned in Fiddler on their first successful login, eliminating the need for manual user invitations.
+
+**Note**: Google OIDC integration does not support group synchronization. Users will be provisioned individually without automated group-based access control.
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+* **Google Cloud Console Access**: Permissions to create and configure OAuth 2.0 applications
+* **Fiddler Administrator Access**: "Org Owner" or "Org User Manager" role in Fiddler's authentication management console
+* **Deployment Information**: Your Fiddler deployment base URL
+* **Google Cloud Project**: An active Google Cloud project or the ability to create one
+
+## Step 1: Configure Google Cloud OAuth 2.0 Client
+
+### Access Google Cloud Console
+
+1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Select an existing project or create a new one
+3. Go to **APIs & Services > Credentials**
+
+### Enable Required APIs
+
+If not already enabled, you may need to enable:
+
+1. **Google+ API** (for profile information)
+2. **OAuth consent screen configuration**
+
+### Configure OAuth Consent Screen
+
+1. Navigate to **APIs & Services > OAuth consent screen**
+2. Choose **Internal** (for Google Workspace organizations) or **External** (for broader access)
+3. Fill in the required information:
+   * **Application name**: Enter a descriptive name (e.g., "Fiddler SSO")
+   * **User support email**: Your support email address
+   * **Application logo**: Optional Fiddler or organization logo
+   * **Authorized domains**: Add your Fiddler deployment domain
+   * **Developer contact email**: Your technical contact email
+4. Add required scopes:
+   * `openid`
+   * `email`
+   * `profile`
+5. Save the configuration
+
+### Create OAuth 2.0 Client ID
+
+1. Navigate to **APIs & Services > Credentials**
+2. Click **Create Credentials > OAuth 2.0 Client ID**
+
+![Creating OAuth Client](/files/6KTMG1ewuzkSCgvqbSQJ)
+
+3. Configure the client:
+   * **Application type**: Select **Web application**
+   * **Name**: Enter a descriptive name (e.g., "Fiddler SSO Client")
+   * **Authorized redirect URIs**: Add `{base_url}/api/sso/google/callback` (replace `{base_url}` with your Fiddler deployment URL)
+
+![Setting up OAuth Client](/files/uyxrElZ31TszszIPMvq1)
+
+4. Click **Create**
+
+### Collect Client Credentials
+
+After creation, copy the following information:
+
+* **Client ID**: The OAuth 2.0 client ID
+* **Client Secret**: The OAuth 2.0 client secret
+
+![Copy OAuth Client ID and Client secret](/files/vwjnb4V4yOCKTCYgSa4q)
+
+**Important**: Store these credentials securely—you'll need them for the Fiddler configuration.
+
+## Step 2: Configure Fiddler Authentication Console
+
+### Access Authentication Management Console
+
+1. Log into the Fiddler authentication management console
+2. Select your customer organization from the dropdown
+3. Navigate to **Settings > Login and Access > Identity Providers**
+4. Click **Add Provider**
+
+### Configure Google Integration
+
+**Provider Configuration**:
+
+* **Provider name**: Enter a descriptive name (e.g., "Google OIDC")
+* **Provider type**: Select Google or OIDC provider type
+* **Client ID**: Enter the Client ID from your Google OAuth application
+* **Client Secret**: Enter the Client secret from your Google OAuth application
+* **Metadata URL**: `https://accounts.google.com/.well-known/openid-configuration` (Google's standard OIDC discovery document)
+
+**User Provisioning Settings**:
+
+* ✅ Enable **"Automatic creation"** - Creates new users on first successful login
+* ✅ Enable **"Automatic update"** - Updates user information from Google
+* ✅ Select **"Check for existing username"** - Links identities to existing accounts when appropriate
+
+### Configure Attribute Mapping
+
+Ensure proper mapping of user attributes from Google to Fiddler:
+
+**Required Mappings**:
+
+* **First Name**: `given_name`
+* **Last Name**: `family_name`
+* **Email**: `email`
+
+**Note**: Google does not provide group information through standard OIDC claims, so group-based attribute mapping is not available.
+
+### Configure Scopes
+
+In the identity provider configuration, ensure the scope list includes:
+
+* `openid` (required for OIDC)
+* `profile` (for user profile information)
+* `email` (for email address)
+
+## Step 3: Test and Validate Integration
+
+### Test Authentication Flow
+
+1. Save your SSO configuration in the authentication management console
+2. Navigate to your Fiddler login page
+3. Click **"Sign in with SSO"**
+4. You should be redirected to Google for authentication
+5. After successful Google authentication, you should be redirected back to Fiddler
+
+### Verify User Provisioning
+
+1. Log in with a test Google account
+2. Verify the user account is automatically created in Fiddler
+3. Check that user information (name, email) is properly populated
+4. Confirm the user has appropriate default permissions
+
+## Advanced Configuration
+
+### Google Workspace Integration
+
+For Google Workspace organizations:
+
+**Domain Restrictions**:
+
+* Configure the OAuth consent screen to limit access to your organization's domain
+* Set up domain-wide delegation if needed for administrative access
+
+**User Management**:
+
+* Users will be provisioned individually based on their Google account information
+* Manual role assignment is required through Fiddler's interface
+
+### Multiple Domain Support
+
+If your organization uses multiple Google domains:
+
+* Configure authorized domains in the OAuth consent screen
+* Users from all authorized domains can authenticate
+* Consider using email domain validation in Fiddler for access control
+
+### Custom Branding
+
+Customize the OAuth consent screen:
+
+* Add your organization's logo and branding
+* Provide clear application descriptions
+* Include appropriate support and privacy policy links
+
+## Limitations
+
+### No Group Synchronization
+
+**Important Limitation**: Google OIDC integration does not support automatic group synchronization with Fiddler teams because:
+
+* Google does not include group membership in standard OIDC tokens
+* Google's group APIs require additional configuration and permissions
+* Group information varies significantly between Google Workspace and personal Google accounts
+
+**Workarounds**:
+
+* Manually assign users to Fiddler teams after first login
+* Use email domain-based access control policies
+* Implement role assignment workflows through Fiddler's interface
+
+### Account Type Considerations
+
+**Google Workspace vs. Personal Accounts**:
+
+* Google Workspace accounts provide more consistent organizational information
+* Personal Google accounts may have limited profile information
+* Consider restricting access to specific account types based on your security requirements
+
+## Troubleshooting
+
+### Common Issues
+
+**Authentication Failures**:
+
+* **Redirect URI Mismatch**: Verify the redirect URI in Google Cloud Console exactly matches `{base_url}/api/sso/google/callback`
+* **Client Secret Issues**: Ensure the client secret is correctly copied and hasn't been regenerated
+* **Scope Problems**: Verify all required scopes (`openid`, `profile`, `email`) are configured
+* **Consent Screen Issues**: Check that the OAuth consent screen is properly configured and published
+
+**User Provisioning Issues**:
+
+* **Users Not Auto-Created**: Verify "Automatic creation" is enabled in Fiddler configuration
+* **Missing User Information**: Check that Google account provides required profile information
+* **Email Conflicts**: Ensure no existing Fiddler users have the same email address
+
+**Domain and Project Issues**:
+
+* **Project Verification**: Some configurations may require Google Cloud project verification
+* **API Quotas**: Check for API usage limits in Google Cloud Console
+* **Domain Authorization**: Verify authorized domains are properly configured
+
+### Common Error Messages
+
+* **redirect\_uri\_mismatch**: The redirect URI in the request doesn't match any registered URIs
+* **invalid\_client**: Client authentication failed due to incorrect credentials
+* **access\_denied**: User denied access or administrator restrictions apply
+* **unauthorized\_client**: Client not authorized to use this authorization flow
+
+### Getting Help
+
+For additional assistance:
+
+* Check authentication logs in the Fiddler authentication management console
+* Review Google Cloud Console error logs and quotas
+* Verify OAuth consent screen configuration and approval status
+* Contact your Fiddler representative with specific error messages and Google client configuration details
+
+## Reference Documentation
+
+For detailed configuration guidance, refer to the official documentation:
+
+* [Google OIDC Configuration Guide](https://zitadel.com/docs/guides/integrate/identity-providers/google) - Comprehensive setup instructions
+* [General SSO Authentication Guide](/reference/access-control/sso-authentication-guide.md) - Overview of SSO concepts and troubleshooting
+* [Google OAuth 2.0 Documentation](https://support.google.com/cloud/answer/15549257) - Official Google setup guide
+* [Google OpenID Connect Documentation](https://developers.google.com/identity/openid-connect/openid-connect) - Technical details
+
+## Important Notes
+
+* **Automatic User Provisioning**: Users are automatically created on first successful login—no manual invitations required
+* **Data Storage**: Fiddler stores only the user's first name, last name, email address, and OIDC token from Google
+* **API Access**: For programmatic API access, users must create access tokens from the "Credentials" tab in Fiddler's Settings page
+* **Single Authentication Method**: Users can only authenticate via either SSO or email authentication, not both
+* **No Group Sync**: Google OIDC does not support automatic group synchronization with Fiddler teams
+* **Account Types**: Both Google Workspace and personal Google accounts are supported, but Workspace accounts provide more consistent organizational information
+
+## Next Steps
+
+After successful integration:
+
+1. **Train Users**: Provide guidance on accessing Fiddler through Google SSO
+2. **Manual Role Assignment**: Set up processes for assigning users to appropriate Fiddler teams and roles
+3. **Access Control**: Implement email domain-based or manual access control policies
+4. **Monitor Usage**: Review authentication logs and user access patterns
+5. **Consider Alternatives**: For organizations requiring group synchronization, consider alternative identity providers like Okta or Microsoft Entra ID
+
+## Alternative Solutions
+
+If group synchronization is critical for your organization, consider:
+
+* **Okta OIDC**: Full group synchronization support with flexible group mapping
+* **Microsoft Entra ID**: Comprehensive group sync and enterprise features
+* **Ping Identity**: SAML-based group synchronization capabilities
+* **Hybrid Approach**: Use Google for authentication and manual processes for group management
+
+
+---

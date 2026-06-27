@@ -1,0 +1,211 @@
+# Onboard Your GenAI Application
+
+This guide walks you through setting up your first **project** and **application**, connecting it to your code, and starting real-time monitoring of your GenAI interactions.
+
+***
+
+## Before You Begin
+
+Before onboarding your GenAI application, ensure you have:
+
+* **Fiddler Account** - Active access to your Fiddler instance
+* **GenAI Application** - An LLM-powered application or agent ready to instrument
+* **Admin or Project Admin Role** - [Permissions](/reference/access-control/role-based-access.md) to create projects and applications
+
+***
+
+## Key Concepts
+
+### Projects
+
+A **project** represents a workspace that groups related AI applications together. Projects are typically organized by product, team, or use case.
+
+Each project can have:
+
+* Multiple **applications** under it
+* Shared [**team members**](/reference/settings.md#teams) and [**permissions**](/reference/access-control/role-based-access.md)
+* Consolidated monitoring and analytics across all applications in that project
+
+You can **use an existing project** if your team already has one, or **create a new project** for a fresh setup.
+
+### Applications
+
+An **application** is the specific GenAI system or integration you want to monitor. It represents one instance of your deployed LLM or agentic workflow—such as a chatbot, summarization API, or evaluation pipeline.
+
+Each application has its own:
+
+* **Application ID** - Unique identifier for SDK integration
+* **Monitoring configuration** - Metrics, evaluators, and alerts
+* **Data streams** - Span events, traces, and performance metrics
+
+<figure><img src="/files/I7DSnBPXlihnCfVnDy2m" alt="GenAI Applications page showing applications with project breadcrumb navigation and sort controls"><figcaption><p>GenAI Applications page — view all applications you have access to, with project navigation and sort controls</p></figcaption></figure>
+
+***
+
+## Onboard Your Application
+
+{% stepper %}
+{% step %}
+**Choose Your Project**
+
+1. Navigate to **GenAI Applications** in the left sidebar
+2. Click **Add Application** in the top-right corner
+3. Select how to organize your new application:
+
+   **Option 1: Use Existing Project**
+
+   * Select **Use Existing Project**
+   * Choose a project from the dropdown menu
+   * Review current team members, add or remove members, or change roles
+
+   **Option 2: Create New Project**
+
+   * Select **Create New Project**
+   * (Optional) Add initial team members using the same process as above
+4. Click **Next** to continue
+
+<figure><img src="/files/2w2hscl8fI3hyXKDJjqu" alt="Add Application dialog showing options to use an existing project or create a new one"><figcaption><p>Choose an existing project or create a new one</p></figcaption></figure>
+
+{% hint style="info" %}
+**Tip:** Choose project names that reflect your team structure or product areas (for example, `CustomerSupportChatbot` or `DataScienceTeamApps`).
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Create Your Application**
+
+1. In the **Create Your Application** step:
+   * Review the selected project name displayed at the top
+   * Enter an **Application Name** in the text field
+   * The name should uniquely identify the GenAI system you're monitoring
+2. Click **Create Application** to continue
+
+<figure><img src="/files/iIUovodooLCCZcdG6OT6" alt="Add Application dialog showing application name entry for the selected project"><figcaption><p>Enter your application name</p></figcaption></figure>
+
+{% hint style="info" %}
+**Note:** Application names must be unique within the project. Choose names that clearly identify the specific use case (for example, `ContentSummarizer` or `CodeAssistant`).
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Integrate Your Application**
+
+Once your application is created, you'll see the **Setup Complete!** confirmation screen with your integration details.
+
+<figure><img src="/files/zvxDSQU2g4621tQpsAF4" alt="Add Application dialog showing completed application setup with credentials"><figcaption><p>New application setup completed</p></figcaption></figure>
+
+**1. Copy Your Credentials**
+
+You'll need two pieces of information to connect your application:
+
+* **Application ID** - Uniquely identifies your application (UUID format)
+* **API Key** - Authenticates requests from your code
+
+**To copy your credentials:**
+
+1. Locate the **Grab Your Application ID and API Key** section
+2. Copy the **Application ID**:
+   * Click the copy icon next to the Application ID field
+   * Store it securely—you'll need it for SDK configuration
+3. Copy your **API Key**:
+   * Navigate to **Settings → Credentials** in Fiddler
+   * Copy your personal access token or create a new one
+   * See [Personal Access Tokens](/reference/settings.md#credentials) for details
+
+{% hint style="info" %}
+**Security Best Practice**
+
+Treat your API key like a password. Never commit it to version control or share it publicly. Use environment variables or secure credential management systems.
+{% endhint %}
+
+**2. Integrate Using the SDK**
+
+Click **View SDK Documentation** to access integration guides for your technology stack:
+
+* **Fiddler LangGraph SDK** - For LangGraph and LangChain applications
+* **Fiddler Evals SDK** - For custom experiments and testing workflows
+* **OpenTelemetry Integration** - For custom instrumentation
+
+Follow the SDK-specific guide to:
+
+1. Install the Fiddler SDK in your application
+2. Configure authentication with your Application ID and API Key
+3. Instrument your code to send span events and metrics
+4. Verify data is flowing to Fiddler
+
+**3. Complete Setup**
+
+Once you've copied your credentials and reviewed the integration guide:
+
+* Click **Finish Setup** to close the onboarding dialog
+
+Your application is now configured and ready to receive monitoring data
+{% endstep %}
+{% endstepper %}
+
+## Next Steps
+
+Now that your application is onboarded, you can:
+
+### Start Monitoring
+
+* **Publish Data** - Run your instrumented application to send span events to Fiddler
+* **View Live Data** - Navigate to your application to see real-time traces and metrics
+* **Analyze Performance** - Use dashboards to track latency, throughput, and errors
+
+### Configure Monitoring
+
+* **Add Evaluators** - Create custom evaluators to assess response quality
+* **Set Up Alerts** - Configure alerts for anomalies or performance degradation
+* **Define Rules** - Create business rules for content moderation or compliance
+
+### Scale Your Monitoring
+
+* **Add More Applications** - Onboard additional GenAI systems under the same project
+* **Organize by Team** - Create separate projects for different teams or products
+* **Manage Access** - Use project-level permissions to control who can view and modify applications
+
+***
+
+## Frequently Asked Questions
+
+### Can I change the project an application belongs to?
+
+No, once an application is created within a project, it cannot be moved to another project. If you need to reorganize, you'll need to create a new application in the correct project.
+
+### How many applications can I have in a project?
+
+There is no hard limit on the number of applications per project. However, for better organization, we recommend grouping related applications that share common team members or business context.
+
+### What happens if I delete a project?
+
+Deleting a project will remove all applications, monitoring data, and configurations within that project. This action cannot be undone. Ensure you export any data you need before deletion.
+
+### Can I use the same Application ID for multiple environments?
+
+No, each application instance (development, staging, production) should have its own Application ID. This allows you to monitor each environment separately and apply different configurations or alerts.
+
+### Where do I find my API key?
+
+Your API key (personal access token) is available in **Settings → Credentials**. See [Creating Personal Access Tokens](/reference/settings.md#creating-personal-access-tokens) for step-by-step instructions.
+
+***
+
+## Related Documentation
+
+* [**Fiddler LangGraph SDK Quick Start**](/developers/agentic-ai-monitoring/langgraph-sdk-quick-start.md) - Instrument LangGraph applications in 10 minutes
+* [**Fiddler Evals SDK**](/evaluate-and-test/evals-sdk-quick-start.md) - Run experiments for your GenAI applications
+* [**Project and Application Management**](/reference/glossary.md) - Understanding project and application concepts
+* [**Role-Based Access Control**](/reference/access-control/role-based-access.md) - Managing team permissions
+* [**Personal Access Tokens**](/reference/settings.md#credentials) - Creating and managing API keys
+
+***
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

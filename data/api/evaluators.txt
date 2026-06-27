@@ -1,0 +1,19 @@
+# Evaluators
+
+- [AnswerRelevance](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/answer-relevance.md): AnswerRelevance
+- [Evaluator](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/evaluator.md): Evaluator
+- [Coherence](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/coherence.md): Coherence
+- [Conciseness](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/conciseness.md): Conciseness
+- [ContextRelevance](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/context-relevance.md): ContextRelevance
+- [CustomJudge](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/custom-judge.md): CustomJudge
+- [EvalFn](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/eval-fn.md): EvalFn
+- [FTLPromptSafety](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/ftl-prompt-safety.md): FTLPromptSafety
+- [FTLResponseFaithfulness](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/ftl-response-faithfulness.md): FTLResponseFaithfulness
+- [RAGFaithfulness](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/rag-faithfulness.md): RAGFaithfulness
+- [RegexMatch](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/regex-match.md): RegexMatch
+- [RegexSearch](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/regex-search.md): RegexSearch
+- [Sentiment](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/sentiment.md): Sentiment
+- [TopicClassification](https://docs.fiddler.ai/api/fiddler-evals-sdk/evaluators/topic-classification.md): TopicClassification
+
+
+---

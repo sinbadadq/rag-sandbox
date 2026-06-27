@@ -1,0 +1,42 @@
+# Fiddler LangChain SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-langchain)](https://pypi.org/project/fiddler-langchain/)
+
+## 1.0
+
+### **1.0.0**
+
+*March 18, 2026*
+
+Initial release of the Fiddler LangChain SDK.
+
+* **Added**
+  * **`FiddlerLangChainInstrumentor`**: Auto-instrumentor for LangChain V1 agents. Monkey-patches `langchain.agents.create_agent` so every subsequent call automatically receives a `FiddlerAgentMiddleware`. Idempotent — calling `instrument()` multiple times is safe.
+    * `instrument()`: Enable automatic instrumentation of all `create_agent` calls.
+    * `uninstrument()`: Restore the original `create_agent` function. Does not affect already-created agents.
+    * `is_instrumented_by_opentelemetry`: Property indicating whether instrumentation is currently active.
+  * **`FiddlerAgentMiddleware`**: LangChain V1 `AgentMiddleware` that instruments agents with Fiddler tracing. Produces a clean, flat trace hierarchy: agent → LLM calls → tool calls, with no noisy Chain wrappers.
+    * `before_agent()`: Opens a root Agent span (`TYPE=agent`) at the start of each invocation.
+    * `after_agent()`: Closes the root Agent span.
+    * `wrap_model_call()` / `awrap_model_call()`: Wraps synchronous and asynchronous model calls with LLM spans (`TYPE=llm`). Captures model name, provider, system prompt, user prompt, full message history, output messages, token usage, LLM context, and tool definitions.
+    * `wrap_tool_call()` / `awrap_tool_call()`: Wraps synchronous and asynchronous tool calls with Tool spans (`TYPE=tool`). Captures tool name, input, and output.
+  * **`set_llm_context()`**: Attach a context string to a `BaseLanguageModel` or `RunnableBinding`. The middleware reads this at invocation time and sets `gen_ai.llm.context` on the LLM span.
+  * **`add_span_attributes(**kwargs)`**: Attach custom metadata to a specific LangChain component (model, tool, or retriever). Emitted as `fiddler.span.user.{key}` only on the span for that component — scoped, unlike `add_session_attributes`.
+  * **`set_conversation_id()`**: Re-exported from `fiddler_otel` for convenience. Propagates conversation ID to all spans in the current execution context.
+  * **`add_session_attributes()`**: Re-exported from `fiddler_otel`. Attaches session-level metadata to all spans in the current context.
+  * **Full async support**: `awrap_model_call` and `awrap_tool_call` hooks fully support `agent.ainvoke()`.
+  * **Error handling**: Failing LLM or tool spans are marked `StatusCode.ERROR` with the exception recorded. The root Agent span is always closed cleanly, preventing dangling open spans. Exceptions are re-raised so normal application error handling is unaffected.
+  * **Multi-agent single-trace nesting**: When a sub-agent is invoked from within a delegation tool, its root Agent span is automatically created as a child of the active tool span — the entire multi-agent flow appears in one trace. Top-level agents (no active parent span) start a new trace as usual.
+  * **Retriever-as-tool**: Retrievers wrapped with `@tool` are automatically traced as `TYPE=tool` spans.
+  * **JSONL local capture**: Inherited from `fiddler-otel`. Use `jsonl_capture_enabled=True` on `FiddlerClient`. The `FIDDLER_JSONL_FILE` environment variable overrides the output file path.
+
+## 0.1
+
+### **0.1.1**
+
+*March 18, 2026*
+
+Pre-release.
+
+
+---

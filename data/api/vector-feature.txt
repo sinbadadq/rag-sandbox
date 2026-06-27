@@ -1,0 +1,41 @@
+# VectorFeature
+
+Represents custom features derived from a single vector column using clustering analysis.
+
+VectorFeature processes high-dimensional vector data (like embeddings or feature vectors) by applying k-means clustering to create discrete clusters that can be monitored for distribution changes over time. This is particularly useful for monitoring embedding drift in high-dimensional spaces.
+
+The feature type is automatically set to CustomFeatureType.FROM\_VECTOR and creates meaningful groupings from vector data for drift detection and anomaly identification.
+
+## source\_column
+
+Optional original column if this feature is derived from an embedding
+
+## Examples
+
+Creating a feature from a general embedding column:
+
+```python
+vector_feature = VectorFeature(
+    name="embedding_clusters",
+    column="user_embedding",
+    n_clusters=10
+)
+```
+
+Creating a feature from model hidden states:
+
+```python
+hidden_feature = VectorFeature(
+    name="hidden_state_clusters",
+    column="model_hidden_layer",
+    n_clusters=15,
+    source_column="input_features"
+)
+```
+
+## *classmethod* validate\_n\_clusters(value)
+
+**Return type:** int
+
+
+---

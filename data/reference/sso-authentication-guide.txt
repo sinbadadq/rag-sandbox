@@ -1,0 +1,228 @@
+# SSO Authentication Guide
+
+This guide covers Single Sign-On authentication in Fiddler, including setup procedures, supported identity providers, and user management workflows.
+
+## Overview
+
+Single Sign-On (SSO) authentication allows users to access Fiddler using their existing organizational credentials from identity providers like Okta, Microsoft Entra ID, Google, and Ping Identity. SSO streamlines user access and reduces password management overhead.
+
+## When to Use SSO Authentication
+
+SSO authentication is ideal for:
+
+* Organizations with existing identity providers
+* Environments requiring centralized user management
+* Compliance requirements mandating enterprise authentication
+* Large user bases where manual user provisioning is impractical
+
+## How SSO Works with Fiddler
+
+### User Provisioning
+
+**Automatic User Creation**: When users successfully authenticate through your SSO provider for the first time, Fiddler automatically creates their user account with basic profile information.
+
+**No Manual Creation Required**: Unlike email authentication, SSO users don't need to be manually created in the AuthN console—they gain access automatically upon successful SSO authentication.
+
+{% hint style="info" %}
+Note that auto-provisioned users will be created with the Fiddler Org Member role by default. Edit a user's Organization role in the[ Access tab of the Settings page](/reference/settings.md#access-users).
+{% endhint %}
+
+### Authentication Flow
+
+1. **User Access**: User navigates to Fiddler login page
+2. **SSO Redirect**: User clicks "Sign in with SSO" and is redirected to your identity provider
+3. **Identity Provider Authentication**: User authenticates with their organizational credentials
+4. **Automatic Provisioning**: If first login, Fiddler creates the user account automatically
+5. **Access Granted**: User gains access to Fiddler as an Org Member and potentially additional privileges if [Group Syncing](/reference/access-control/mapping-ad-groups-to-fiddler-teams.md) is implemented
+
+## Supported Identity Providers
+
+Fiddler supports major enterprise identity providers through industry-standard protocols:
+
+| Identity Provider                          | Supported Protocols | Configuration Guide                                                                    |
+| ------------------------------------------ | ------------------- | -------------------------------------------------------------------------------------- |
+| **Okta**                                   | OIDC                | [Okta OIDC Integration](/reference/access-control/okta-integration.md)                 |
+| Okta                                       | SAML                | [Okta SAML Integration](/reference/access-control/okta-integration-saml.md)            |
+| **Microsoft Entra ID** (formerly Azure AD) | OIDC                | [Azure AD OIDC Integration](/reference/access-control/single-sign-on-with-azure-ad.md) |
+| **Google**                                 | OIDC                | [Google OIDC Integration](/reference/access-control/google-integration.md)             |
+| **Ping Identity**                          | SAML                | [Ping Identity SAML Integration](/reference/access-control/ping-identity-saml.md)      |
+
+## SSO Configuration Process
+
+### Prerequisites
+
+Before configuring SSO, ensure you have:
+
+* Administrative access to your identity provider
+* Access to the Fiddler AuthN management console
+* Access to the AuthN user acount having the "Org Owner" role
+* Required information from your identity provider (client IDs, metadata URLs, certificates)
+
+### General Configuration Steps
+
+These are the basic steps to follow for most IdPs. Follow the specific guide for your required IdP and protocol.
+
+**Step 1: Access Authentication Management Console**
+
+1. Log into the AuthN authentication management console
+
+   <figure><img src="/files/lNpjrIi9dIF7ylsXQO3L" alt="AuthN console login page"><figcaption></figcaption></figure>
+2. Select your customer organization from the dropdown
+
+   <figure><img src="/files/XffOhJOdSxqA7nkhYxUk" alt="AuthN console home page"><figcaption></figcaption></figure>
+3. Navigate to **Settings > Login and Access > Identity Providers**
+
+   <figure><img src="/files/e21PkyPISWyvNrcJK6CM" alt="AuthN console org settings page"><figcaption></figcaption></figure>
+4. Select your desired provider by selecting its icon in the **Add Provider section**
+
+**Step 2: Configure Identity Provider Integration**
+
+More specific configuration steps are in each IdP + protocol guide.
+
+1. **Provider Name**: Enter a descriptive name for your SSO integration
+2. **Copy AuthN Settings**: If required, copy AuthN settings to use in creating the application in your IdP
+3. **IdP Required Fields**: Populate your IdP's required fields
+4. **Connection Details**: Copy required settings from your IdP:
+   * Client ID or Application ID
+   * Metadata URL or Issuer URL
+   * Client Secret (if required)
+   * Certificate information (for SAML)
+
+**Step 3: Enable User Provisioning**
+
+Expand the optional section and onfigure automatic user provisioning settings:
+
+* ✅ **Enable "Automatic creation"** - Creates new users on first successful login
+* ✅ **Enable "Automatic update"** - Updates user information from identity provider
+* ✅ **Select "Check for existing username"** - Links identities to existing accounts when appropriate
+
+**Step 4: Configure Attribute Mapping**
+
+Ensure proper mapping of user attributes from your identity provider to Fiddler. These values will differ between IdPs and protocols:
+
+**Example Required Attributes**:
+
+* **First Name** (`firstName`, `given_name`)
+* **Last Name** (`lastName`, `family_name`)
+* **Email Address** (`email`)
+
+**Optional Attributes**:
+
+* **Groups** (`groups`) - For automated group-based access control see [Mapping LDAP Groups](/reference/access-control/mapping-ad-groups-to-fiddler-teams.md) guide
+
+**Step 5: IdP-specific Action Script and Trigger**
+
+Each IdP integration guide will provide an action script and trigger type:
+
+Action Script
+
+* Paste the Fiddler-provided script into the text area
+* Paste the script name into the Name text box
+
+Trigger
+
+* Set the Trigger Type option per the guide
+* Set the Actions dropdown option per the guide
+
+**Step 5: Test and Validate**
+
+1. Save your SSO configuration
+2. Test authentication with a sample user account
+3. Verify user information is properly mapped
+4. Confirm automatic provisioning works as expected
+
+## Group Synchronization
+
+### Supported Providers
+
+Group synchronization is available for these identity providers:
+
+* **Okta** (OIDC and SAML)
+* **Microsoft Entra ID** (OIDC with proper configuration)
+* **Ping Identity** (SAML)
+
+## User Management with SSO
+
+### Automatic User Provisioning
+
+**First Login Process**:
+
+1. User authenticates successfully through SSO
+2. Fiddler automatically creates user account with information from the IdP
+3. User receives default organization member role (the very first user to login will be assigned the Org Admin role)
+4. Additional permissions can be assigned through Fiddler teams or individual roles
+
+**Ongoing User Updates**:
+
+* User information automatically updates from the IdP on each login
+* Group memberships sync automatically (if configured)
+* User status changes (deactivation/reactivation) can be managed through the IdP (note that Fiddler deactivates user accounts rather than deletes)
+
+## Mixed Authentication Environments
+
+### Combining SSO and Email Authentication
+
+Organizations can use both SSO and email authentication simultaneously:
+
+* **SSO Users**: Automatically provisioned from identity provider
+* **Email Users**: Manually added through the AuthN management console
+* **Separate Login Paths**: Users choose appropriate authentication method at login if more than one path has been enabled
+
+### User Account Constraints
+
+* **Single Authentication Method**: Each user account uses either SSO or email authentication, not both
+* **Account Linking**: Existing email-authenticated users can be linked to SSO identities under specific conditions
+
+## Troubleshooting Common Issues
+
+### Authentication Failures
+
+**Redirect URI Mismatch**:
+
+* Verify redirect URI in identity provider matches: `{fiddler_url}/api/sso/{provider}/callback`
+* Check for HTTP vs. HTTPS mismatches
+
+**Certificate or Secret Expiration**:
+
+* Monitor client secret expiration dates (typically 6-24 months)
+* Update expired certificates or secrets in both identity provider and Fiddler configuration
+
+**Attribute Mapping Issues**:
+
+* Verify required attributes (`firstName`, `lastName`, `email`) are included in authentication response
+* Check attribute name consistency between identity provider and Fiddler configuration
+
+### User Provisioning Issues
+
+**Users Not Auto-Provisioned**:
+
+* Confirm "Automatic creation" setting is enabled
+* Verify user has appropriate permissions in identity provider
+* Check authentication logs for error messages
+
+**Missing User Information**:
+
+* Validate attribute mappings in identity provider configuration
+* Ensure identity provider includes required claims in authentication tokens
+
+**Group Synchronization Problems**:
+
+* Verify `groups` attribute is included in identity provider claims
+* Check that corresponding teams exist in Fiddler
+* Confirm group names match between identity provider and Fiddler teams
+
+## Next Steps
+
+After reading this overview:
+
+1. **Choose Your Provider**: Review the provider-specific integration guides
+2. **Plan Implementation**: Coordinate with your identity provider administrator
+3. **Test Configuration**: Set up a test environment before production deployment
+4. **Train Users**: Provide documentation on the new authentication process
+
+***
+
+**Note**: SSO configuration requires coordination between Fiddler administrators and identity provider administrators. Plan accordingly for configuration, testing, and rollout phases.
+
+
+---

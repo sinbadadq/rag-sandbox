@@ -1,0 +1,292 @@
+# AWS VPC Endpoint Setup
+
+This guide provides an automated approach to creating AWS VPC endpoints for Fiddler Cloud integration. For manual configuration steps, see the [AWS Virtual PrivateLink Setup](/reference/settings/aws-vpl-setup.md) guide.
+
+{% hint style="info" %}
+This script automates the VPC endpoint creation process described in the manual setup guide. Ensure you have completed initial coordination with the Fiddler team before running this script.
+{% endhint %}
+
+## Overview
+
+The VPC endpoint creation script automates the following tasks:
+
+* Creates and configures security groups with HTTPS access
+* Establishes VPC endpoints in specified subnets
+* Configures private DNS for seamless Fiddler Cloud access
+* Validates configuration and handles cross-region endpoints
+
+## Prerequisites
+
+Before running the script, ensure you have:
+
+* **AWS CLI** installed and configured with appropriate credentials
+* **jq** tool installed for JSON parsing
+* **yq** tool installed for YAML parsing
+* AWS IAM permissions to create:
+  * VPC endpoints
+  * Security groups
+  * Route53 DNS records
+* Required information from the Fiddler team:
+  * VPC endpoint service name
+  * Stack name identifier
+* Your AWS environment details:
+  * VPC ID
+  * Subnet IDs
+  * AWS region
+
+## Installation
+
+### Step 1: Install Required Tools
+
+The following tools are required:
+
+* AWS CLI
+* jq for JSON parsing
+* yq for YAML parsing
+
+{% tabs %}
+{% tab title="macOS" %}
+
+```sh
+brew install awscli, jq, yq
+```
+
+{% endtab %}
+
+{% tab title="Ubuntu/Debian" %}
+
+```sh
+sudo apt-get install -y awscli, jq, yq
+```
+
+{% endtab %}
+
+{% tab title="CentOS/RHEL" %}
+It is recommended to manually install the AWS CLI on these operating systems. Download the bundle [directly](https://aws.amazon.com/cli/) from AWS.
+
+```sh
+sudo yum install jq yq
+```
+
+{% endtab %}
+{% endtabs %}
+
+### Step 2: Configure AWS CLI
+
+If not already configured, set up your AWS credentials:
+
+```bash
+aws configure
+```
+
+### Step 3: Download and Prepare the Script
+
+1. Request the script and configuration file template from your Fiddler representative
+2. Make the script executable:
+
+```bash
+chmod +x create-vpc-endpoint.sh
+```
+
+## Configuration
+
+### Step 1: Gather Required Information
+
+Collect the following information before configuration:
+
+**From the Fiddler team:**
+
+* **Service name**: The VPC endpoint service name for your Fiddler environment
+* **Stack name**: The unique identifier for your endpoint
+
+**From your AWS environment:**
+
+* **VPC ID**: The ID of your VPC (e.g., `vpc-12345678`)
+* **Subnet IDs**: IDs of subnets where the endpoint will be created
+* **Region**: The AWS region where your VPC is located
+
+### Step 2: Update Configuration File
+
+Edit the `config.yaml` file with your specific values:
+
+```yaml
+# Required: VPC Private Link service name (provided by Fiddler)
+service_name: <VPC_ENDPOINT_SERVICE_NAME>
+
+# Required: Stack name (provided by Fiddler)
+stack_name: <STACK_NAME>-endpoint
+
+# Required: VPC ID where endpoint will be created
+vpc_id: <YOUR_VPC_ID>
+
+# Required: List of subnet IDs (at least one required)
+subnet_ids:
+  - <SUBNET_ID_1>
+  - <SUBNET_ID_2>
+  - <SUBNET_ID_3>
+
+# Required: AWS region (must match your VPC region)
+region: <YOUR_AWS_REGION>
+
+# Optional: DNS configuration
+dns:
+  enabled: true
+  custom_domain: authn-<YOUR_SUBDOMAIN>.cloud.fiddler.ai
+  zone_name: cloud.fiddler.ai
+```
+
+{% hint style="warning" %}
+The `service_name` and `stack_name` must be obtained from the Fiddler team. Do not use placeholder values.
+{% endhint %}
+
+## Running the Script
+
+### Basic Usage
+
+Run the script with the default configuration file `config.yaml`:
+
+```bash
+./create-vpc-endpoint.sh
+```
+
+### Using a Custom Configuration File Name
+
+Specify an alternative configuration file:
+
+```bash
+./create-vpc-endpoint.sh my-config.yaml
+```
+
+### Script Execution Process
+
+The script performs the following operations:
+
+1. **Validates configuration** - Ensures all required fields are present
+2. **Creates security group** - Establishes HTTPS access rules if not specified
+3. **Creates VPC endpoint** - Establishes the endpoint in your VPC
+4. **Configures DNS** - Sets up private DNS for easy access (if enabled)
+
+{% hint style="info" %}
+The script is idempotent and safe to run multiple times. It will not create duplicate resources.
+{% endhint %}
+
+### Example Output
+
+```
+[INFO] Reading configuration from: config.yaml
+[INFO] Configuration loaded successfully
+[INFO] Creating VPC endpoint for service: com.amazonaws.vpce.us-west-2.vpce-svc-1234567890abcdef0
+[INFO] Using AWS region: us-west-2
+[INFO] Checking if VPC endpoint with tag Name=myapp-endpoint already exists...
+[INFO] No existing VPC endpoint found - proceeding with creation
+[INFO] Creating security group for VPC endpoint...
+[INFO] Security group created successfully: sg-1234567890abcdef0
+[INFO] Creating VPC endpoint...
+[INFO] VPC endpoint created successfully!
+[INFO] Setting up DNS for new endpoint...
+[DNS] DNS setup completed successfully!
+[INFO] VPC endpoint creation initiated successfully!
+```
+
+## Advanced Configuration
+
+### Using Existing Security Groups
+
+To use pre-existing security groups instead of creating new ones:
+
+```yaml
+security_group_ids:
+  * sg-12345678
+  * sg-87654321
+```
+
+### Disabling DNS Setup
+
+If you prefer to manage DNS separately:
+
+```yaml
+dns:
+  enabled: false
+```
+
+### Cross-Region Endpoints
+
+The script automatically handles cross-region endpoints when the service is in a different region than your VPC:
+
+```yaml
+service_name: com.amazonaws.vpce.us-east-1.vpce-svc-1234567890abcdef0  # Service in us-east-1
+region: us-west-2  # Your VPC region
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### AWS CLI not configured
+
+```bash
+aws configure
+```
+
+Enter your AWS access key, secret key, default region, and output format.
+
+#### Missing required tools
+
+Install jq and yq as described in the Installation section.
+
+#### VPC or subnet not found
+
+* Verify the VPC ID and subnet IDs in your configuration
+* Ensure you have access to the specified resources
+* Confirm the resources exist in the specified region
+
+#### Permission denied errors
+
+Ensure your AWS credentials have the following permissions:
+
+* `ec2:CreateVpcEndpoint`
+* `ec2:CreateSecurityGroup`
+* `ec2:AuthorizeSecurityGroupIngress`
+* `ec2:CreateTags`
+* `ec2:DescribeVpcs`
+* `ec2:DescribeSubnets`
+* `route53:CreateHostedZone`
+* `route53:ChangeResourceRecordSets`
+
+### Getting Help
+
+For script usage information:
+
+```bash
+./create-vpc-endpoint.sh -h
+```
+
+## Security Considerations
+
+* The script creates security groups allowing HTTPS (port 443) access from your VPC CIDR range
+* All DNS zones are created as private hosted zones
+* Resources are tagged for easy identification and management
+* VPC endpoints use AWS PrivateLink for secure, private communication
+
+## Verification
+
+After running the script:
+
+1. Verify the endpoint status in the AWS VPC console shows "Available"
+2. Check that security group rules are correctly configured
+3. Test DNS resolution within your VPC:
+
+   ```bash
+   nslookup <your-subdomain>.cloud.fiddler.ai
+   ```
+4. Access the Fiddler UI at `https://<your-subdomain>.cloud.fiddler.ai`
+
+## Next Steps
+
+* Review the [AWS Virtual PrivateLink Setup](/reference/settings/aws-vpl-setup.md) guide for additional context
+* Configure your applications to use the private endpoint
+* Set up monitoring for the VPC endpoint connection
+* Contact Fiddler [support](mailto:support@fiddler.ai) if you encounter any issues
+
+
+---

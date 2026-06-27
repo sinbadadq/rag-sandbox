@@ -1,0 +1,64 @@
+# LangGraphInstrumentor
+
+An OpenTelemetry instrumentor for LangGraph applications.
+
+This class provides automatic instrumentation for applications built with LangGraph. It captures traces from the execution of LangGraph graphs and sends them to the Fiddler platform for monitoring and analysis.
+
+Instrumentation works by monkey-patching LangChain's callback system to inject a custom callback handler that captures trace data. Once instrumented, all LangGraph operations will automatically generate telemetry data.
+
+Note: Instrumentation persists for the lifetime of the application unless explicitly removed by calling uninstrument(). Calling instrument() multiple times is safe - it will not create duplicate handlers.
+
+Thread Safety: The instrumentation applies globally to the process and affects all threads. In concurrent environments (multi-threading, async), all contexts share the same instrumented callback system.
+
+To use the instrumentor, you first need to create a FiddlerClient instance. Then, you can create an instance of LangGraphInstrumentor and call the instrument() method.
+
+## Examples
+
+Basic usage:
+
+```python
+from fiddler_langgraph import FiddlerClient, LangGraphInstrumentor
+
+client = FiddlerClient(application_id="...", api_key="...", url="https://your-instance.fiddler.ai")
+instrumentor = LangGraphInstrumentor(client=client)
+instrumentor.instrument()
+```
+
+Removing instrumentation:
+
+```python
+# Clean up instrumentation when shutting down
+instrumentor.uninstrument()
+```
+
+Context manager pattern (advanced):
+
+```python
+with LangGraphInstrumentor(client).instrument():
+    # Instrumented operations here
+    agent.invoke({"messages": [...]})
+# Automatically uninstrumented after block
+```
+
+## Parameters
+
+| Parameter | Type                                                                 | Required | Default | Description                 |
+| --------- | -------------------------------------------------------------------- | -------- | ------- | --------------------------- |
+| `client`  | [`FiddlerClient`](/api/fiddler-langgraph-sdk/core/fiddler-client.md) | ✓        | `-`     | The FiddlerClient instance. |
+
+## Raises
+
+**ImportError** -- If LangGraph version is incompatible or not installed.
+
+## instrumentation\_dependencies()
+
+Returns the package dependencies required for this instrumentor.
+
+## Returns
+
+A collection of package dependency strings.
+
+**Return type:** Collection\[str]
+
+
+---

@@ -1,0 +1,12 @@
+# NLP Inputs
+
+This guide will walk you through the basic steps required to use Fiddler for monitoring NLP models. A multi-class classifier is applied to the 20newsgroup dataset and the text embeddings are monitored using Fiddler's unique Vector Monitoring approach.
+
+Click [this link to get started using Google Colab →](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_NLP_Multiclass_Monitoring.ipynb)
+
+<div align="left"><figure><img src="https://colab.research.google.com/img/colab_favicon_256px.png" alt="Google Colab" width="188"><figcaption></figcaption></figure></div>
+
+Or download the notebook directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_NLP_Multiclass_Monitoring.ipynb).
+
+
+---

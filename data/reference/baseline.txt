@@ -1,0 +1,87 @@
+# Baseline
+
+Baselines are data that serve as a point of reference for calculating [data drift](/reference/glossary/data-drift.md). When determining if data drift has occurred, Fiddler's monitoring features must compare the distribution of production data (at a point in time) to reference data. Baselines serve as this reference.
+
+Most commonly, training data is used to establish a model's baseline. In this case, the model's training data is uploaded by publishing the dataset. Fiddler will then create a static pre-production baseline of the same name. Multiple baselines can be defined for a model, too. It is not uncommon to have other baselines defined not from training data but from static sets of historical inferences or rolling baselines that look back weeks, months, or quarters at historical inferences.
+
+In other words, a baseline is a representative sample of the data you expect to see in production. It represents the ideal data that your model works best on. For this reason, in most cases, a baseline dataset should be sampled from your model’s training set.
+
+## How Fiddler Uses Baselines
+
+Fiddler requires a baseline to detect data drift in production data. Baselines serve as a point of reference for Fiddler to understand what data distributions the model expects to see for all of its inputs and outputs.
+
+## Why Baselines Are Important
+
+Baselines are crucial for monitoring and maintaining the performance of machine learning models by serving as a reference point to detect data drift, assess model degradation, and ensure consistency over time. They help teams compare real-world data distributions against expected patterns, enabling proactive adjustments to models, improving fairness, and maintaining compliance with regulatory standards.
+
+The roles of baselines in machine learning and model monitoring include:
+
+* **Reference for Data Drift Detection**: Baselines serve as a point of reference to compare production data and identify if the data distribution has changed over time (LINK data drift).
+* **Performance Benchmarking**: Baselines provide a comparison standard for model performance, ensuring that more complex models outperform simple baseline models.
+* **Model Validation**: They help assess whether a model’s performance is consistent with expectations by comparing it against static or historical data.
+* **Monitoring Stability**: Baselines enable ongoing tracking of model behavior in production, helping detect any significant deviations in real-time predictions.
+* **Regulatory Compliance**: They ensure that models align with predefined expectations and regulatory standards, especially in critical industries.
+* **Error Detection**: Baselines help identify when the model's output deviates beyond acceptable thresholds, guiding corrective actions.
+
+## Types of Baselines
+
+* **Static Pre-production**: A fixed baseline created from training data before a model is deployed, used to compare production data against expected distributions.
+* **Static Production**: A fixed baseline derived from a snapshot of historical production data, used to monitor long-term data stability.
+* **Rolling Production**: A dynamic baseline that updates periodically using recent production data, allowing for continuous drift monitoring over time.
+* **Default Static**: A pre-set static production baseline, created automatically when onboarding a model.
+
+## Challenges
+
+* **Choosing the Right Data**: It can be challenging to select the appropriate reference data for baselines (e.g., training data, historical inferences, etc.). The data chosen must represent expected real-world conditions to detect data drift effectively.
+* **Dynamic Data**: In environments with constantly changing data, it’s challenging to define a static baseline that remains relevant over time. Rolling or dynamic baselines may be required but are more complex to manage.
+* **Handling Bias**: Baselines defined from biased or incomplete data may lead to misleading conclusions, especially if the reference data doesn’t adequately represent diverse real-world scenarios.
+* **Complexity in Multiple Baselines**: Defining multiple baselines for different use cases or time frames (e.g., historical vs. real-time data) can create confusion and make choosing the right one for comparisons difficult.
+* **Scalability**: As data volumes and model complexity increase, managing and updating baselines becomes more resource-intensive and burdensome to scale effectively.
+* **Adaptability**: Baselines that were accurate at one point might not remain effective as the data distribution or model requirements evolve, making it essential to adapt baselines regularly.
+* **Ensuring Consistency**: Maintaining consistency across multiple baseline definitions can be challenging, especially when different teams or systems define their baselines independently.
+
+## Baseline Implementation How-to Guide
+
+1. **Set up baseline performance metrics**
+   * If monitoring for long-term drift, a static baseline from training data may suffice.
+   * If monitoring for short-term trends, rolling baselines are preferred.
+2. **Upload and Define Your Baseline**
+   * Ensure training data is appropriately formatted and uploaded to the monitoring system.
+   * If using Fiddler, define a pre-production baseline using the same model name.
+3. **Set Up Monitoring Rules**
+   * Establish thresholds for acceptable levels of drift.
+   * Configure alerts for when drift exceeds predefined thresholds.
+4. **Compare Production Data to the Baseline**
+   * Regularly evaluate how production data distributions compare to the baseline.
+   * Adjust the model if significant drift is detected.
+
+## Frequently Asked Questions
+
+**Q: What happens if my baseline itself becomes outdated?**
+
+You may need to upload an updated baseline periodically or introduce rolling baselines to capture evolving trends.
+
+**Q: What is data drift?**
+
+Data drift is the change in the statistical properties of input data over time, which can impact a model's performance and predictions.
+
+**Q: How do I know if my model is drifting too much?**
+
+Set drift thresholds and monitor performance metrics like accuracy, precision, recall, or fairness scores against your baseline.
+
+## Related Terms
+
+* [Data Drift](/reference/glossary/data-drift.md)
+* [Model Drift](/reference/glossary/model-drift.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+* [ML Observability](/reference/glossary/ml-observability.md)
+
+## Related Resources
+
+* [Creating Baselines in Fiddler](/developers/client-library-reference/publishing-production-data/creating-a-baseline-dataset.md)
+* [Model Onboarding](/developers/client-library-reference/model-onboarding/create-a-project-and-model.md)
+* [Python Client SDK](/api/fiddler-python-client-sdk/entities.md)
+* [Baseline REST API Guide](/api/rest-api/rest-api.md)
+
+
+---

@@ -1,0 +1,216 @@
+# LLM Evaluation Prompt Specs
+
+## The Challenge With LLM Evaluation
+
+When building production LLM applications, evaluation is critical, but it's often the most time-consuming bottleneck in your development workflow. Traditional approaches to creating LLM-as-a-Judge evaluators require you to:
+
+* **Hand-craft natural language prompts** for each new use case or data schema
+* **Iteratively tune prompts** through trial-and-error until the model produces reliable outputs
+* **Manually rewrite entire prompt templates** every time your input fields or output categories change
+* **Struggle with inconsistent results** as small prompt variations lead to unpredictable model behavior
+* **Spend weeks perfecting prompts** before you can move to production monitoring
+
+This manual process doesn't scale when you need to evaluate multiple aspects of your LLM application or adapt to evolving requirements.
+
+## How Prompt Specs Solve This Problem
+
+Fiddler's Prompt Specs eliminate the prompt engineering bottleneck by letting you **declare your evaluation logic using simple JSON schemas** instead of writing prompts. Here's the key difference:
+
+### Manual Prompt Engineering (Traditional Approach)
+
+{% code overflow="wrap" %}
+
+```
+You are an expert classifier. Given a news summary, classify it into one of these topics: World, Sports, Business, Technology.
+
+News summary: {news_summary}
+
+Consider the main subject matter and classify accordingly. Provide your reasoning.
+
+Output format:
+Topic: [your classification]
+Reasoning: [your explanation]
+```
+
+{% endcode %}
+
+*Every schema change requires rewriting and retuning the entire prompt*
+
+### Schema-Based Evaluation Using Prompt Specs
+
+```json
+{
+  "input_fields": {
+    "news_summary": { "type": "string" }
+  },
+  "output_fields": {
+    "topic": {
+      "type": "string",
+      "choices": ["Business", "Sci/Tech", "Sports", "World"]
+    },
+    "reasoning": { "type": "string" }
+  }
+}
+```
+
+*Schema changes are simple JSON updates—no prompt rewriting needed*
+
+## When to Use Prompt Specs
+
+Prompt Specs are ideal for scenarios where you need:
+
+**Domain-Specific Classification**
+
+* Content moderation with custom policy categories for example finance-specific metrics
+* Topic classification
+* Product categorization using your taxonomy
+
+**Quality Assessment**
+
+* Response relevance scoring for your specific use case
+* Conciseness and coherence evaluation
+* Completeness checking for required information elements
+
+**Safety and Compliance**
+
+* Custom content policy enforcement
+* Regulatory compliance checking (e.g., financial disclosures, medical claims)
+* Brand safety evaluation with organization-specific criteria
+
+Prompt Specs work particularly well when you need multiple output fields, such as confidence ranges and reasoning, alongside the classification and when classification accuracy is more important than the flexibility of fully custom prompts.
+
+## Benefits for Technical Teams
+
+**Faster Development Cycles**
+
+* Reduce evaluation setup from weeks to hours
+* Eliminate iterative prompt tuning cycles
+* Enable rapid schema evolution without prompt rewrites
+
+**Improved Reliability**
+
+* Consistent structured output guaranteed by schema validation
+* Higher classification accuracy compared to guided choice decoding
+* Built-in reasoning capture for debugging and explainability
+
+**Better Maintainability**
+
+* Version control friendly JSON schemas
+* Clear separation between evaluation logic and implementation
+* Seamless integration with existing Fiddler monitoring workflows
+
+## Benefits for Risk and Compliance Teams
+
+**Enhanced Auditability**
+
+* Clear, declarative evaluation criteria in version-controlled schemas
+* Consistent evaluation logic across all model versions
+* Traceable reasoning for every evaluation decision
+
+**Improved Governance**
+
+* Schema-based approach prevents evaluation drift over time
+* Standardized evaluation framework across teams and use cases
+* Integration with Fiddler's monitoring and alerting capabilities for continuous oversight
+
+**Regulatory Compliance**
+
+* Documented evaluation criteria that can be reviewed by compliance teams
+* Consistent application of evaluation logic for audit purposes
+* Historical tracking of schema changes and their impacts on evaluation outcomes
+
+## How Prompt Specs Work
+
+Prompt Specs follow a simple three-step workflow that takes you from evaluation idea to production monitoring:
+
+### 1. Define Your Evaluation Schema
+
+Create a JSON schema specifying your input fields and desired output format. Supported field types include:
+
+* `string` (with optional `choices` array for categorical outputs)
+* `integer`
+* `boolean`
+* `number`
+
+### 2. Validate and Test Your Schema
+
+Use Fiddler's validation and prediction APIs to ensure your schema works correctly with sample data.
+
+### 3. Deploy for Production Monitoring
+
+Deploy your validated Prompt Spec as a Fiddler [enrichment](/reference/glossary/enrichment.md) for ongoing monitoring.
+
+**Ready to try it yourself?** Follow our step-by-step [Quickstart Guide](/evaluate-and-test/prompt-specs-quick-start.md) to build your first evaluation in minutes.
+
+## Performance and Cost Considerations
+
+### Prompt Specs Benefits
+
+* **Higher accuracy**: Classification accuracy is very high using meaningful field names and labels
+* **Consistent structure**: Yields reliably structured LLM output without guided decoding
+* **Performance optimization**: System prompts remain consistent across invocations, enabling KV caching benefits
+* **Customization**: Easy to add descriptions to fields and tasks for better accuracy
+
+**Trade-offs:**
+
+* Structured output is not 100% guaranteed
+* Less flexibility than fully custom prompts for highly nuanced evaluations
+* Best suited for classification and structured scoring tasks rather than open-ended evaluation
+
+## Integration With Fiddler's Monitoring Platform
+
+Prompt Specs integrate seamlessly with Fiddler's existing monitoring capabilities:
+
+**Enrichment Pipeline Integration**
+
+* Deploy Prompt Specs as [enrichments](/reference/glossary/enrichment.md) alongside other Fiddler [trust and safety metrics](/reference/glossary/trust-score.md)
+* Combine schema-based evaluations with [built-in enrichments](/observability/llm/enrichments.md) like toxicity detection and PII identification
+* Use evaluation results in [alerting rules](/observability/platform/alerts-platform.md) and [dashboard visualizations](/observability/dashboards.md)
+
+**Monitoring and Alerting**
+
+* Set up automated alerts based on Prompt Spec outputs (e.g., alert when helpfulness scores drop below threshold)
+* Track evaluation trends over time alongside other model performance metrics
+* Use reasoning outputs for [root cause analysis](/observability/analytics.md) when issues are detected
+
+## Validation Rules and Schema Requirements
+
+When creating Prompt Specs, ensure your schema follows these rules:
+
+* **Required fields**: Input fields and output fields must each have at least one item
+* **Field naming**: Field names must be valid Python variable names
+* **Uniqueness**: Field names must be unique between input and output sections
+* **Type specification**: `type` is required for all fields and must be one of: `string`, `integer`, `number`, `boolean`
+* **Optional elements**: Top-level `task_instruction` and field-level `description` are optional
+* **Choices arrays**: Must have at least 2 items and are only allowed when `type` is `string`
+
+## When Not to Use Prompt Specs
+
+Prompt Specs may not be the best choice when:
+
+* You need highly nuanced evaluation requiring extensive domain context that can't be captured in field descriptions
+* Your evaluation criteria change frequently and unpredictably in ways that require prompt-level modifications
+* You require real-time evaluation with sub-100ms latency requirements
+* Your use case is already well-served by existing Fiddler enrichments like Fast Faithfulness
+* You need the full flexibility of custom prompt templates
+
+## Comparison With Other Evaluation Approaches
+
+| Approach                      | Setup Time | Accuracy  | Consistency | Flexibility | Maintenance |
+| ----------------------------- | ---------- | --------- | ----------- | ----------- | ----------- |
+| **Prompt Specs**              | Hours      | High      | High        | Medium      | Low         |
+| **Manual Prompt Engineering** | Weeks      | Very High | Medium      | Very High   | High        |
+| **Pre-built Enrichments**     | Minutes    | High      | High        | Low         | None        |
+
+Prompt Specs occupy a sweet spot between the quick deployment of pre-built enrichments and the full customization of manual prompt engineering, making them ideal for customers who need domain-specific evaluation without extensive prompt tuning effort.
+
+## Getting Started
+
+### Prompt Specs Quick Start
+
+The fastest way to get started is with the Prompt Spec Quick Start Guide:
+
+**🚀** [**Follow the Quickstart Guide**](/evaluate-and-test/prompt-specs-quick-start.md) - Build and deploy your first evaluation in minutes
+
+
+---

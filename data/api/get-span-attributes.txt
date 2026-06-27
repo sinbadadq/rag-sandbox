@@ -1,0 +1,20 @@
+# get\_span\_attributes
+
+Get span attributes from a Model or AgentTool object.
+
+Retrieves custom attributes that were previously set using set\_span\_attributes(). Returns an empty dictionary if no attributes have been set.
+
+## Parameters
+
+| Parameter | Type    | Required    | Default | Description |
+| --------- | ------- | ----------- | ------- | ----------- |
+| `obj`     | \`Model | AgentTool\` | ✗       | `None`      |
+
+## Returns
+
+Dictionary of attribute key-value pairs, or empty dict if none exist
+
+**Return type:** dict\[str, str | int | float | bool]
+
+
+---

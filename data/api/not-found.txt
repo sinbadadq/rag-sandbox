@@ -1,0 +1,47 @@
+# NotFound
+
+Raised when a requested resource is not found (HTTP 404).
+
+This exception is thrown when attempting to access or manipulate a resource that does not exist in the Fiddler platform. This can include models, projects, datasets, alerts, or any other entity that cannot be located using the provided identifier.
+
+Common scenarios include using incorrect IDs, attempting to access deleted resources, or referencing resources that haven't been created yet.
+
+## Examples
+
+Handling missing resources:
+
+```python
+try:
+    model = client.get_model("wrong-model-id")
+
+except NotFound as e:
+    print(f"Model not found: {e.message}")
+    # Create the model or check the correct ID
+```
+
+Checking if a resource exists:
+
+```python
+try:
+    project = client.get_project("my-project")
+    print("Project exists")
+
+except NotFound:
+    print("Project doesn't exist, creating it...")
+    project = client.create_project(name="my-project")
+```
+
+Common NotFound scenarios:
+
+```python
+- Accessing models, projects, or datasets with wrong IDs
+- Referencing deleted or expired resources
+- Typos in resource names or identifiers
+```
+
+## code *: int* *= 404*
+
+## reason *: str* *= 'NotFound'*
+
+
+---

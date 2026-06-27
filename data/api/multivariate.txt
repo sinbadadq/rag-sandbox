@@ -1,0 +1,42 @@
+# Multivariate
+
+Represents custom features derived from multiple columns using clustering analysis.
+
+Multivariate features combine multiple numeric columns into a single derived feature using k-means clustering algorithms. This enables monitoring of multivariate drift and detecting unusual combinations that might not be apparent when monitoring columns individually.
+
+The feature type is automatically set to CustomFeatureType.FROM\_COLUMNS and uses clustering to group similar combinations of column values for drift detection.
+
+## Examples
+
+Creating a user behavior multivariate feature:
+
+```python
+behavior_feature = Multivariate(
+    name="user_engagement_cluster",
+    columns=["page_views", "session_duration", "clicks"],
+    n_clusters=8,
+    monitor_components=True
+)
+```
+
+Creating a system performance multivariate feature:
+
+```python
+perf_feature = Multivariate(
+    name="system_health",
+    columns=["cpu_usage", "memory_usage", "response_time"],
+    n_clusters=5,
+    monitor_components=False
+)
+```
+
+## *classmethod* validate\_columns(value)
+
+**Return type:** *List*\[str]
+
+## *classmethod* validate\_n\_clusters(value)
+
+**Return type:** int
+
+
+---

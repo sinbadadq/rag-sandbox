@@ -1,0 +1,392 @@
+# Prompt Specs Quick Start
+
+Get your first custom LLM evaluation running in **minutes** using Prompt Specs with Fiddler's LLM-as-a-Judge solution. This guide walks you through creating, testing, and deploying a custom evaluation using Prompt Specs.
+
+### What You'll Build
+
+In this quick start, you'll create a news article topic classifier that:
+
+* Takes a news summary as input
+* Classifies it into one of four categories: World, Sports, Business, or Sci/Tech
+* Provides reasoning for its classification
+* Deploys to production monitoring in Fiddler
+
+### Prerequisites
+
+* Fiddler platform access
+* Basic familiarity with Python and REST APIs
+* A Fiddler API token and base URL
+
+{% stepper %}
+{% step %}
+**Set Up Your Environment**
+
+Refer to the Fiddler Python client SDK [Installation and Setup Guide](/developers/client-library-reference/installation-and-setup.md) for details on the Fiddler Access Token, URL, and client initialization.
+
+```python
+import json
+import fiddler as fdl
+import pandas as pd
+import requests
+
+# Replace with your actual values
+FIDDLER_TOKEN = "your_token_here"
+FIDDLER_BASE_URL = "https://your_company.fiddler.ai"
+
+PROMPT_SPEC_URL = f"{FIDDLER_BASE_URL}/v3/llm-as-a-judge/prompt-spec"
+FIDDLER_HEADERS = {
+    "Authorization": f"Bearer {FIDDLER_TOKEN}",
+    "Content-Type": "application/json",
+}
+```
+
+{% endstep %}
+
+{% step %}
+**Prepare Sample Data**
+
+We'll use news article data for this example:
+
+```python
+# Load sample news data (using AG News dataset)
+df_news = pd.read_parquet(
+    "hf://datasets/fancyzhx/ag_news/data/test-00000-of-00001.parquet"
+).sample(20, random_state=25)
+
+# Map labels to topic names
+df_news["original_topic"] = df_news["label"].map({
+    0: "World", 1: "Sports", 2: "Business", 3: "Sci/Tech"
+})
+
+# Summarize the count of each unique topic
+print(df_news["original_topic"].value_counts())
+```
+
+{% endstep %}
+
+{% step %}
+**Create Your First Prompt Spec**
+
+Define a simple evaluation schema:
+
+```python
+basic_prompt_spec = {
+    "input_fields": {
+        "news_summary": {"type": "string"}
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": ["World", "Sports", "Business", "Sci/Tech"]
+        },
+        "reasoning": {"type": "string"}
+    }
+}
+```
+
+{% endstep %}
+
+{% step %}
+**Validate**
+
+Validate your Prompt Spec schema:
+
+```python
+validate_response = requests.post(
+    f"{PROMPT_SPEC_URL}/validate",
+    headers=FIDDLER_HEADERS,
+    json={"prompt_spec": basic_prompt_spec}
+)
+
+if validate_response.status_code == 200:
+    print("✅ Schema validation successful!")
+else:
+    print("❌ Validation failed:", validate_response.text)
+```
+
+{% endstep %}
+
+{% step %}
+**Test with Sample Data**
+
+```python
+def get_prediction(prompt_spec, input_data):
+    response = requests.post(
+        f"{PROMPT_SPEC_URL}/predict",
+        headers=FIDDLER_HEADERS,
+        json={"prompt_spec": prompt_spec, "input_data": input_data}
+    )
+    if response.status_code == 200:
+        return response.json()["prediction"]
+    return {"topic": None, "reasoning": None}
+
+# Test with a single example
+test_result = get_prediction(
+    basic_prompt_spec,
+    {"news_summary": "Wimbledon 2025 is under way!"}
+)
+print(json.dumps(test_result, indent=2))
+```
+
+{% endstep %}
+
+{% step %}
+**Improve Accuracy With Descriptions**
+
+Add field descriptions to improve classification accuracy:
+
+```python
+enhanced_prompt_spec = {
+    "instruction": "Determine the topic of the given news summary.",
+    "input_fields": {
+        "news_summary": {"type": "string"}
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": ["World", "Sports", "Business", "Sci/Tech"],
+            "description": """Use 'Sci/Tech' for technology companies, scientific discoveries, or health/medical research.
+Use 'Sports' for sports events or athletes.
+Use 'Business' for companies outside of tech/sports.
+Use 'World' for global events or issues."""
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "Explain why you chose this topic."
+        }
+    }
+}
+```
+
+{% endstep %}
+
+{% step %}
+**Evaluate Performance**
+
+Test your enhanced Prompt Spec on multiple examples:
+
+```python
+# Test on your dataset
+results = []
+for _, row in df_news.iterrows():
+    prediction = get_prediction(
+        enhanced_prompt_spec,
+        {"news_summary": row["text"]}
+    )
+    results.append({
+        "original": row["original_topic"],
+        "predicted": prediction["topic"],
+        "reasoning": prediction["reasoning"]
+    })
+
+# Calculate accuracy
+df_results = pd.DataFrame(results)
+accuracy = (df_results["original"] == df_results["predicted"]).mean()
+print(f"Accuracy: {accuracy:.1%}")
+```
+
+{% endstep %}
+
+{% step %}
+**Deploy to Production Monitoring**
+
+Once satisfied with your Prompt Spec, deploy it as a Fiddler enrichment:
+
+```python
+import fiddler as fdl
+
+# Initialize Fiddler client
+fdl.init(url=FIDDLER_BASE_URL, token=FIDDLER_TOKEN)
+
+# Create project and enrichment
+project = fdl.Project.get_or_create(name="llm_evaluation_demo")
+
+enrichment = fdl.Enrichment(
+    name="news_topic_classifier",
+    enrichment="llm_as_a_judge",
+    columns=["news_summary"],
+    config={"prompt_spec": enhanced_prompt_spec}
+)
+
+# Create model with enrichment
+model_spec = fdl.ModelSpec(
+    inputs=["news_summary"],
+    custom_features=[enrichment]
+)
+
+model = fdl.Model.from_data(
+    source=df_news.rename(columns={"text": "news_summary"}),
+    name="news_classifier",
+    project_id=project.id,
+    spec=model_spec,
+    task=fdl.ModelTask.LLM
+)
+
+model.create()
+print(f"Model created: {model.name}")
+```
+
+{% endstep %}
+
+{% step %}
+**Publish Events and Monitor**
+
+Publish your data and start monitoring:
+
+```python
+# Publish production events
+job = model.publish(df_news.rename(columns={"text": "news_summary"}))
+job.wait()
+
+if job.status == "SUCCESS":
+    print("✅ Data published successfully!")
+    print("🎯 Your evaluation is now running in production monitoring")
+```
+
+{% endstep %}
+{% endstepper %}
+
+<details>
+
+<summary>Full Script Copy</summary>
+
+```python
+import json
+from datetime import datetime
+
+import fiddler as fdl
+import pandas as pd
+import requests
+
+# Replace with your actual values
+# FIDDLER_TOKEN = "your_token_here"
+# FIDDLER_BASE_URL = "https://your_company.fiddler.ai"
+
+FIDDLER_TOKEN = "hqvUV7r8-WUkMkjvKHbvI_sVpxRd9DJLKX6PCloRwVk"
+FIDDLER_BASE_URL = "https://preprod.cloud.fiddler.ai"
+
+PROMPT_SPEC_URL = f"{FIDDLER_BASE_URL}/v3/llm-as-a-judge/prompt-spec"
+FIDDLER_HEADERS = {
+    "Authorization": f"Bearer {FIDDLER_TOKEN}",
+    "Content-Type": "application/json",
+}
+
+# Load sample news data (using AG News dataset)
+df_news = pd.read_parquet(
+    "hf://datasets/fancyzhx/ag_news/data/test-00000-of-00001.parquet"
+).sample(20, random_state=25)
+
+# Map labels to topic names
+df_news["original_topic"] = df_news["label"].map({
+    0: "World", 1: "Sports", 2: "Business", 3: "Sci/Tech"
+})
+
+print(df_news["original_topic"].value_counts())
+
+basic_prompt_spec = {
+    "input_fields": {
+        "news_summary": {"type": "string"}
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": ["World", "Sports", "Business", "Sci/Tech"]
+        },
+        "reasoning": {"type": "string"}
+    }
+}
+
+validate_response = requests.post(
+    f"{PROMPT_SPEC_URL}/validate",
+    headers=FIDDLER_HEADERS,
+    json={"prompt_spec": basic_prompt_spec}
+)
+
+if validate_response.status_code == 200:
+    print("✅ Schema validation successful!")
+else:
+    print("❌ Validation failed:", validate_response.text)
+
+def get_prediction(prompt_spec, input_data):
+    response = requests.post(
+        f"{PROMPT_SPEC_URL}/predict",
+        headers=FIDDLER_HEADERS,
+        json={"prompt_spec": prompt_spec, "input_data": input_data}
+    )
+    if response.status_code == 200:
+        return response.json()["prediction"]
+    return {"topic": None, "reasoning": None}
+
+# Test with a single example
+test_result = get_prediction(
+    basic_prompt_spec,
+    {"news_summary": "Wimbledon 2025 is under way!"}
+)
+print(json.dumps(test_result, indent=2))
+
+enhanced_prompt_spec = {
+    "instruction": "Determine the topic of the given news summary.",
+    "input_fields": {
+        "news_summary": {"type": "string"}
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": ["World", "Sports", "Business", "Sci/Tech"],
+            "description": """Use 'Sci/Tech' for technology companies, scientific discoveries, or health/medical research.
+Use 'Sports' for sports events or athletes.
+Use 'Business' for companies outside of tech/sports.
+Use 'World' for global events or issues."""
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "Explain why you chose this topic."
+        }
+    }
+}
+
+# Test on your dataset
+results = []
+for _, row in df_news.iterrows():
+    prediction = get_prediction(
+        enhanced_prompt_spec,
+        {"news_summary": row["text"]}
+    )
+    results.append({
+        "original": row["original_topic"],
+        "predicted": prediction["topic"],
+        "reasoning": prediction["reasoning"]
+    })
+
+# Calculate accuracy
+df_results = pd.DataFrame(results)
+accuracy = (df_results["original"] == df_results["predicted"]).mean()
+print(f"Accuracy: {accuracy:.1%}")
+
+```
+
+</details>
+
+### What Happens Next
+
+After completing this quick start:
+
+1. **View Results**: Check the Fiddler UI to see your model and enrichment results
+2. **Monitor Performance**: Set up alerts based on classification accuracy or confidence scores
+3. **Iterate**: Refine your Prompt Spec descriptions to improve accuracy
+4. **Scale**: Apply the same approach to your own evaluation use cases
+
+### Key Takeaways
+
+* **Fast Setup**: From zero to production evaluation in minutes, not weeks
+* **No Manual Prompting**: JSON schema approach eliminates prompt engineering bottlenecks
+* **Built-in Monitoring**: Seamless integration with Fiddler's observability platform
+* **Easy Iteration**: Update schemas without rewriting prompts
+
+### Next Steps
+
+* [**Complete Interactive Notebook**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLMaaJ_Prompt_Spec.ipynb): Follow along with a full working example
+* [**Prompt Specs Guide**](/observability/llm/llm-evaluation-prompt-specs.md): Learn more about the underlying framework
+
+
+---

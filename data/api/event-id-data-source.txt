@@ -1,0 +1,34 @@
+# EventIdDataSource
+
+Data source for explainability analysis using a specific event ID.
+
+EventIdDataSource allows you to perform explainability analysis on a specific event that has been previously logged to Fiddler. This is useful when you want to explain predictions for events that are already stored in your environment, enabling you to analyze historical predictions and their explanations.
+
+This data source type is ideal for investigating specific incidents, analyzing historical predictions, or performing post-hoc analysis on logged events.
+
+## Examples
+
+Creating an event data source for production analysis:
+
+```python
+event_source = EventIdDataSource(
+    event_id="evt_12345abcdef",
+    env_id="prod_dataset_uuid",
+    env_type=EnvType.PRODUCTION
+)
+```
+
+Creating an event data source for validation analysis:
+
+```python
+validation_event_source = EventIdDataSource(
+    event_id="validation_event_789",
+    env_id="validation_dataset_uuid",
+    env_type=EnvType.VALIDATION
+)
+```
+
+## env\_type *: EnvType*
+
+
+---

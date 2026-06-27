@@ -1,0 +1,50 @@
+# Fiddler Evals SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-evals)](https://pypi.org/project/fiddler-evals/)
+
+## 0.3
+
+### **0.3.0**
+
+*February 5, 2026*
+
+* **New Evaluators**
+  * **Context Relevance** (New): Measures whether retrieved documents are relevant to the user query. Ordinal scoring — High (1.0), Medium (0.5), Low (0.0) with detailed reasoning.
+  * **RAG Faithfulness** (New): LLM-as-a-Judge evaluator that assesses whether the response is grounded in the retrieved documents. Binary scoring — Yes (1.0) / No (0.0) with detailed reasoning.
+  * **CustomJudge** (New): Build custom LLM-as-a-Judge evaluators using `prompt_template` with Jinja `{{ placeholder }}` syntax and `output_fields` for structured evaluation results.
+* **Enhancements**
+  * **Answer Relevance 2.0**: Upgraded from binary to ordinal scoring — High (1.0), Medium (0.5), Low (0.0) with detailed reasoning.
+  * **Ordinal Score Bounding**: Ordinal scores from the scoring API are now bounded to \[0, 1].
+
+## 0.2
+
+### **0.2.0**
+
+*November 19, 2025*
+
+* **Enhancements**
+  * **Model and Credential Parameters**: `model` and `credential` are now parameters on LLM-as-a-Judge evaluators, enabling configuration of the LLM used for evaluation.
+  * **Evaluator-Level Score Function Mapping**: Evaluators now support `score_fn_kwargs_mapping` at the evaluator level for more flexible parameter binding.
+  * **Score Name Prefix**: Added support for custom score name prefixes on evaluators.
+  * **Evals API Error Handling**: Improved error handling and messaging for Evals API responses.
+  * **Coherence Prompt Input Required**: The `prompt` input for the Coherence evaluator is now required.
+  * **Removed Pandas Core Dependency**: Pandas moved from core to optional dependency, reducing install footprint.
+  * **Docstring Standardization**: Fixed docstring errors and standardized documentation format across all evaluators.
+* **Removals**
+  * **Toxicity Evaluator Removed**: The Toxicity evaluator has been removed from the SDK.
+
+## 0.1
+
+### **0.1.1**
+
+*October 8, 2025*
+
+* **Initial Release**
+  * Core SDK with HTTP client, entity management (Project, Application, Dataset, Experiment), and the `evaluate()` function for running experiments.
+  * **Evaluators**: AnswerRelevance, Coherence, Conciseness, Sentiment, TopicClassification, FTLPromptSafety, FTLResponseFaithfulness, RegexSearch, and support for user-defined function evaluators.
+  * **Data Input**: Load test cases from pandas DataFrames, CSV files, or JSONL files.
+  * **Concurrent Processing**: Parallel evaluation with ThreadPoolExecutor and tqdm progress tracking.
+  * **PyPI Publishing**: Available as `pip install fiddler-evals`.
+
+
+---

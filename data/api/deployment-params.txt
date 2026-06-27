@@ -1,0 +1,45 @@
+# DeploymentParams
+
+Configuration parameters for deploying a model in the Fiddler platform.
+
+DeploymentParams defines the deployment configuration for a model, including the artifact type, deployment environment, resource allocation, and container specifications. These parameters control how the model is packaged, deployed, and scaled within the Fiddler infrastructure.
+
+This class is used when deploying models to specify the runtime environment, resource requirements, and deployment strategy that best fits your model's needs and performance requirements.
+
+## Examples
+
+Creating basic deployment parameters:
+
+```python
+basic_params = DeploymentParams()
+```
+
+Creating deployment with custom resources:
+
+```python
+custom_params = DeploymentParams(
+    artifact_type=ArtifactType.PYTHON_PACKAGE,
+    deployment_type=DeploymentType.BASE_CONTAINER,
+    replicas=3,
+    cpu=2,
+    memory=4096
+)
+```
+
+Creating deployment with custom container:
+
+```python
+container_params = DeploymentParams(
+    artifact_type=ArtifactType.DOCKER_IMAGE,
+    deployment_type=DeploymentType.CUSTOM_CONTAINER,
+    image_uri="my-registry.com/my-model:v1.0",
+    replicas=2,
+    cpu=4,
+    memory=8192
+)
+```
+
+## memory *: int | None*
+
+
+---

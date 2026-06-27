@@ -1,0 +1,48 @@
+# Conflict
+
+Raised when a request conflicts with the current state of a resource (HTTP 409).
+
+This exception occurs when attempting to perform an operation that conflicts with the current state of a resource. This typically happens when trying to create resources that already exist, or when concurrent modifications cause state conflicts.
+
+Common scenarios include creating models or projects with names that already exist, attempting to modify resources that are currently being processed, or violating business rules that prevent certain operations.
+
+## Examples
+
+Handling resource conflicts:
+
+```python
+try:
+    project = client.create_project(name="existing-project")
+
+except Conflict as e:
+    print(f"Project already exists: {e.message}")
+    # Use existing project or choose different name
+    project = client.get_project("existing-project")
+```
+
+Handling state conflicts:
+
+```python
+try:
+    model.update_status("active")
+
+except Conflict as e:
+    print(f"Cannot change status: {e.message}")
+    # Wait for current operation to complete
+```
+
+Common Conflict scenarios:
+
+```python
+- Creating resources with duplicate names
+- Modifying resources during processing
+- Violating business logic constraints
+- Concurrent modification conflicts
+```
+
+## code *: int* *= 409*
+
+## reason *: str* *= 'Conflict'*
+
+
+---

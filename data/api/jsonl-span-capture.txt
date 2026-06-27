@@ -1,0 +1,20 @@
+# JSONLSpanCapture
+
+Captures OpenTelemetry span data and saves it to JSONL format with structured fields.
+
+Initialize JSONL capture.
+
+## Parameters
+
+| Parameter         | Type  | Required | Default | Description                 |
+| ----------------- | ----- | -------- | ------- | --------------------------- |
+| `jsonl_file_path` | \`str | None\`   | ✗       | `fiddler_trace_data.jsonl'` |
+
+## capture\_span()
+
+Capture a span and write it to JSONL file.
+
+**Return type:** None
+
+
+---

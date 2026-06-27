@@ -1,0 +1,457 @@
+# Exporting OTel Traces to Fiddler
+
+## Overview
+
+This guide covers the **client-side export** scenario: your application has already generated OpenTelemetry traces, you manage their storage and processing, and you need to ship them to Fiddler. You are responsible for:
+
+1. **Attribute mapping** — translating your OTel span attributes to Fiddler's schema
+2. **Protobuf serialization** — building `ResourceSpans → ScopeSpans → Span` structures
+3. **Export** — POSTing the compressed payload to Fiddler's `v1/traces` endpoint
+
+This differs from [live instrumentation](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md), where the OTel SDK exports spans automatically as your agent runs.
+
+{% hint style="info" %}
+**When to use this approach**
+
+Use client-side export when you have:
+
+* Traces stored in a data warehouse, JSONL files, or a logging pipeline that you want to replay into Fiddler
+* A custom export pipeline that processes spans before sending (e.g., filtering, enrichment, or ID regeneration)
+* Batch backfill of historical trace data
+
+For real-time agent instrumentation, use the [OpenTelemetry Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) or a [framework SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) instead.
+{% endhint %}
+
+***
+
+## Prerequisites
+
+* A Fiddler account with a GenAI application created — you will need its **Application UUID**
+* A valid **Fiddler API token** (from **Settings** > **Credentials**)
+* Python packages:
+
+  ```bash
+  pip install opentelemetry-proto httpx
+  ```
+
+***
+
+## The v1/traces Endpoint
+
+Send traces as a gzip-compressed protobuf `ExportTraceServiceRequest` payload:
+
+| Property                   | Value                                       |
+| -------------------------- | ------------------------------------------- |
+| **URL**                    | `https://<your-fiddler-instance>/v1/traces` |
+| **Method**                 | `POST`                                      |
+| **Content-Type**           | `application/x-protobuf`                    |
+| **Content-Encoding**       | `gzip`                                      |
+| **Authorization**          | `Bearer <your-api-token>`                   |
+| **fiddler-application-id** | `<your-application-uuid>`                   |
+
+```python
+import gzip
+import httpx
+from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
+
+payload = ExportTraceServiceRequest(resource_spans=[...]).SerializeToString()
+
+httpx.post(
+    "https://your-instance.fiddler.ai/v1/traces",
+    content=gzip.compress(payload),
+    headers={
+        "Authorization": "Bearer <YOUR_TOKEN>",
+        "fiddler-application-id": "<YOUR_APP_UUID>",
+        "Content-Type": "application/x-protobuf",
+        "Content-Encoding": "gzip",
+    },
+)
+```
+
+***
+
+## Protobuf Structure
+
+Fiddler expects the standard OTLP hierarchy:
+
+```
+ExportTraceServiceRequest
+└── ResourceSpans[]
+    ├── Resource
+    │   └── attributes: [application.id, service.name, ...]
+    └── ScopeSpans[]
+        └── Span[]
+            ├── trace_id, span_id, parent_span_id
+            ├── name, kind, status
+            ├── start_time_unix_nano, end_time_unix_nano
+            └── attributes: [gen_ai.agent.name, fiddler.span.type, ...]
+```
+
+**`application.id`** must be set at the **Resource** level (not on individual spans):
+
+```python
+from opentelemetry.proto.resource.v1.resource_pb2 import Resource
+from opentelemetry.proto.common.v1.common_pb2 import AnyValue, KeyValue
+
+resource = Resource(attributes=[
+    KeyValue(key="application.id", value=AnyValue(string_value="<YOUR_APP_UUID>")),
+    KeyValue(key="service.name",   value=AnyValue(string_value="my-agent-service")),
+])
+```
+
+***
+
+## Attribute Mapping Reference
+
+### Span Structure Fields
+
+The following fields control the span's structural properties and are **not** sent as span attributes. Map them to the corresponding protobuf `Span` fields instead:
+
+| Your field           | Protobuf `Span` field                      |
+| -------------------- | ------------------------------------------ |
+| `trace_id`           | `trace_id` (bytes, 16 bytes / 32-char hex) |
+| `span_id`            | `span_id` (bytes, 8 bytes / 16-char hex)   |
+| `parent_span_id`     | `parent_span_id` (bytes, same format)      |
+| `span_name` / `name` | `name`                                     |
+| `span_kind`          | `kind` (SpanKind enum)                     |
+| `status_code`        | `status.code` (StatusCode enum)            |
+| `start_time`         | `start_time_unix_nano`                     |
+| `end_time`           | `end_time_unix_nano`                       |
+
+### Required Span Attributes
+
+Every span sent to Fiddler must include this attribute:
+
+| Attribute           | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `fiddler.span.type` | Span type: `llm`, `tool`, `chain`, or `agent` |
+
+`application.id` is required at the **Resource** level (see above).
+
+### Span Type: Deriving from gen\_ai.operation.name
+
+If your spans follow the GenAI semantic conventions and carry `gen_ai.operation.name`, map it to `fiddler.span.type` as follows:
+
+| `gen_ai.operation.name`       | `fiddler.span.type` |
+| ----------------------------- | ------------------- |
+| `chat`                        | `llm`               |
+| `execute_tool`                | `tool`              |
+| `invoke_agent`                | `chain`             |
+| *(any other value or absent)* | `chain` *(default)* |
+
+### LLM Semantic Convention Mappings
+
+| Your OTel attribute          | Fiddler attribute                              | Notes                                                     |
+| ---------------------------- | ---------------------------------------------- | --------------------------------------------------------- |
+| `gen_ai.input.messages`      | `gen_ai.llm.input.user` + `gen_ai.llm.context` | See [message parsing](#parsing-gen_aiinputmessages) below |
+| `gen_ai.output.messages`     | `gen_ai.llm.output`                            |                                                           |
+| `gen_ai.system_instructions` | `gen_ai.llm.input.system`                      |                                                           |
+| `gen_ai.response.model`      | `gen_ai.request.model`                         | Fiddler normalises to the request-side attribute          |
+| `gen_ai.usage.input_tokens`  | `gen_ai.usage.input_tokens`                    | Pass through unchanged                                    |
+| `gen_ai.usage.output_tokens` | `gen_ai.usage.output_tokens`                   | Pass through unchanged                                    |
+| `gen_ai.usage.total_tokens`  | `gen_ai.usage.total_tokens`                    | Pass through unchanged                                    |
+| `gen_ai.system`              | `gen_ai.system`                                | LLM provider identifier (e.g. `openai`)                   |
+| `gen_ai.request.model`       | `gen_ai.request.model`                         | Pass through unchanged                                    |
+
+### Tool Semantic Convention Mappings
+
+| Your OTel attribute          | Fiddler attribute    |
+| ---------------------------- | -------------------- |
+| `gen_ai.tool.call.arguments` | `gen_ai.tool.input`  |
+| `gen_ai.tool.call.result`    | `gen_ai.tool.output` |
+| `gen_ai.tool.name`           | `gen_ai.tool.name`   |
+
+### Agent and Conversation Attributes
+
+| Your OTel attribute      | Fiddler attribute        | Notes                                                |
+| ------------------------ | ------------------------ | ---------------------------------------------------- |
+| `gen_ai.agent.name`      | `gen_ai.agent.name`      | Optional                                             |
+| `gen_ai.agent.id`        | `gen_ai.agent.id`        | Optional                                             |
+| `gen_ai.conversation.id` | `gen_ai.conversation.id` | Optional — used for multi-turn conversation grouping |
+
+{% hint style="info" %}
+**Set agent attributes on every span.** If `gen_ai.agent.name` or `gen_ai.agent.id` are provided, set both on **every span within the trace**. Fiddler uses these attributes to attribute spans to the correct agent — spans missing these fields will be unattributed even if other spans in the same trace carry them.
+{% endhint %}
+
+### Legacy / Underscore Field Names
+
+If your traces use older underscore-style field names, map them to the Fiddler dotted equivalents before serialization:
+
+| Legacy field       | Fiddler attribute         |
+| ------------------ | ------------------------- |
+| `model_name`       | `gen_ai.request.model`    |
+| `model_provider`   | `gen_ai.system`           |
+| `tool_name`        | `gen_ai.tool.name`        |
+| `tool_input`       | `gen_ai.tool.input`       |
+| `tool_output`      | `gen_ai.tool.output`      |
+| `llm_input_system` | `gen_ai.llm.input.system` |
+| `llm_input_user`   | `gen_ai.llm.input.user`   |
+| `llm_output`       | `gen_ai.llm.output`       |
+| `llm_context`      | `gen_ai.llm.context`      |
+
+### Custom User Attributes
+
+To attach business-level metadata to spans, prefix your keys with `fiddler.span.user.`:
+
+```python
+# Source field: custom_attributes = {"session_type": "onboarding", "region": "us-west"}
+# Maps to:
+span.attributes["fiddler.span.user.session_type"] = "onboarding"
+span.attributes["fiddler.span.user.region"]       = "us-west"
+```
+
+These attributes are indexed and queryable in Fiddler's trace explorer.
+
+***
+
+## Parsing gen\_ai.input.messages
+
+The `gen_ai.input.messages` attribute is a JSON array of chat-style message objects. Fiddler expects it split into two separate attributes:
+
+| Output attribute        | Content                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `gen_ai.llm.input.user` | Text content of the **last message with `role: user`**                    |
+| `gen_ai.llm.context`    | All other messages (conversation history), formatted as `[role]: content` |
+
+**Example input:**
+
+```json
+[
+  {"role": "system",    "content": "You are a helpful assistant."},
+  {"role": "user",      "content": "What is the capital of France?"},
+  {"role": "assistant", "content": "Paris."},
+  {"role": "user",      "content": "And Germany?"}
+]
+```
+
+**Resulting mapping:**
+
+| Attribute               | Value                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `gen_ai.llm.input.user` | `"And Germany?"`                                                                                            |
+| `gen_ai.llm.context`    | `"[system]: You are a helpful assistant.\n\n[user]: What is the capital of France?\n\n[assistant]: Paris."` |
+
+If no `user` message is found, all messages are placed in `gen_ai.llm.context` and `gen_ai.llm.input.user` is omitted.
+
+<details>
+
+<summary>Python implementation</summary>
+
+```python
+import json
+
+
+def parse_input_messages(value: str | list) -> dict[str, str]:
+    """
+    Parse gen_ai.input.messages and split into Fiddler attributes.
+
+    Extracts the last user message as ``gen_ai.llm.input.user`` and
+    formats all other messages as ``gen_ai.llm.context``.
+
+    :param value: JSON string or already-parsed list of message dicts.
+                  Each message must have a ``role`` key and either a
+                  ``content`` string or a ``parts`` list of text objects.
+    :returns: Dict with zero, one, or both of:
+              - ``gen_ai.llm.input.user``  – last user message text
+              - ``gen_ai.llm.context``     – prior conversation history
+    """
+    # Parse JSON string if needed
+    if isinstance(value, str):
+        try:
+            messages = json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return {"gen_ai.llm.input.user": value}
+    else:
+        messages = value
+
+    if not isinstance(messages, list) or not messages:
+        return {}
+
+    def extract_content(message: dict) -> str:
+        """Extract plain text from a message object."""
+        parts = message.get("parts", [])
+        if isinstance(parts, list):
+            text_parts = [
+                part.get("content", "") if isinstance(part, dict) and part.get("type") == "text"
+                else part
+                for part in parts
+                if isinstance(part, str) or (isinstance(part, dict) and part.get("type") == "text")
+            ]
+            if text_parts:
+                return "\n".join(text_parts)
+        elif isinstance(parts, str):
+            return parts
+        content = message.get("content", "")
+        return content if isinstance(content, str) else str(content)
+
+    # Find the index of the last user message
+    last_user_idx = next(
+        (i for i in range(len(messages) - 1, -1, -1)
+         if isinstance(messages[i], dict) and messages[i].get("role") == "user"),
+        None,
+    )
+
+    result: dict[str, str] = {}
+
+    if last_user_idx is None:
+        # No user message — put everything in context
+        context_parts = [
+            f"[{m.get('role', 'unknown')}]: {extract_content(m)}"
+            for m in messages
+            if isinstance(m, dict)
+        ]
+        if context_parts:
+            result["gen_ai.llm.context"] = "\n\n".join(context_parts)
+        return result
+
+    # Last user message → input.user
+    user_text = extract_content(messages[last_user_idx])
+    if user_text:
+        result["gen_ai.llm.input.user"] = user_text
+
+    # All other messages → context
+    context_messages = messages[:last_user_idx] + messages[last_user_idx + 1:]
+    context_parts = [
+        f"[{m.get('role', 'unknown')}]: {extract_content(m)}"
+        for m in context_messages
+        if isinstance(m, dict) and extract_content(m)
+    ]
+    if context_parts:
+        result["gen_ai.llm.context"] = "\n\n".join(context_parts)
+
+    return result
+
+
+# Usage
+attributes = parse_input_messages(span_row["gen_ai.input.messages"])
+# e.g. {
+#   "gen_ai.llm.input.user": "And Germany?",
+#   "gen_ai.llm.context": "[system]: You are a helpful assistant.\n\n[user]: What is the capital of France?\n\n[assistant]: Paris."
+# }
+```
+
+</details>
+
+***
+
+## Span Kind and Status Mappings
+
+**Span kind** (`SpanKind` enum):
+
+| String value | Protobuf value                  |
+| ------------ | ------------------------------- |
+| `INTERNAL`   | `SpanKind.INTERNAL` *(default)* |
+| `SERVER`     | `SpanKind.SERVER`               |
+| `CLIENT`     | `SpanKind.CLIENT`               |
+| `PRODUCER`   | `SpanKind.PRODUCER`             |
+| `CONSUMER`   | `SpanKind.CONSUMER`             |
+
+**Status code** (`StatusCode` enum):
+
+| String value | Protobuf value              |
+| ------------ | --------------------------- |
+| `OK`         | `StatusCode.OK` *(default)* |
+| `ERROR`      | `StatusCode.ERROR`          |
+| `UNSET`      | `StatusCode.UNSET`          |
+
+***
+
+## Minimal End-to-End Example
+
+```python
+import gzip
+import httpx
+from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
+from opentelemetry.proto.common.v1.common_pb2 import AnyValue, InstrumentationScope, KeyValue
+from opentelemetry.proto.resource.v1.resource_pb2 import Resource
+from opentelemetry.proto.trace.v1.trace_pb2 import ResourceSpans, ScopeSpans, Span, Status
+from opentelemetry.trace import SpanKind
+from opentelemetry.trace.status import StatusCode
+
+FIDDLER_URL    = "https://your-instance.fiddler.ai"
+APP_UUID       = "550e8400-e29b-41d4-a716-446655440000"
+FIDDLER_TOKEN  = "your-api-token"
+
+# Build a single LLM span
+span = Span(
+    trace_id=bytes.fromhex("4bf92f3577b34da6a3ce929d0e0e4736"),
+    span_id=bytes.fromhex("00f067aa0ba902b7"),
+    name="chat",
+    kind=SpanKind.INTERNAL.value,
+    start_time_unix_nano=1_700_000_000_000_000_000,
+    end_time_unix_nano=1_700_000_001_000_000_000,
+    status=Status(code=StatusCode.OK.value),
+    attributes=[
+        KeyValue(key="gen_ai.agent.name",    value=AnyValue(string_value="my-agent")),
+        KeyValue(key="fiddler.span.type",    value=AnyValue(string_value="llm")),
+        KeyValue(key="gen_ai.request.model", value=AnyValue(string_value="gpt-4o")),
+        KeyValue(key="gen_ai.llm.input.user",value=AnyValue(string_value="What is the capital of France?")),
+        KeyValue(key="gen_ai.llm.output",    value=AnyValue(string_value="Paris.")),
+    ],
+)
+
+# Wrap in ResourceSpans
+resource_spans = ResourceSpans(
+    resource=Resource(attributes=[
+        KeyValue(key="application.id", value=AnyValue(string_value=APP_UUID)),
+        KeyValue(key="service.name",   value=AnyValue(string_value="my-agent-service")),
+    ]),
+    scope_spans=[ScopeSpans(
+        scope=InstrumentationScope(name="my-tracer", version="1.0.0"),
+        spans=[span],
+    )],
+)
+
+# Serialize and compress
+payload = ExportTraceServiceRequest(resource_spans=[resource_spans]).SerializeToString()
+
+# Send
+response = httpx.post(
+    f"{FIDDLER_URL}/v1/traces",
+    content=gzip.compress(payload),
+    headers={
+        "Authorization": f"Bearer {FIDDLER_TOKEN}",
+        "fiddler-application-id": APP_UUID,
+        "Content-Type": "application/x-protobuf",
+        "Content-Encoding": "gzip",
+    },
+    timeout=30.0,
+)
+response.raise_for_status()
+```
+
+***
+
+## Attribute Quick Reference
+
+| Attribute                    | Level    | Required | Type                                  |
+| ---------------------------- | -------- | -------- | ------------------------------------- |
+| `application.id`             | Resource | Yes      | UUID string                           |
+| `gen_ai.agent.name`          | Span     | No       | string                                |
+| `fiddler.span.type`          | Span     | Yes      | `llm` \| `tool` \| `chain` \| `agent` |
+| `gen_ai.agent.id`            | Span     | No       | string                                |
+| `gen_ai.conversation.id`     | Span     | No       | string                                |
+| `gen_ai.request.model`       | Span     | No       | string                                |
+| `gen_ai.system`              | Span     | No       | string (provider name)                |
+| `gen_ai.llm.input.system`    | Span     | No       | string                                |
+| `gen_ai.llm.input.user`      | Span     | No       | string                                |
+| `gen_ai.llm.output`          | Span     | No       | string                                |
+| `gen_ai.llm.context`         | Span     | No       | string                                |
+| `gen_ai.tool.name`           | Span     | No       | string                                |
+| `gen_ai.tool.input`          | Span     | No       | string (JSON)                         |
+| `gen_ai.tool.output`         | Span     | No       | string (JSON)                         |
+| `gen_ai.usage.input_tokens`  | Span     | No       | int                                   |
+| `gen_ai.usage.output_tokens` | Span     | No       | int                                   |
+| `gen_ai.usage.total_tokens`  | Span     | No       | int                                   |
+| `fiddler.span.user.*`        | Span     | No       | any                                   |
+
+***
+
+## Related
+
+* [OpenTelemetry Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) — live agent instrumentation via the OTel SDK
+* [OpenTelemetry Quick Start](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/developers/quick-starts/opentelemetry-quick-start.md) — step-by-step setup guide
+* [Agentic AI Overview](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) — compare all integration options
+
+
+---

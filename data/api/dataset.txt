@@ -1,0 +1,1032 @@
+# Dataset
+
+Represents a Dataset container for organizing evaluation test cases.
+
+A Dataset is a logical container within an Application that stores structured test cases with inputs and expected outputs for GenAI evaluation. Datasets provide organized storage, metadata management, and tagging capabilities for systematic testing and validation of GenAI applications.
+
+Key Features:
+
+* **Test Case Storage**: Container for structured evaluation test cases
+* **Application Context**: Datasets are scoped within applications for isolation
+* **Metadata Management**: Custom metadata and tagging for organization
+* **Evaluation Foundation**: Structured data for GenAI application testing
+* **Lifecycle Management**: Coordinated creation, updates, and deletion of datasets
+
+Dataset Lifecycle:
+
+1. **Creation**: Create dataset with unique name within an application
+2. **Configuration**: Add test cases and metadata
+3. **Evaluation**: Use dataset for testing GenAI applications
+4. **Maintenance**: Update test cases and metadata as needed
+5. **Cleanup**: Delete dataset when no longer needed
+
+## Example
+
+```python
+# Create a new dataset for fraud detection tests
+dataset = Dataset.create(
+    name="fraud-detection-tests",
+    application_id=application_id,
+    description="Test cases for fraud detection model",
+    metadata={"source": "production", "version": "1.0"},
+)
+print(f"Created dataset: {dataset.name} (ID: {dataset.id})")
+```
+
+{% hint style="info" %}
+Datasets are permanent containers - once created, the name cannot be changed. Deleting a dataset removes all contained test cases and metadata. Consider the organizational structure carefully before creating datasets.
+{% endhint %}
+
+## active *: bool* *= True*
+
+## description *: str | None* *= None*
+
+## *classmethod* get\_by\_id(id\_)
+
+Retrieve a dataset by its unique identifier.
+
+Fetches a dataset from the Fiddler platform using its UUID. This is the most direct way to retrieve a dataset when you know its ID.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+The dataset instance with all metadata and configuration.
+
+**Return type:** `Dataset`
+
+## Raises
+
+* **NotFound** -- If no dataset exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get dataset by UUID
+dataset = Dataset.get_by_id(id_="550e8400-e29b-41d4-a716-446655440000")
+print(f"Retrieved dataset: {dataset.name}")
+print(f"Created: {dataset.created_at}")
+print(f"Application: {dataset.application.name}")
+```
+
+{% hint style="info" %}
+This method makes an API call to fetch the latest dataset state from the server. The returned dataset instance reflects the current state in Fiddler.
+{% endhint %}
+
+## *classmethod* get\_by\_name(name, application\_id)
+
+Retrieve a dataset by name within an application.
+
+Finds and returns a dataset using its name within the specified application. This is useful when you know the dataset name and application but not its UUID. Dataset names are unique within an application, making this a reliable lookup method.
+
+## Parameters
+
+| Parameter        | Type   | Required | Default | Description                                                                                                 |
+| ---------------- | ------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `name`           | `str`  | ✗        | `None`  | The name of the dataset to retrieve. Dataset names are unique within an application and are case-sensitive. |
+| `application_id` | \`UUID | str\`    | ✗       | `None`                                                                                                      |
+
+## Returns
+
+The dataset instance matching the specified name.
+
+**Return type:** `Dataset`
+
+## Raises
+
+* **NotFound** -- If no dataset exists with the specified name in the application.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get application instance
+application = Application.get_by_name(name="fraud-detection-app", project_id=project_id)
+
+# Get dataset by name within an application
+dataset = Dataset.get_by_name(
+    name="fraud-detection-tests",
+    application_id=application.id
+)
+print(f"Found dataset: {dataset.name} (ID: {dataset.id})")
+print(f"Created: {dataset.created_at}")
+print(f"Application: {dataset.application.name}")
+```
+
+{% hint style="info" %}
+Dataset names are case-sensitive and must match exactly. Use this method when you have a known dataset name from configuration or user input.
+{% endhint %}
+
+## *classmethod* list(application\_id)
+
+List all datasets in an application.
+
+Retrieves all datasets that the current user has access to within the specified application. Returns an iterator for memory efficiency when dealing with many datasets.
+
+## Parameters
+
+| Parameter        | Type   | Required | Default | Description |
+| ---------------- | ------ | -------- | ------- | ----------- |
+| `application_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## Yields
+
+`Dataset` -- Dataset instances for all accessible datasets in the application.
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API. **Return type:** *Iterator*\[[*Dataset*](#dataset)]
+
+## Example
+
+```python
+# Get application instance
+application = Application.get_by_name(name="fraud-detection-app", project_id=project_id)
+
+# List all datasets in an application
+for dataset in Dataset.list(application_id=application.id):
+    print(f"Dataset: {dataset.name}")
+    print(f"  ID: {dataset.id}")
+    print(f"  Created: {dataset.created_at}")
+
+# Convert to list for counting and filtering
+datasets = list(Dataset.list(application_id=application.id))
+print(f"Total datasets in application: {len(datasets)}")
+
+# Find datasets by name pattern
+test_datasets = [
+    ds for ds in Dataset.list(application_id=application.id)
+    if "test" in ds.name.lower()
+]
+print(f"Test datasets: {len(test_datasets)}")
+```
+
+{% hint style="info" %}
+This method returns an iterator for memory efficiency. Convert to a list with list(Dataset.list(application\_id)) if you need to iterate multiple times or get the total count. The iterator fetches datasets lazily from the API.
+{% endhint %}
+
+## *classmethod* create(name, application\_id, description=None, metadata=None, active=True)
+
+Create a new dataset in an application.
+
+Creates a new dataset within the specified application on the Fiddler platform. The dataset must have a unique name within the application.
+
+## Parameters
+
+| Parameter        | Type   | Required | Default | Description                                                 |
+| ---------------- | ------ | -------- | ------- | ----------------------------------------------------------- |
+| `name`           | `str`  | ✗        | `None`  | Dataset name, must be unique within the application.        |
+| `application_id` | \`UUID | str\`    | ✗       | `None`                                                      |
+| `description`    | \`str  | None\`   | ✗       | `None`                                                      |
+| `metadata`       | \`dict | None\`   | ✗       | `None`                                                      |
+| `active`         | `bool` | ✗        | `None`  | Optional boolean flag to indicate if the dataset is active. |
+
+## Returns
+
+The newly created dataset instance with server-assigned fields.
+
+**Return type:** `Dataset`
+
+## Raises
+
+* **Conflict** -- If a dataset with the same name already exists in the application.
+* **ValidationError** -- If the dataset configuration is invalid (e.g., invalid name format).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get application instance
+application = Application.get_by_name(name="fraud-detection-app", project_id=project_id)
+
+# Create a new dataset for fraud detection tests
+dataset = Dataset.create(
+    name="fraud-detection-tests",
+    application_id=application.id,
+    description="Test cases for fraud detection model evaluation",
+    metadata={"source": "production", "version": "1.0", "environment": "test"},
+)
+print(f"Created dataset with ID: {dataset.id}")
+print(f"Created at: {dataset.created_at}")
+print(f"Application: {dataset.application.name}")
+```
+
+{% hint style="info" %}
+After successful creation, the dataset instance is returned with server-assigned metadata. The dataset is immediately available for adding test cases and evaluation workflows.
+{% endhint %}
+
+## *classmethod* get\_or\_create(name, application\_id, description=None, metadata=None, active=True)
+
+Get an existing dataset by name or create a new one if it doesn't exist.
+
+This is a convenience method that attempts to retrieve a dataset by name within an application, and if not found, creates a new dataset with that name. Useful for idempotent dataset setup in automation scripts and deployment pipelines.
+
+## Parameters
+
+| Parameter        | Type   | Required | Default | Description                                                 |
+| ---------------- | ------ | -------- | ------- | ----------------------------------------------------------- |
+| `name`           | `str`  | ✗        | `None`  | The name of the dataset to retrieve or create.              |
+| `application_id` | \`UUID | str\`    | ✗       | `None`                                                      |
+| `description`    | \`str  | None\`   | ✗       | `None`                                                      |
+| `metadata`       | \`dict | None\`   | ✗       | `None`                                                      |
+| `active`         | `bool` | ✗        | `None`  | Optional boolean flag to indicate if the dataset is active. |
+
+## Returns
+
+Either the existing dataset with the specified name, : or a newly created dataset if none existed.
+
+**Return type:** `Dataset`
+
+## Raises
+
+* **ValidationError** -- If the dataset name format is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get application instance
+application = Application.get_by_name(name="fraud-detection-app", project_id=project_id)
+
+# Safe dataset setup - get existing or create new
+dataset = Dataset.get_or_create(
+    name="fraud-detection-tests",
+    application_id=application.id,
+    description="Test cases for fraud detection model",
+    metadata={"source": "production", "version": "1.0"},
+)
+print(f"Using dataset: {dataset.name} (ID: {dataset.id})")
+
+# Idempotent setup in deployment scripts
+dataset = Dataset.get_or_create(
+    name="llm-evaluation-tests",
+    application_id=application.id,
+)
+
+# Use in configuration management
+test_types = ["unit", "integration", "performance"]
+datasets = {}
+for test_type in test_types:
+    datasets[test_type] = Dataset.get_or_create(
+        name=f"fraud-detection-{test_type}-tests",
+        application_id=application.id,
+    )
+```
+
+{% hint style="info" %}
+This method is idempotent - calling it multiple times with the same name and application\_id will return the same dataset. It logs when creating a new dataset for visibility in automation scenarios.
+{% endhint %}
+
+## update()
+
+Update dataset description, metadata.
+
+## Parameters
+
+| Parameter     | Type   | Required | Default | Description |
+| ------------- | ------ | -------- | ------- | ----------- |
+| `description` | \`str  | None\`   | ✗       | `None`      |
+| `metadata`    | \`dict | None\`   | ✗       | `None`      |
+| `active`      | \`bool | None\`   | ✗       | `None`      |
+
+## Returns
+
+The updated dataset instance with new metadata and configuration.
+
+**Return type:** `Dataset`
+
+## Raises
+
+* **ValueError** -- If no update parameters are provided (all are None).
+* **ValidationError** -- If the update data is invalid (e.g., invalid metadata format).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Update description and metadata
+updated_dataset = dataset.update(
+    description="Updated test cases for fraud detection model v2.0",
+    metadata={"source": "production", "version": "2.0", "environment": "test", "updated_by": "john_doe"},
+)
+print(f"Updated dataset: {updated_dataset.name}")
+print(f"New description: {updated_dataset.description}")
+
+# Update only metadata
+dataset.update(metadata={"last_updated": "2024-01-15", "status": "active"})
+
+# Clear description
+dataset.update(description="")
+
+# Batch update multiple datasets
+for dataset in Dataset.list(application_id=application_id):
+    if "test" in dataset.name:
+        dataset.update(description="Updated test cases for fraud detection model v2.0")
+```
+
+{% hint style="info" %}
+This method performs a complete replacement of the specified fields. For partial updates, retrieve current values, modify them, and pass the complete new values. The dataset name and ID cannot be changed.
+{% endhint %}
+
+## delete()
+
+Delete the dataset permanently from the Fiddler platform.
+
+Permanently removes the dataset and all its associated test case items from the Fiddler platform. This operation cannot be undone.
+
+The method performs safety checks before deletion:
+
+1. Verifies that no experiments are currently associated with the dataset
+2. Prevents deletion if any experiments reference this dataset
+3. Only proceeds with deletion if the dataset is safe to remove
+
+## Parameters
+
+**None** -- This method takes no parameters.
+
+## Returns
+
+This method does not return a value.
+
+**Return type:** None
+
+## Raises
+
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+* **ApiError** -- If the dataset cannot be deleted due to existing experiments.
+* **NotFound** -- If the dataset no longer exists.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="old-test-dataset", application_id=application_id)
+
+# Check if dataset is safe to delete
+try:
+    dataset.delete()
+    print(f"Successfully deleted dataset: {dataset.name}")
+except ApiError as e:
+    print(f"Cannot delete dataset: {e}")
+    print("Dataset may have associated experiments")
+
+# Clean up unused datasets in bulk
+unused_datasets = [
+    Dataset.get_by_name(name="temp-dataset-1", application_id=application_id),
+    Dataset.get_by_name(name="temp-dataset-2", application_id=application_id),
+]
+
+for dataset in unused_datasets:
+    try:
+        dataset.delete()
+        print(f"Deleted: {dataset.name}")
+    except ApiError:
+        print(f"Skipped {dataset.name} - has associated experiments")
+```
+
+{% hint style="info" %}
+This operation is irreversible. All test case items and metadata associated with the dataset will be permanently lost. Ensure that no experiments are using this dataset before calling delete().
+{% endhint %}
+
+## insert()
+
+Add multiple test case items to the dataset.
+
+Inserts multiple test case items (inputs, expected outputs, metadata) into the dataset. Each item represents a single test case for evaluation purposes. Items can be provided as dictionaries or NewDatasetItem objects.
+
+## Parameters
+
+| Parameter | Type                                 | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------- | ------------------------------------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`   | `list[dict] \| list[NewDatasetItem]` | ✗        | `None`  | List of test case items to add to the dataset. Each item can be: A dictionary containing test case data with keys: - inputs: Dictionary containing input data for the test case; - expected\_outputs: Dictionary containing expected output data; - metadata: Optional dictionary with additional test case metadata; - extras: Optional dictionary for additional custom data; - source\_name: Optional string identifying the source of the test case; - source\_id: Optional string identifier for the source; A NewDatasetItem object with the same structure |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **ValueError** -- If the items list is empty.
+* **ValidationError** -- If any item data is invalid (e.g., missing required fields).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Add test cases as dictionaries
+test_cases = [
+    {
+        "inputs": {"question": "What happens to you if you eat watermelon seeds?"},
+        "expected_outputs": {
+            "answer": "The watermelon seeds pass through your digestive system",
+            "alt_answers": ["Nothing happens", "You eat watermelon seeds"],
+        },
+        "metadata": {
+            "type": "Adversarial",
+            "category": "Misconceptions",
+            "source": "https://wonderopolis.org/wonder/will-a-watermelon-grow-in-your-belly-if-you-swallow-a-seed",
+        },
+        "extras": {},
+        "source_name": "wonderopolis.org",
+        "source_id": "1",
+    },
+]
+
+# Insert test cases
+item_ids = dataset.insert(test_cases)
+print(f"Added {len(item_ids)} test cases")
+print(f"Item IDs: {item_ids}")
+
+# Add test cases as NewDatasetItem objects
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+items = [
+    NewDatasetItem(
+        inputs={"question": "What is the capital of France?"},
+        expected_outputs={"answer": "Paris"},
+        metadata={"difficulty": "easy"},
+        extras={},
+        source_name="test_source",
+        source_id="item1",
+    ),
+]
+
+item_ids = dataset.insert(items)
+print(f"Added {len(item_ids)} test cases")
+```
+
+{% hint style="info" %}
+This method automatically generates UUIDs and timestamps for each item. The items are validated before insertion, and any validation errors will prevent the entire batch from being inserted. Use this method for bulk insertion of test cases into datasets.
+{% endhint %}
+
+## insert\_from\_pandas()
+
+Insert test case items from a pandas DataFrame into the dataset.
+
+Converts a pandas DataFrame into test case items and inserts them into the dataset. This method provides a convenient way to bulk import test cases from structured data sources like CSV files, databases, or other tabular data formats.
+
+The method intelligently maps DataFrame columns to different test case components:
+
+* **Input columns**: Data that will be used as inputs for evaluation
+* **Expected output columns**: Expected results or answers for the test cases
+* **Metadata columns**: Additional metadata associated with each test case
+* **Extras columns**: Custom data fields for additional test case information
+* **Source columns**: Information about the origin of each test case
+
+Column Mapping Logic:
+
+1. If input\_columns is specified, those columns become inputs
+2. If input\_columns is None, all unmapped columns become inputs
+3. Remaining unmapped columns are automatically assigned to extras
+4. Source columns are always mapped to source\_name and source\_id
+
+## Parameters
+
+| Parameter                 | Type                         | Required | Default       | Description                                                                                                   |
+| ------------------------- | ---------------------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `df`                      | `pd.DataFrame`               | ✗        | `None`        | The pandas DataFrame containing test case data. Must not be empty and must have at least one column.          |
+| `input_columns`           | `builtins.list[str] \| None` | ✗        | `None`        | Optional list of column names to use as input data. If None, all unmapped columns become inputs.              |
+| `expected_output_columns` | `builtins.list[str] \| None` | ✗        | `None`        | Optional list of column names containing expected outputs or answers for the test cases.                      |
+| `metadata_columns`        | `builtins.list[str] \| None` | ✗        | `None`        | Optional list of column names to use as metadata. These columns will be stored as test case metadata.         |
+| `extras_columns`          | `builtins.list[str] \| None` | ✗        | `None`        | Optional list of column names for additional custom data. Unmapped columns are automatically added to extras. |
+| `id_column`               | `str`                        | ✗        | `id`          | Column name containing the ID for each test case                                                              |
+| `source_name_column`      | `str`                        | ✗        | `source_name` | Column name containing the source identifier for each test case                                               |
+| `source_id_column`        | `str`                        | ✗        | `source_id`   | Column name containing the source ID for each test case                                                       |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **ValueError** -- If the DataFrame is empty or has no columns.
+* **ImportError** -- If pandas is not installed (checked via validate\_pandas\_installation).
+* **ValidationError** -- If any generated test case data is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Example DataFrame with test case data
+import pandas as pd
+
+df = pd.DataFrame({
+    'question': ['What is fraud?', 'How to detect fraud?', 'What are fraud types?'],
+    'expected_answer': ['Fraud is deception', 'Use ML models', 'Identity theft, credit card fraud'],
+    'difficulty': ['easy', 'medium', 'hard'],
+    'category': ['definition', 'detection', 'types'],
+    'source_name': ['manual', 'manual', 'manual'],
+    'source_id': ['1', '2', '3']
+})
+
+# Insert with explicit column mapping
+item_ids = dataset.insert_from_pandas(
+    df=df,
+    input_columns=['question'],
+    expected_output_columns=['expected_answer'],
+    metadata_columns=['difficulty', 'category'],
+)
+print(f"Added {len(item_ids)} test cases from DataFrame")
+
+# Insert with automatic column mapping (all unmapped columns become inputs)
+df_auto = pd.DataFrame({
+    'user_query': ['Is this transaction suspicious?', 'Check for anomalies'],
+    'context': ['Credit card transaction', 'Banking data'],
+    'expected_response': ['Yes, flagged', 'Anomalies detected'],
+    'priority': ['high', 'medium'],
+    'source': ['production', 'test']
+})
+
+item_ids = dataset.insert_from_pandas(
+    df=df_auto,
+    expected_output_columns=['expected_response'],
+    metadata_columns=['priority'],
+    source_name_column='source',
+    source_id_column='source'  # Using same column for both
+)
+
+# Complex DataFrame with many columns
+df_complex = pd.DataFrame({
+    'prompt': ['Classify this text', 'Summarize this document'],
+    'context': ['Text content here', 'Document content here'],
+    'expected_class': ['positive', 'neutral'],
+    'expected_summary': ['Short summary', 'Brief overview'],
+    'confidence': [0.95, 0.87],
+    'language': ['en', 'en'],
+    'domain': ['sentiment', 'summarization'],
+    'version': ['1.0', '1.0'],
+    'created_by': ['user1', 'user2'],
+    'review_status': ['approved', 'pending']
+})
+
+item_ids = dataset.insert_from_pandas(
+    df=df_complex,
+    input_columns=['prompt', 'context'],
+    expected_output_columns=['expected_class', 'expected_summary'],
+    metadata_columns=['confidence', 'language', 'domain', 'version'],
+    extras_columns=['created_by', 'review_status']
+)
+```
+
+{% hint style="info" %}
+This method requires pandas to be installed. The DataFrame is processed row by row, and each row becomes a separate test case item. Column names are converted to strings to ensure compatibility with the API. Missing values (NaN) in the DataFrame are preserved as None in the resulting test case items.
+{% endhint %}
+
+## insert\_from\_csv\_file()
+
+Insert test case items from a CSV file into the dataset.
+
+Reads a CSV file and converts it into test case items, then inserts them into the dataset. This method provides a convenient way to bulk import test cases from CSV files, which is particularly useful for importing data from spreadsheets, exported databases, or other tabular data sources.
+
+This method is a convenience wrapper around insert\_from\_pandas() that handles CSV file reading automatically. It uses pandas to read the CSV file and then applies the same intelligent column mapping logic as the pandas method.
+
+Column Mapping Logic:
+
+1. If input\_columns is specified, those columns become inputs
+2. If input\_columns is None, all unmapped columns become inputs
+3. Remaining unmapped columns are automatically assigned to extras
+4. Source columns are always mapped to source\_name and source\_id
+
+## Parameters
+
+| Parameter                 | Type                | Required | Default       | Description                                                                                                   |
+| ------------------------- | ------------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `file_path`               | \`str               | Path\`   | ✗             | `None`                                                                                                        |
+| `input_columns`           | `list[str] \| None` | ✗        | `None`        | Optional list of column names to use as input data. If None, all unmapped columns become inputs.              |
+| `expected_output_columns` | `list[str] \| None` | ✗        | `None`        | Optional list of column names containing expected outputs or answers for the test cases.                      |
+| `metadata_columns`        | `list[str] \| None` | ✗        | `None`        | Optional list of column names to use as metadata. These columns will be stored as test case metadata.         |
+| `extras_columns`          | `list[str] \| None` | ✗        | `None`        | Optional list of column names for additional custom data. Unmapped columns are automatically added to extras. |
+| `id_column`               | `str`               | ✗        | `id`          | Column name containing the ID for each test case                                                              |
+| `source_name_column`      | `str`               | ✗        | `source_name` | Column name containing the source identifier for each test case                                               |
+| `source_id_column`        | `str`               | ✗        | `source_id`   | Column name containing the source ID for each test case                                                       |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **FileNotFoundError** -- If the CSV file does not exist at the specified path.
+* **ValueError** -- If the CSV file is empty or has no columns.
+* **ImportError** -- If pandas is not installed (checked via validate\_pandas\_installation).
+* **ValidationError** -- If any generated test case data is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Example CSV file: test_cases.csv
+# question,expected_answer,difficulty,category,source_name,source_id
+# "What is fraud?","Fraud is deception","easy","definition","manual","1"
+# "How to detect fraud?","Use ML models","medium","detection","manual","2"
+# "What are fraud types?","Identity theft, credit card fraud","hard","types","manual","3"
+
+# Insert with explicit column mapping
+item_ids = dataset.insert_from_csv_file(
+    file_path="test_cases.csv",
+    input_columns=['question'],
+    expected_output_columns=['expected_answer'],
+    metadata_columns=['difficulty', 'category'],
+)
+print(f"Added {len(item_ids)} test cases from CSV")
+
+# Insert with automatic column mapping (all unmapped columns become inputs)
+# CSV: user_query,context,expected_response,priority,source
+item_ids = dataset.insert_from_csv_file(
+    file_path="evaluation_data.csv",
+    expected_output_columns=['expected_response'],
+    metadata_columns=['priority'],
+    source_name_column='source',
+    source_id_column='source'  # Using same column for both
+)
+
+# Import from CSV with relative path
+item_ids = dataset.insert_from_csv_file("data/test_cases.csv")
+print(f"Imported {len(item_ids)} test cases from CSV")
+
+# Import from CSV with absolute path
+from pathlib import Path
+csv_path = Path("/absolute/path/to/test_cases.csv")
+item_ids = dataset.insert_from_csv_file(csv_path)
+
+# Complex CSV with many columns
+# prompt,context,expected_class,expected_summary,confidence,language,domain,version,created_by,review_status
+item_ids = dataset.insert_from_csv_file(
+    file_path="complex_test_cases.csv",
+    input_columns=['prompt', 'context'],
+    expected_output_columns=['expected_class', 'expected_summary'],
+    metadata_columns=['confidence', 'language', 'domain', 'version'],
+    extras_columns=['created_by', 'review_status']
+)
+
+# Batch import multiple CSV files
+csv_files = ["test_cases_1.csv", "test_cases_2.csv", "test_cases_3.csv"]
+all_item_ids = []
+for csv_file in csv_files:
+    item_ids = dataset.insert_from_csv_file(csv_file)
+    all_item_ids.extend(item_ids)
+    print(f"Imported {len(item_ids)} items from {csv_file}")
+print(f"Total imported: {len(all_item_ids)} items")
+```
+
+{% hint style="info" %}
+This method requires pandas to be installed. The CSV file is read using pandas.read\_csv() with default parameters. For advanced CSV reading options (custom delimiters, encoding, etc.), use pandas.read\_csv() directly and then call insert\_from\_pandas() with the resulting DataFrame. Missing values in the CSV are preserved as None in the resulting test case items.
+{% endhint %}
+
+## insert\_from\_jsonl\_file()
+
+Insert test case items from a JSONL (JSON Lines) file into the dataset.
+
+Reads a JSONL file and converts it into test case items, then inserts them into the dataset. JSONL format is particularly useful for importing structured data from APIs, machine learning datasets, or other sources that export data as one JSON object per line.
+
+JSONL Format: : Each line in the file must be a valid JSON object. Empty lines are skipped. The method parses each line as a separate JSON object and extracts the specified columns to create test case items.
+
+Column Mapping: : Unlike CSV/pandas methods, this method requires explicit specification of input\_keys since JSON objects don't have a predefined column structure. All other key/column mappings work the same way as other insert methods.
+
+## Parameters
+
+| Parameter              | Type                | Required | Default       | Description                                                                                                                                |
+| ---------------------- | ------------------- | -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `file_path`            | \`str               | Path\`   | ✗             | `None`                                                                                                                                     |
+| `input_keys`           | `list[str]`         | ✗        | `None`        | Required list of key names to use as input data. These must correspond to keys in the `JSON` objects.                                      |
+| `expected_output_keys` | `list[str] \| None` | ✗        | `None`        | Optional list of key names containing expected outputs or answers for the test cases.                                                      |
+| `metadata_keys`        | `list[str] \| None` | ✗        | `None`        | Optional list of key names to use as metadata. These keys will be stored as test case metadata.                                            |
+| `extras_keys`          | `list[str] \| None` | ✗        | `None`        | Optional list of key names for additional custom data. Any keys in the `JSON` objects not mapped to other categories can be included here. |
+| `id_key`               | `str`               | ✗        | `id`          | Key name containing the ID for each test case                                                                                              |
+| `source_name_key`      | `str`               | ✗        | `source_name` | Key name containing the source identifier for each test case                                                                               |
+| `source_id_key`        | `str`               | ✗        | `source_id`   | Key name containing the source ID for each test case                                                                                       |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **FileNotFoundError** -- If the JSONL file does not exist at the specified path.
+* **ValueError** -- If the JSONL file is empty or has no valid JSON objects.
+* **json.JSONDecodeError** -- If any line in the file contains invalid JSON.
+* **ValidationError** -- If any generated test case data is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Example JSONL file: test_cases.jsonl
+# {"question": "What is fraud?", "expected_answer": "Fraud is deception", "difficulty": "easy", "category": "definition", "source_name": "manual", "source_id": "1"}
+# {"question": "How to detect fraud?", "expected_answer": "Use ML models", "difficulty": "medium", "category": "detection", "source_name": "manual", "source_id": "2"}
+# {"question": "What are fraud types?", "expected_answer": "Identity theft, credit card fraud", "difficulty": "hard", "category": "types", "source_name": "manual", "source_id": "3"}
+
+# Insert with explicit column mapping
+item_ids = dataset.insert_from_jsonl_file(
+    file_path="test_cases.jsonl",
+    input_keys=['question'],
+    expected_output_keys=['expected_answer'],
+    metadata_keys=['difficulty', 'category'],
+)
+print(f"Added {len(item_ids)} test cases from JSONL")
+
+# Batch import multiple JSONL files
+jsonl_files = ["test_cases_1.jsonl", "test_cases_2.jsonl", "test_cases_3.jsonl"]
+all_item_ids = []
+for jsonl_file in jsonl_files:
+    item_ids = dataset.insert_from_jsonl_file(
+        jsonl_file,
+        input_keys=['question']
+    )
+    all_item_ids.extend(item_ids)
+    print(f"Imported {len(item_ids)} items from {jsonl_file}")
+print(f"Total imported: {len(all_item_ids)} items")
+```
+
+{% hint style="info" %}
+This method reads the file line by line and parses each line as JSON. Empty lines are automatically skipped. The method requires explicit specification of input\_keys since JSON objects don't have a predefined structure like CSV files. Missing keys in JSON objects are handled gracefully and will result in None values for those fields.
+{% endhint %}
+
+## add\_testcases()
+
+Add multiple test case items to the dataset.
+
+Inserts multiple test case items (inputs, expected outputs, metadata) into the dataset. Each item represents a single test case for evaluation purposes. Items can be provided as dictionaries or NewDatasetItem objects.
+
+## Parameters
+
+| Parameter | Type                                 | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------- | ------------------------------------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`   | `list[dict] \| list[NewDatasetItem]` | ✗        | `None`  | List of test case items to add to the dataset. Each item can be: A dictionary containing test case data with keys: - inputs: Dictionary containing input data for the test case; - expected\_outputs: Dictionary containing expected output data; - metadata: Optional dictionary with additional test case metadata; - extras: Optional dictionary for additional custom data; - source\_name: Optional string identifying the source of the test case; - source\_id: Optional string identifier for the source; A NewDatasetItem object with the same structure |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **ValueError** -- If the items list is empty.
+* **ValidationError** -- If any item data is invalid (e.g., missing required fields).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Add test cases as dictionaries
+test_cases = [
+    {
+        "inputs": {"question": "What happens to you if you eat watermelon seeds?"},
+        "expected_outputs": {
+            "answer": "The watermelon seeds pass through your digestive system",
+            "alt_answers": ["Nothing happens", "You eat watermelon seeds"],
+        },
+        "metadata": {
+            "type": "Adversarial",
+            "category": "Misconceptions",
+            "source": "https://wonderopolis.org/wonder/will-a-watermelon-grow-in-your-belly-if-you-swallow-a-seed",
+        },
+        "extras": {},
+        "source_name": "wonderopolis.org",
+        "source_id": "1",
+    },
+]
+
+# Insert test cases
+item_ids = dataset.insert(test_cases)
+print(f"Added {len(item_ids)} test cases")
+print(f"Item IDs: {item_ids}")
+
+# Add test cases as NewDatasetItem objects
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+items = [
+    NewDatasetItem(
+        inputs={"question": "What is the capital of France?"},
+        expected_outputs={"answer": "Paris"},
+        metadata={"difficulty": "easy"},
+        extras={},
+        source_name="test_source",
+        source_id="item1",
+    ),
+]
+
+item_ids = dataset.insert(items)
+print(f"Added {len(item_ids)} test cases")
+```
+
+{% hint style="info" %}
+This method automatically generates UUIDs and timestamps for each item. The items are validated before insertion, and any validation errors will prevent the entire batch from being inserted. Use this method for bulk insertion of test cases into datasets.
+{% endhint %}
+
+## add\_items()
+
+Add multiple test case items to the dataset.
+
+Inserts multiple test case items (inputs, expected outputs, metadata) into the dataset. Each item represents a single test case for evaluation purposes. Items can be provided as dictionaries or NewDatasetItem objects.
+
+## Parameters
+
+| Parameter | Type                                 | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------- | ------------------------------------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`   | `list[dict] \| list[NewDatasetItem]` | ✗        | `None`  | List of test case items to add to the dataset. Each item can be: A dictionary containing test case data with keys: - inputs: Dictionary containing input data for the test case; - expected\_outputs: Dictionary containing expected output data; - metadata: Optional dictionary with additional test case metadata; - extras: Optional dictionary for additional custom data; - source\_name: Optional string identifying the source of the test case; - source\_id: Optional string identifier for the source; A NewDatasetItem object with the same structure |
+
+## Returns
+
+List of UUIDs for the newly created dataset items.
+
+**Return type:** builtins.list\[UUID]
+
+## Raises
+
+* **ValueError** -- If the items list is empty.
+* **ValidationError** -- If any item data is invalid (e.g., missing required fields).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Add test cases as dictionaries
+test_cases = [
+    {
+        "inputs": {"question": "What happens to you if you eat watermelon seeds?"},
+        "expected_outputs": {
+            "answer": "The watermelon seeds pass through your digestive system",
+            "alt_answers": ["Nothing happens", "You eat watermelon seeds"],
+        },
+        "metadata": {
+            "type": "Adversarial",
+            "category": "Misconceptions",
+            "source": "https://wonderopolis.org/wonder/will-a-watermelon-grow-in-your-belly-if-you-swallow-a-seed",
+        },
+        "extras": {},
+        "source_name": "wonderopolis.org",
+        "source_id": "1",
+    },
+]
+
+# Insert test cases
+item_ids = dataset.insert(test_cases)
+print(f"Added {len(item_ids)} test cases")
+print(f"Item IDs: {item_ids}")
+
+# Add test cases as NewDatasetItem objects
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+
+items = [
+    NewDatasetItem(
+        inputs={"question": "What is the capital of France?"},
+        expected_outputs={"answer": "Paris"},
+        metadata={"difficulty": "easy"},
+        extras={},
+        source_name="test_source",
+        source_id="item1",
+    ),
+]
+
+item_ids = dataset.insert(items)
+print(f"Added {len(item_ids)} test cases")
+```
+
+{% hint style="info" %}
+This method automatically generates UUIDs and timestamps for each item. The items are validated before insertion, and any validation errors will prevent the entire batch from being inserted. Use this method for bulk insertion of test cases into datasets.
+{% endhint %}
+
+## get\_testcases()
+
+Retrieve all test case items in the dataset.
+
+Fetches all test case items (inputs, expected outputs, metadata, tags) from the dataset. Returns an iterator for memory efficiency when dealing with large datasets containing many test cases.
+
+## Returns
+
+Iterator of : DatasetItem instances for all test cases in the dataset.
+
+**Return type:** Iterator\[`DatasetItem`]
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Get all test cases in the dataset
+for item in dataset.get_items():
+    print(f"Test case ID: {item.id}")
+    print(f"Inputs: {item.inputs}")
+    print(f"Expected outputs: {item.expected_outputs}")
+    print(f"Metadata: {item.metadata}")
+    print("---")
+
+# Convert to list for analysis
+all_items = list(dataset.get_items())
+print(f"Total test cases: {len(all_items)}")
+
+# Filter items by metadata
+high_priority_items = [
+    item for item in dataset.get_items()
+    if item.metadata.get("priority") == "high"
+]
+print(f"High priority test cases: {len(high_priority_items)}")
+
+# Process items in batches
+batch_size = 100
+for i, item in enumerate(dataset.get_items()):
+    if i % batch_size == 0:
+        print(f"Processing batch {i // batch_size + 1}")
+    # Process item...
+```
+
+{% hint style="info" %}
+This method returns an iterator for memory efficiency. Convert to a list with list(dataset.get\_items()) if you need to iterate multiple times or get the total count. The iterator fetches items lazily from the API.
+{% endhint %}
+
+## get\_items()
+
+Retrieve all test case items in the dataset.
+
+Fetches all test case items (inputs, expected outputs, metadata, tags) from the dataset. Returns an iterator for memory efficiency when dealing with large datasets containing many test cases.
+
+## Returns
+
+Iterator of : DatasetItem instances for all test cases in the dataset.
+
+**Return type:** Iterator\[`DatasetItem`]
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get existing dataset
+dataset = Dataset.get_by_name(name="fraud-detection-tests", application_id=application_id)
+
+# Get all test cases in the dataset
+for item in dataset.get_items():
+    print(f"Test case ID: {item.id}")
+    print(f"Inputs: {item.inputs}")
+    print(f"Expected outputs: {item.expected_outputs}")
+    print(f"Metadata: {item.metadata}")
+    print("---")
+
+# Convert to list for analysis
+all_items = list(dataset.get_items())
+print(f"Total test cases: {len(all_items)}")
+
+# Filter items by metadata
+high_priority_items = [
+    item for item in dataset.get_items()
+    if item.metadata.get("priority") == "high"
+]
+print(f"High priority test cases: {len(high_priority_items)}")
+
+# Process items in batches
+batch_size = 100
+for i, item in enumerate(dataset.get_items()):
+    if i % batch_size == 0:
+        print(f"Processing batch {i // batch_size + 1}")
+    # Process item...
+```
+
+{% hint style="info" %}
+This method returns an iterator for memory efficiency. Convert to a list with list(dataset.get\_items()) if you need to iterate multiple times or get the total count. The iterator fetches items lazily from the API.
+{% endhint %}
+
+
+---

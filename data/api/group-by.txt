@@ -1,0 +1,28 @@
+# group\_by
+
+Group the events by a column. Use this method to form the grouped data for ranking models.
+
+## Parameters
+
+| Parameter      | Type        | Required | Default | Description                     |
+| -------------- | ----------- | -------- | ------- | ------------------------------- |
+| `df`           | `DataFrame` | ✗        | `None`  | The dataframe with flat data    |
+| `group_by_col` | `str`       | ✗        | `None`  | The column to group the data by |
+| `output_path`  | \`Path      | str      | None\`  | ✗                               |
+
+## Returns
+
+Dataframe in grouped format
+
+**Return type:** pd.DataFrame
+
+## Examples
+
+```python
+COLUMN_NAME = 'col_2'
+
+grouped_df = group_by(df=df, group_by_col=COLUMN_NAME)
+```
+
+
+---

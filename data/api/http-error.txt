@@ -1,0 +1,25 @@
+# HttpError
+
+Base class for all HTTP-related errors.
+
+This is the parent class for HTTP communication errors that can occur during API requests to the Fiddler platform. While this specific class is deprecated and no longer thrown directly, it serves as the base for more specific HTTP error types.
+
+{% hint style="info" %}
+This class is deprecated and not thrown anymore. Use more specific HTTP error subclasses like ApiError, NotFound, or Conflict instead.
+{% endhint %}
+
+## Examples
+
+Catching any HTTP-related error:
+
+```python
+try:
+    # API operation
+    pass
+
+except HttpError as e:
+    print(f"HTTP error: {e.message}")
+```
+
+
+---

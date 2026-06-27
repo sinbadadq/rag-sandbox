@@ -1,0 +1,395 @@
+# Admin Guide
+
+### Introduction
+
+This Admin Guide supplements the official [Amazon SageMaker Partner AI Apps documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps.html) with Fiddler-specific guidance and practical examples. While Amazon's documentation provides the foundation for Partner AI Apps, specific implementation details can benefit from additional vendor-specific context. Based on our direct experience deploying the Fiddler Partner AI App in SageMaker environments, this guide offers proven configuration patterns, troubleshooting tips, and concrete examples to help you integrate Fiddler's ML monitoring capabilities into your SageMaker infrastructure.
+
+### SageMaker Partner AI Apps Subscription Prerequisites and Permissions
+
+Before proceeding with procurement, the AWS Admin must have some things in place to enable subscription to and deployment of Amazon SageMaker Partner AI Apps as noted in the [Set up Partner AI Apps](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-app-onboard.html) section.
+
+#### Prerequisites
+
+While Amazon lists both items as optional, having both will help facilitate the deployment and validation processes in the SageMaker console.
+
+* A SageMaker AI domain
+* AWS CLI (latest version)
+
+#### Administrative Permissions
+
+Configuring the appropriate permissions is an important step. Every organization will have its own security policies and configuration, so the setup will not be identical across organizations. Some of these grants may already be available to admins in a more permissive environment.
+
+The key steps are:
+
+* Grant permissions to your admin role to complete AWS Marketplace subscriptions
+* Grant permissions for SageMaker AI to run other AWS operations on the admin's behalf
+* Set up an execution role for the Partner AI App (note this role will be needed when deploying the Fiddler Partner AI App)
+* Create an AWS License Manager service-linked role or confirm one exists
+* Grant permissions for the Fiddler Partner AI App to access AWS License Manager
+* Grant Amazon S3 permissions to the execution role
+
+<details>
+
+<summary>Enable AWS Marketplace Access</summary>
+
+Attach the `AWSMarketplaceManageSubscriptions` managed policy to the IAM role you'll use to access the SageMaker AI console and subscribe to Fiddler:
+
+```bash
+aws iam attach-role-policy \
+  --role-name YourAdminRole \
+  --policy-arn arn:aws:iam::aws:policy:AWSMarketplaceManageSubscriptions
+```
+
+Or add the policy through the AWS IAM console.
+
+</details>
+
+<details>
+
+<summary><strong>SageMaker Partner AI App Policy</strong></summary>
+
+Create and attach the following policy to your administrator role:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:CreatePartnerApp",
+        "sagemaker:DeletePartnerApp",
+        "sagemaker:UpdatePartnerApp",
+        "sagemaker:DescribePartnerApp",
+        "sagemaker:ListPartnerApps",
+        "sagemaker:CreatePartnerAppPresignedUrl",
+        "sagemaker:AddTags",
+        "sagemaker:ListTags",
+        "sagemaker:DeleteTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "sagemaker.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+
+<summary><strong>Create Partner AI App Execution Role for Fiddler</strong></summary>
+
+This role allows Fiddler to access the necessary AWS resources:
+
+```bash
+aws iam create-role \
+  --role-name PartnerAiAppExecutionRole \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": [
+            "sagemaker.amazonaws.com"
+          ]
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
+```
+
+</details>
+
+<details>
+
+<summary><strong>AWS License Manager Service-linked Role</strong></summary>
+
+```sh
+# License Manager service-linked roles are typically created automatically
+# when you first use License Manager features. You can verify if it exists:
+aws iam get-role --role-name AWSServiceRoleForAWSLicenseManagerRole 2>/dev/null || \
+echo "License Manager service-linked role will be created automatically when first used"
+
+# If you need to create it manually (rarely required), use:
+# aws iam create-service-linked-role --aws-service-name license-manager.amazonaws
+```
+
+</details>
+
+<details>
+
+<summary><strong>Add License Manager Permissions to the Execution Role</strong></summary>
+
+Comments
+
+```bash
+aws iam put-role-policy \
+  --role-name PartnerAiAppExecutionRole \
+  --policy-name LicenseManagerPolicy \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": {
+      "Effect": "Allow",
+      "Action": [
+        "license-manager:CheckoutLicense",
+        "license-manager:CheckInLicense",
+        "license-manager:ExtendLicenseConsumption",
+        "license-manager:GetLicense",
+        "license-manager:GetLicenseUsage"
+      ],
+      "Resource": "*"
+    }
+  }'
+```
+
+</details>
+
+<details>
+
+<summary><strong>Add Amazon S3 Permissions to the Execution Role</strong></summary>
+
+To allow access to the required S3 bucket, add the appropriate S3 permissions to the execution role.
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::SageMaker"
+            ]
+        },
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::SageMaker/*"
+            ]
+        }
+    ]
+}
+```
+
+</details>
+
+#### User Permissions
+
+Non-admin users require the following permissions to use the Fiddler Partner AI App:
+
+* Grant permissions for SageMaker AI to run other AWS operations on the user's behalf
+* Add the *sts:TagSession* trust policy to the role used to launch Studio and/or Fiddler
+* Grant API permission to the IAM role used with the notebook or code editor to enable access to the Fiddler Python client SDK
+
+<details>
+
+<summary><strong>Create Partner AI App Access Policy</strong></summary>
+
+Create and attach this policy to the execution role of the user profile:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:DescribePartnerApp",
+        "sagemaker:ListPartnerApps",
+        "sagemaker:CreatePartnerAppPresignedUrl"
+      ],
+      "Resource": "arn:aws:sagemaker:*:*:partner-app/app-*"
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+
+<summary><strong>Add Tag Session Permission</strong></summary>
+
+Add the `sts:TagSession` trust policy to the role used to launch Studio or the Fiddler Partner AI App directly:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": {
+    "Service": "sagemaker.amazonaws.com"
+  },
+  "Action": [
+    "sts:AssumeRole",
+    "sts:TagSession"
+  ]
+}
+```
+
+</details>
+
+<details>
+
+<summary><strong>Add Partner App API Permission for SDK Usage</strong></summary>
+
+Enable user access to Fiddler's SDK functionality by adding this permission to the Studio execution role or the IAM role used with notebooks outside Studio:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Statement1",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:CallPartnerAppApi"
+      ],
+      "Resource": [
+        "arn:aws:sagemaker:region:account:partner-app/app-*"
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### Authorization and Authentication
+
+Fiddler and Partner AI Apps require user identity propagation to function correctly. For detailed configuration requirements, refer to the [Manage user authorization and authentication](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-app-onboard.html#partner-app-onboard-auth) section in the AWS documentation.
+
+**Critical Configuration Points**:
+
+* The username format in your identity source must **exactly match** the admin usernames you'll enter during Fiddler deployment
+* For IAM Identity Center: usernames are typically email addresses
+* For IAM: usernames match the IAM user or role name
+* Enable STS identity propagation during Fiddler configuration (this is mandatory)
+
+### Fiddler Partner AI App SageMaker Subscription Process
+
+Amazon SageMaker Partner AI Apps are only available through the Amazon Marketplace. Currently, Fiddler is available on a subscription basis or as a 30-day free trial.
+
+{% hint style="warning" %}
+Partner AI App subscriptions are for software license costs only. The infrastructure necessary to run Partner AI Apps is an additional cost billed to the subscriber under their existing agreement with Amazon.
+{% endhint %}
+
+#### Fiddler 30-day Free Trial
+
+The 30-day free trial is a fully functional Fiddler Partner AI App deployment with no functional limitations. The number of models allowed for monitoring is capped at five. As the Partner AI App free trials are not intended for production use cases, AWS provides no migration path for upgrading trial deployments to fully subscribed deployments.
+
+{% hint style="info" %}
+The 30-day free trial does not include infrastructure costs, which are billed like a full subscription directly to your AWS account per your existing agreement with Amazon.
+{% endhint %}
+
+{% hint style="warning" %}
+You MUST delete your Fiddler Partner AI App deployment at the end of the 30 days or whenever you wish to stop incurring AWS infrastructure costs.
+{% endhint %}
+
+### Deploying the Fiddler Partner AI App
+
+#### Admin Management
+
+For the Fiddler Partner AI App, you must enter at least one and up to five root admin users. The usernames entered here must match the identity principal forwarded to the Fiddler UI when launched.
+
+* The root users will not be editable once the Fiddler AI App has been deployed
+* This list of root users will persist in SageMaker AI even if the Fiddler app is deleted and then later redeployed
+* Admin users created within the Fiddler UI will not persist after the Fiddler Partner AI App deployment is deleted
+
+#### Infrastructure Options
+
+Amazon SageMaker offers Partner AI Apps in small, medium, and large tier sizes. The subscription tier selection screen will have the most current t-shirt-size use cases and estimated AWS costs to help guide your selection.
+
+### Monitor and Manage Your Fiddler Partner AI App Deployment
+
+#### **View Deployment Status**
+
+Navigate to the "My Apps" tab in the Partner AI Apps section to view the status of your Fiddler deployment:
+
+* **Deployed**: Application is ready for use
+* **Error**: Issue with deployment; troubleshoot and reconfigure
+* **Not deployed**: Subscribed but not yet deployed
+
+#### **Access Fiddler**
+
+Users can access Fiddler in two ways:
+
+* From SageMaker Studio: Navigate to Partner AI Apps and select Fiddler
+* Via pre-signed URL: Generate using the `CreatePartnerAppPresignedUrl` with the [Amazon SageMaker API](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreatePartnerAppPresignedUrl.html) or the [AWS CLI](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/sagemaker/create-partner-app-presigned-url.html)
+
+#### **Update Configuration**
+
+To update configuration settings:
+
+* Navigate to "My Apps" in Partner AI Apps
+* Select the Fiddler application
+* Choose "Update" to modify configuration parameters
+
+#### **Delete Deployment**
+
+To delete the Fiddler deployment:
+
+* Navigate to "My Apps" in Partner AI Apps
+* Select the Fiddler application
+* Choose "Delete"
+* Note: This does not cancel your subscription, but it does delete the associated AWS infrastructure
+
+### Troubleshooting
+
+#### **Deployment Failure**
+
+If deployment fails:
+
+* Check IAM roles and permissions
+* Verify that the execution role has all required permissions
+* Check CloudWatch logs for detailed error information
+* Open a support ticket with your AWS support team
+
+#### **Access Issues**
+
+If users cannot access Fiddler:
+
+* Verify that the user IAM permissions include the necessary Partner AI App access
+* Confirm identity propagation is correctly configured
+* Check that usernames match between your identity source and Fiddler
+
+#### **Python Client Connection Issues**
+
+If users cannot connect using the Fiddler Python client:
+
+* Verify the `sagemaker:CallPartnerAppApi` permission is configured
+* Confirm environment variables are correctly set:
+
+  ```python
+  os.environ['AWS_PARTNER_APP_AUTH'] = 'true'
+  os.environ['AWS_PARTNER_APP_ARN'] = '<partner-app-ARN>'
+  os.environ['AWS_PARTNER_APP_URL'] = '<partner-app-URL>'
+  ```
+
+### Additional Resources
+
+* [Amazon SageMaker AI Domain Overview](https://docs.aws.amazon.com/sagemaker/latest/dg/gs-studio-onboard.html)
+* [Partner AI Apps Documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/partner-apps.html)
+* [AWS Identity and Access Management (IAM) Documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html)
+
+
+---

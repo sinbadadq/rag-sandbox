@@ -1,0 +1,54 @@
+# CustomFeature
+
+Base class for all custom feature types in Fiddler models.
+
+CustomFeature provides the foundation for creating specialized feature types that enhance model monitoring and analysis. Custom features allow you to define derived metrics, embeddings, and enrichments that extend beyond basic model inputs and outputs for advanced drift detection and analysis.
+
+This is an abstract base class that should not be instantiated directly. Instead, use one of its concrete subclasses: Multivariate, VectorFeature, TextEmbedding, ImageEmbedding, or Enrichment.
+
+## Examples
+
+Creating a multivariate feature from multiple columns:
+
+```python
+feature = CustomFeature.from_columns(
+    custom_name="user_behavior_cluster",
+    cols=["clicks", "views", "time_spent"],
+    n_clusters=5
+)
+```
+
+Creating a custom feature from a dictionary:
+
+```python
+feature_dict = {
+    "name": "text_sentiment",
+    "type": "FROM_TEXT_EMBEDDING",
+    "column": "embedding_col",
+    "source_column": "review_text"
+}
+feature = CustomFeature.from_dict(feature_dict)
+```
+
+## *class* Config
+
+## allow\_mutation *= False*
+
+## use\_enum\_values *= True*
+
+## discriminator *= 'type'*
+
+## *classmethod* from\_columns(custom\_name, cols, n\_clusters=5)
+
+**Return type:** *Multivariate*
+
+## *classmethod* from\_dict(deserialized\_json)
+
+**Return type:** *Any*
+
+## to\_dict()
+
+**Return type:** *Dict*\[str, *Any*]
+
+
+---

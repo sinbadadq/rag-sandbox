@@ -1,0 +1,320 @@
+# Guardrails
+
+## Overview
+
+Fiddler Guardrails provide real-time protection for GenAI applications—including LLM-powered systems and agentic AI workflows—by detecting and preventing harmful content, PII leaks, and hallucinations before they reach your users. Built on Fiddler Trust Models—Fiddler's proprietary small language models (SLMs)—Guardrails deliver enterprise-grade security with low-latency, high-throughput performance optimized for production environments.
+
+**Use Fiddler Guardrails to:**
+
+* Detect and block harmful or inappropriate content across 11 safety dimensions
+* Prevent personally identifiable information (PII) leaks in user inputs and model outputs
+* Identify hallucinations in retrieval-augmented generation (RAG) applications
+* Protect against prompt injection and jailbreaking attempts
+
+## Available Guardrail Types
+
+Fiddler offers three specialized guardrail types, each powered by Fiddler Trust Models:
+
+* **Fast Safety Guardrails** - Detect harmful, toxic, or jailbreaking content
+* **Fast Faithfulness Guardrails** - Identify hallucinations in RAG applications
+* **Fast PII Guardrails** - Detect and redact sensitive information
+
+{% hint style="info" %}
+Guardrails are designed for **real-time content blocking** with more sensitive thresholds than enrichments used for monitoring and analytics. See the [Enrichments guide](/observability/llm/enrichments.md) for batch processing and monitoring use cases.
+{% endhint %}
+
+## Getting Started with Fiddler Guardrails
+
+### Prerequisites
+
+* **Fiddler Guardrails Account** - Sign up for [Free Guardrails](https://fiddler.ai/free-guardrails) or use your enterprise Fiddler account
+* **API Key** - Generate your API key from Settings → [Credentials](/reference/settings.md#credentials)
+* **HTTP Client** - Python 3.8+ with `requests` library, cURL, or any HTTP client
+
+Guardrails can be invoked directly via REST API from any programming language. The examples below demonstrate usage with cURL and Python.
+
+***
+
+## Fast Safety Guardrails
+
+The Fast Safety model evaluates the safety of text along eleven different dimensions: `illegal, hateful, harassing, racist, sexist, violent, sexual, harmful, unethical, jailbreaking, roleplaying`.
+
+This model requires a single string input for evaluation and outputs 11 distinct scores (floats between 0 and 1). **Set a threshold value > 0.1 for detection (any value > 0.1 indicates unsafe content).**
+
+{% hint style="info" %}
+**Threshold Guidance:** For real-time guardrails, a threshold of **0.1** provides sufficient sensitivity for blocking potentially harmful content. For monitoring use cases with enrichments, higher thresholds (0.7+) reduce false positives. See [Fast Safety Enrichment](/observability/llm/enrichments.md#fast-safety) for monitoring thresholds.
+{% endhint %}
+
+### Fast Safety Guardrails Example Code
+
+{% tabs %}
+{% tab title="cURL" %}
+
+```bash
+curl --location 'https://{fiddler_endpoint}/v3/guardrails/ftl-safety' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {token}' \
+--data '{
+    "data": {
+        "input": "I am a dangerous person who will be wreaking havoc upon the world!!!"
+    }
+}'
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+import requests
+import json
+
+token = "YOUR_FIDDLER_TOKEN_HERE"
+url = "FIDDLER_ENDPOINT_HERE"
+
+payload = json.dumps(
+    {
+        "data": {
+            "input": "I am a dangerous person who will be wreaking havoc upon the world!!!"
+        }
+    }
+)
+headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
+response = requests.request(
+    "POST", f"{url}/v3/guardrails/ftl-safety", headers=headers, data=payload
+)
+
+print(response.text)
+```
+
+{% endtab %}
+{% endtabs %}
+
+**Sample Response**
+
+```json
+{
+  "fdl_harmful": 0.119,
+  "fdl_violent": 0.073,
+  "fdl_unethical": 0.043,
+  "fdl_illegal": 0.016,
+  "fdl_sexual": 0.005,
+  "fdl_racist": 0.003,
+  "fdl_jailbreaking": 0.002,
+  "fdl_harassing": 0.001,
+  "fdl_hateful": 0.001,
+  "fdl_sexist": 0.001,
+  "fdl_roleplaying": 0.051
+}
+```
+
+**Interpreting Safety Scores:**
+
+Each dimension returns a score between 0 and 1:
+
+* **Closer to 0** - Safe content
+* **Closer to 1** - Unsafe content
+* **> 0.1** - Exceeds recommended threshold for real-time blocking
+
+***
+
+## Fast Faithfulness Guardrails
+
+The Fast Faithfulness model (FTL Faithfulness) evaluates the accuracy and reliability of facts presented in AI-generated text responses by comparing them to provided context documents. This uses Fiddler's proprietary Fast Trust Model with `response` and `context` inputs.
+
+{% hint style="info" %}
+**Not to be confused with RAG Faithfulness.** Fast Faithfulness Guardrails use Fiddler's proprietary Fast Trust Model (`ftl_response_faithfulness`) optimized for real-time blocking. RAG Faithfulness is a separate LLM-as-a-Judge evaluator available in Agentic Monitoring and Experiments for diagnostic evaluation. See [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) for details.
+{% endhint %}
+
+This model requires a response string and contextual documents as input. The model outputs a single faithfulness score (float between 0 and 1). **Set a threshold of < 0.5 for detection (any value less than 0.5 indicates unfaithful content).**
+
+{% hint style="info" %}
+**Threshold Guidance:** A score closer to **0** means unfaithful (the LLM hallucinated relative to the provided context), while a score closer to **1** means faithful (the LLM output did not hallucinate and is well-grounded in the provided context). For real-time guardrails, a threshold of **0.5** strikes a balance between sensitivity and accuracy.
+{% endhint %}
+
+### Fast Faithfulness Guardrails Example Code
+
+{% tabs %}
+{% tab title="cURL" %}
+
+```bash
+curl --location 'https://{fiddler_endpoint}/v3/guardrails/ftl-response-faithfulness' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {token}' \
+--data '{
+    "data": {
+      "response": "The Yorkshire Terrier and the Cavalier King Charles Spaniel are both small breeds of companion dogs.",
+      "context": "The Yorkshire Terrier is a small dog breed of terrier type, developed during the 19th century in Yorkshire, England, to catch rats in clothing mills.The Cavalier King Charles Spaniel is a small spaniel classed as a toy dog by The Kennel Club and the American Kennel Club"
+  }
+}'
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+import requests
+import json
+
+token = "YOUR_FIDDLER_TOKEN_HERE"
+url = "FIDDLER_ENDPOINT_HERE"
+
+payload = json.dumps(
+    {
+        "data": {
+            "response": "The Yorkshire Terrier and the Cavalier King Charles Spaniel are both small breeds of companion dogs.",
+            "context": "The Yorkshire Terrier is a small dog breed of terrier type, developed during the 19th century in Yorkshire, England, to catch rats in clothing mills.The Cavalier King Charles Spaniel is a small spaniel classed as a toy dog by The Kennel Club and the American Kennel Club",
+        }
+    }
+)
+headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
+response = requests.request(
+    "POST",
+    f"{url}/v3/guardrails/ftl-response-faithfulness",
+    headers=headers,
+    data=payload,
+)
+
+print(response.text)
+```
+
+{% endtab %}
+{% endtabs %}
+
+**Sample Response**
+
+```json
+{
+  "fdl_faithful_score": 0.194
+}
+```
+
+**Interpreting Faithfulness Scores:**
+
+* **0.0 - 0.49** - Unfaithful (likely hallucination - block or flag for review)
+* **0.5 - 1.0** - Faithful (response is well-supported by the provided context)
+
+The example above shows a score of **0.194**, which is **below the 0.5 threshold**, indicating the response may contain hallucinated information not supported by the context.
+
+***
+
+## Fast Personally Identifiable Information (PII) Guardrails
+
+The Fast Personally Identifiable Information (PII) model detects, flags, and redacts PII leakage in both user inputs and model responses.
+
+The following 24 label types are supported by the Fast PII Guardrails model: `person, address, email, email address, credit card number, credit card expiration date, cvv, cvc, bank account number, iban, social security number, date of birth, ip address, phone number, mobile phone number, landline phone number, passport number, drivers license number, tax identification number, cpf, cnpj, national health insurance number, digital signature, postal code`
+
+{% hint style="info" %}
+Fast PII Guardrails use Fiddler's proprietary models and support a different entity set than the [PII Enrichment](/observability/llm/enrichments.md#personally-identifiable-information) (which uses Presidio). For monitoring and batch processing, see the PII Enrichment documentation.
+{% endhint %}
+
+This model accepts a single text string and returns all detected PII spans with their labels, confidence scores, and character offsets.
+
+### Fast Personally Identifiable Information (PII) Guardrails Example Code
+
+{% tabs %}
+{% tab title="cURL" %}
+
+```bash
+curl --location 'https://{fiddler_endpoint}/v3/guardrails/sensitive-information' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {token}' \
+--data '{
+    "data": {
+        "input": "Some of my colleagues share their contact info as well. Jane Smith's email is jane.smith@company.com, and her office is located at 432 Oak Avenue, Suite 210, Chicago, IL 60611. You can call her mobile at 312-555-7890."
+    }
+}'
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+import requests
+import json
+
+token = "YOUR_FIDDLER_TOKEN_HERE"
+url = "FIDDLER_ENDPOINT_HERE"
+
+payload = json.dumps(
+    {
+        "data": {
+            "input": "Some of my colleagues share their contact info as well. Jane Smith's email is jane.smith@company.com, and her office is located at 432 Oak Avenue, Suite 210, Chicago, IL 60611. You can call her mobile at 312-555-7890."
+        }
+    }
+)
+headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
+response = requests.request(
+    "POST", f"{url}/v3/guardrails/sensitive-information", headers=headers, data=payload
+)
+
+print(response.text)
+```
+
+{% endtab %}
+{% endtabs %}
+
+**Sample Response**
+
+```json
+{
+  "fdl_sensitive_information_scores": [
+    {
+      "score": 0.987,
+      "label": "email",
+      "start": 78,
+      "end": 100,
+      "text": "jane.smith@company.com"
+    },
+    {
+      "score": 0.945,
+      "label": "address",
+      "start": 131,
+      "end": 175,
+      "text": "432 Oak Avenue, Suite 210, Chicago, IL 60611"
+    },
+    {
+      "score": 0.987,
+      "label": "mobile phone number",
+      "start": 204,
+      "end": 216,
+      "text": "312-555-7890"
+    }
+  ]
+}
+```
+
+**Response Fields:**
+
+* `score` - Confidence score (0.0 to 1.0)
+* `label` - Entity type (e.g., "email", "social security number")
+* `text` - The detected sensitive information
+* `start` / `end` - Character positions in the input text
+
+***
+
+## Summary
+
+Fiddler Guardrails provide real-time protection for GenAI applications through three specialized guardrail types powered by Fiddler Trust Models:
+
+* **Fast Safety Guardrails** - Detect harmful content across 11 safety dimensions with a recommended threshold of > 0.1
+* **Fast Faithfulness Guardrails** - Identify hallucinations in RAG applications with a recommended threshold of < 0.5
+* **Fast PII Guardrails** - Detect and redact 24 types of sensitive information
+
+All guardrails use Fiddler Trust Models—Fiddler's proprietary small language models—optimized for sub-second latency in production environments.
+
+## Next Steps
+
+* **Quick Start** - [Get started with Fiddler Guardrails in 15 minutes](/developers/guardrails/guardrails-quick-start.md)
+* **API Reference** - [Complete Guardrails API documentation](/api/rest-api/guardrails-api-reference.md)
+* **Tutorials** - Explore detailed tutorials for [Safety](/developers/tutorials/guardrails/guardrails-safety.md), [PII](/developers/tutorials/guardrails/guardrails-pii.md), and [Faithfulness](/developers/tutorials/guardrails/guardrails-faithfulness.md)
+* **Concepts** - [Understand Fiddler Trust Models and enrichments](/observability/llm/enrichments.md)
+* **Monitoring** - [Integrate guardrails with LLM monitoring](/observability/llm/enrichments.md#fast-safety)
+
+
+---

@@ -1,0 +1,38 @@
+# FiddlerTool
+
+Wrapper for tool/function call spans with semantic convention helpers.
+
+Initialize tool span wrapper.
+
+## **enter**()
+
+Enter context and set tool type.
+
+**Return type:** [*FiddlerTool*](#fiddlertool)
+
+## set\_tool\_name()
+
+Set the tool/function name (gen\_ai.tool.name).
+
+**Return type:** None
+
+## set\_tool\_input()
+
+Set the tool input arguments (gen\_ai.tool.input).
+
+**Return type:** None
+
+## set\_tool\_output()
+
+Set the tool output/result (gen\_ai.tool.output).
+
+**Return type:** None
+
+## set\_tool\_definitions()
+
+Set available tool definitions (gen\_ai.tool.definitions).
+
+**Return type:** None
+
+
+---

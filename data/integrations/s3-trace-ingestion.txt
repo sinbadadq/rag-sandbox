@@ -1,0 +1,478 @@
+# S3 Trace Ingestion
+
+## Overview
+
+The Fiddler S3 Connector allows you to ingest OpenTelemetry (OTLP) trace data from Amazon S3 into Fiddler without requiring any live SDK integration. Your application writes OTLP JSON files to an S3 bucket (or a compatible object store), and Fiddler's ingestion service automatically discovers, parses, and forwards those traces into the observability platform.
+
+This is the recommended approach for:
+
+* **Air-gapped or high-security deployments** where direct outbound connections from the application to Fiddler are not permitted
+* **Batch ingestion pipelines** that transform logs or events into OTLP format and stage them in S3
+* **Custom log transformers** that convert raw LangGraph or other framework logs into the Fiddler OTLP format
+
+{% hint style="info" %}
+**When to use the SDK instead**
+
+If your application can make direct outbound HTTPS requests, the [Fiddler LangGraph SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) or [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) provide zero-config auto-instrumentation with no file staging required. Use S3 ingestion only when direct SDK integration is not possible.
+{% endhint %}
+
+***
+
+## Architecture
+
+```
+Your Application
+      │
+      │  writes OTLP JSON files
+      ▼
+┌─────────────┐
+│  Amazon S3  │  (your bucket, your prefix)
+└──────┬──────┘
+       │  scans every N seconds
+       ▼
+┌────────────────────────────────┐
+│  object-store-ingestion-manager │  discovers new files, enqueues them
+└──────────────┬─────────────────┘
+               │
+               ▼
+┌────────────────────────────────┐
+│  object-store-ingestion-worker  │  downloads, parses, sends to collector
+└──────────────┬─────────────────┘
+               │  OTLP protobuf (HTTP/4318)
+               ▼
+┌──────────────────────┐
+│  Fiddler OTEL        │  authenticates, routes to Kafka → ClickHouse
+│  Collector           │
+└──────────────────────┘
+               │
+               ▼
+┌──────────────────────┐
+│  Fiddler UI          │  traces visible under your GenAI Application
+└──────────────────────┘
+```
+
+***
+
+## Prerequisites
+
+* A Fiddler account with a GenAI **Application** created — you will need its **Application UUID**
+* A valid **Fiddler API key** (from **Settings → Credentials**) — this is used to authenticate the worker with the OTEL Collector
+* An **Amazon S3 bucket** (or S3-compatible store) that Fiddler's worker can read from
+* IAM permissions on the bucket — see [IAM Setup](#iam-setup) below
+
+***
+
+## OTLP File Format
+
+Files placed in S3 must be valid **OTLP JSON** with a `resourceSpans` array at the top level. This is the standard `ExportTraceServiceRequest` JSON envelope.
+
+### Supported file extensions
+
+`.json`
+
+### Required JSON structure
+
+```json
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "application.id",
+            "value": { "stringValue": "<your-fiddler-application-uuid>" }
+          },
+          {
+            "key": "service.name",
+            "value": { "stringValue": "your-service-name" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "your-tracer-name", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "<trace-id>",
+              "spanId": "<span-id>",
+              "parentSpanId": "<parent-span-id-or-empty-string-for-root>",
+              "name": "agent_invocation",
+              "kind": 1,
+              "startTimeUnixNano": "1744200000000000000",
+              "endTimeUnixNano": "1744200005500000000",
+              "status": { "code": 1 },
+              "attributes": [
+                {
+                  "key": "fiddler.span.type",
+                  "value": { "stringValue": "llm" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Critical fields
+
+| Field                                   | Description                                     | Notes                                                                                                                                       |
+| --------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resource.attributes["application.id"]` | **Fiddler Application UUID**                    | **Must match** the application UUID in your Fiddler instance. This routes spans to the correct application in the UI.                       |
+| `startTimeUnixNano` / `endTimeUnixNano` | Span timestamps as nanoseconds since Unix epoch | Must reflect the **actual time** of each event. Wrong timestamps cause spans to appear in the wrong time range in the UI.                   |
+| `traceId`                               | 16-byte trace identifier                        | Accepted as **base64** (`S/kvNXezTaajzpKdDg5HNg==`) or **hex** (`4bf92f3577b34da6a3ce929d0e0e4736`). Fiddler auto-normalises hex to base64. |
+| `spanId`                                | 8-byte span identifier                          | Same encoding rules as `traceId`.                                                                                                           |
+| `parentSpanId`                          | Parent span ID                                  | Set to `""` (empty string) for root spans.                                                                                                  |
+| `fiddler.span.type`                     | Span type for Fiddler's UI                      | Recommended values: `llm`, `tool`. See [Supported span types](#supported-span-types-and-attributes) below.                                  |
+
+{% hint style="warning" %}
+**`application.id` must be in the file**
+
+The `application.id` resource attribute inside the OTLP file is the source of truth for routing spans to the correct Fiddler application. The `application_ids` field on the ingestion source (see below) is used for access control only — it does **not** override the `application.id` in the span data. If these do not match, spans will be ingested but will not appear under your application in the UI.
+{% endhint %}
+
+### Supported span types and attributes
+
+| `fiddler.span.type`            | Key attributes                                                                                                                                                              |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `llm`                          | `gen_ai.system`, `gen_ai.request.model`, `gen_ai.llm.input.user`, `gen_ai.llm.input.system`, `gen_ai.llm.output`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
+| `tool`                         | `gen_ai.tool.name`, `gen_ai.tool.input`, `gen_ai.tool.output`                                                                                                               |
+| `agent`                        | `gen_ai.agent.name`, `gen_ai.agent.id`                                                                                                                                      |
+| `chain` *(legacy — LangChain)* | `gen_ai.agent.name`, `gen_ai.agent.id`, `gen_ai.conversation.id`                                                                                                            |
+
+For the full attribute reference including all supported keys and their types, see [Fiddler Span Attributes](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-span-attributes.md).
+
+Custom span attributes can be added using the `fiddler.span.user.*` namespace:
+
+```json
+{ "key": "fiddler.span.user.risk_rating", "value": { "stringValue": "Moderate-High" } }
+```
+
+***
+
+{% hint style="info" %}
+**Platform enablement required**
+
+The S3 connector must be enabled for your Fiddler environment before use. Contact your **Fiddler account team or platform admin** to request enablement. Once confirmed, proceed with the steps below to set up your ingestion source.
+{% endhint %}
+
+## Setting Up the Ingestion Source
+
+Create an ingestion source via the Fiddler REST API to tell the connector where to look in S3.
+
+### API endpoint
+
+```
+POST /v3/ingestion-sources
+```
+
+### Request body
+
+```json
+{
+  "name": "my-agent-traces",
+  "description": "Production LangGraph agent traces from ECS Fargate",
+  "provider": "s3",
+  "region": "us-west-2",
+  "bucket": "my-company-traces",
+  "prefix": "fiddler/prod/",
+  "scan_interval_seconds": 60,
+  "file_extensions": [".json"],
+  "credential_type": "iam_role",
+  "role_arn": "arn:aws:iam::123456789012:role/my-ingestion-role",
+  "application_ids": ["<your-fiddler-application-uuid>"]
+}
+```
+
+### Request fields
+
+| Field                   | Required | Description                                                                                |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `name`                  | ✅        | Unique name for this ingestion source (1–255 characters)                                   |
+| `bucket`                | ✅        | S3 bucket name (without `s3://` prefix)                                                    |
+| `application_ids`       | ✅        | List containing exactly one Fiddler application UUID (v1 enforces 1:1)                     |
+| `provider`              | ❌        | Object store provider. Default: `"s3"`. One of: `s3`, `gcs`, `azure`                       |
+| `region`                | ❌        | AWS region of the bucket (e.g. `"us-west-2"`). Optional                                    |
+| `prefix`                | ❌        | S3 key prefix to scan (e.g. `"traces/prod/"`). Default: `""` (scan entire bucket)          |
+| `file_extensions`       | ❌        | List of file extensions to process. Default: `[".json"]`                                   |
+| `credential_type`       | ❌        | `"iam_role"` (default) to use an IAM role, or `"access_key"` for static access key/secret  |
+| `access_key_id`         | ❌        | Required when `credential_type` is `"access_key"`. Write-only, never returned in responses |
+| `secret_access_key`     | ❌        | Required when `credential_type` is `"access_key"`. Write-only, never returned in responses |
+| `role_arn`              | ❌        | IAM role ARN to assume via STS (cross-account). Omit to use the worker's node IAM role     |
+| `external_id`           | ❌        | STS external ID for cross-account role assumption. Write-only, never returned in responses |
+| `endpoint_url`          | ❌        | Custom endpoint URL for S3-compatible stores (e.g. MinIO). Default: `null`                 |
+| `scan_interval_seconds` | ❌        | How often the manager scans for new files. Default: `60`. Minimum: `10`                    |
+| `description`           | ❌        | Optional description (max 1000 characters)                                                 |
+
+### Example using Python
+
+```python
+import requests
+
+FIDDLER_URL = "https://your-instance.fiddler.ai"
+API_KEY = "your-api-key"
+APPLICATION_ID = "your-application-uuid"
+
+response = requests.post(
+    f"{FIDDLER_URL}/v3/ingestion-sources",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "name": "my-agent-traces",
+        "description": "Agent traces from S3",
+        "provider": "s3",
+        "region": "us-west-2",
+        "bucket": "my-traces-bucket",
+        "prefix": "traces/",
+        "scan_interval_seconds": 60,
+        "file_extensions": [".json"],
+        "credential_type": "iam_role",
+        "application_ids": [APPLICATION_ID],
+    },
+)
+print(response.json())
+```
+
+***
+
+## IAM Setup
+
+The Fiddler worker needs read access to your S3 bucket. The recommended approach is an IAM role.
+
+### Minimum required IAM policy
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "FiddlerS3ReadAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::my-traces-bucket",
+        "arn:aws:s3:::my-traces-bucket/traces/*"
+      ]
+    }
+  ]
+}
+```
+
+### Options
+
+| Option                     | How to configure                                                                                                                  | When to use                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **EKS Node IAM Role**      | Grant the Fiddler worker node's IAM role access to your bucket. Omit `role_arn` in the API request.                               | Same AWS account, simple setup             |
+| **Cross-account IAM Role** | Create a role in your account with a trust policy allowing Fiddler's worker role to assume it. Set `role_arn` in the API request. | Cross-account or tighter security boundary |
+
+***
+
+## Monitoring File Processing Status
+
+### Aggregate stats
+
+Get a summary count of files by status and total spans ingested:
+
+```
+GET /v3/ingestion-sources/{source_id}/stats
+```
+
+```bash
+curl -H "Authorization: Bearer <api-key>" \
+  "https://your-instance.fiddler.ai/v3/ingestion-sources/<source-id>/stats"
+```
+
+Example response:
+
+```json
+{
+  "data": {
+    "source_id": "<source-uuid>",
+    "total_files": 10,
+    "pending": 2,
+    "processing": 1,
+    "completed": 6,
+    "failed": 1,
+    "total_spans_ingested": 342,
+    "last_file_completed_at": "2026-04-10T09:38:22Z",
+    "last_file_failed_at": null
+  }
+}
+```
+
+### Per-file list
+
+List individual files with their status:
+
+```
+GET /v3/ingestion-sources/{source_id}/files
+```
+
+```bash
+curl -H "Authorization: Bearer <api-key>" \
+  "https://your-instance.fiddler.ai/v3/ingestion-sources/<source-id>/files"
+```
+
+### File statuses
+
+| Status       | Meaning                                                                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pending`    | Discovered by the manager, queued for processing. Also the status a file returns to after a transient error when retries remain (`retries` counter increments each time).      |
+| `processing` | Worker is currently downloading and parsing the file                                                                                                                           |
+| `completed`  | Successfully ingested. `spans_count` shows how many spans were sent                                                                                                            |
+| `failed`     | Permanently failed. Either a non-retryable error (e.g. malformed JSON, auth error) or all retries exhausted. Check `error_message` for details. Use the retry API to re-queue. |
+
+### Example response
+
+```json
+{
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "s3_key": "traces/sample_trace.json",
+        "file_size_bytes": 10097,
+        "status": "completed",
+        "error_message": null,
+        "spans_count": 4,
+        "retries": 0,
+        "max_retries": 3,
+        "processed_at": "2026-04-10T09:38:22Z",
+        "created_at": "2026-04-10T09:38:18Z"
+      }
+    ]
+  }
+}
+```
+
+### Retry a failed file
+
+Retry a single failed file:
+
+```
+POST /v3/ingestion-sources/{source_id}/files/{file_id}/retry
+```
+
+Bulk retry all failed files for a source at once:
+
+```
+POST /v3/ingestion-sources/{source_id}/retry-failed
+```
+
+***
+
+## Testing the Connection
+
+Before uploading production traces, verify that the ingestion source can reach your bucket:
+
+```
+POST /v3/ingestion-sources/{source_id}/test
+```
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer <api-key>" \
+  "https://your-instance.fiddler.ai/v3/ingestion-sources/<source-id>/test"
+```
+
+A successful response returns `{ "status": "success", "files_found": N }` where `files_found` is the number of files discovered under the configured prefix. A failure returns `{ "status": "error", "message": "<error detail>" }` (e.g. `AccessDenied`, `NoSuchBucket`).
+
+***
+
+## Generating OTLP Files with the Fiddler SDK
+
+If your application can write files locally (but cannot send traces directly to Fiddler), you can use the Fiddler LangGraph SDK's built-in OTLP file capture and upload the files to S3 separately.
+
+```python
+from fiddler_langgraph import FiddlerClient
+
+client = FiddlerClient(
+    application_id="your-application-uuid",
+    otlp_enabled=False,           # Do not send traces directly to Fiddler
+    otlp_json_capture_enabled=True,
+    otlp_json_output_dir="./traces",  # Directory to write OTLP JSON files
+)
+```
+
+Each LangGraph invocation writes one OTLP JSON file to `./traces/`. Upload these files to your S3 bucket using the AWS CLI or any S3 client:
+
+```bash
+aws s3 sync ./traces/ s3://my-traces-bucket/traces/
+```
+
+{% hint style="info" %}
+For environments where local file writes are also not possible (e.g. ECS Fargate with read-only filesystems), generate the OTLP JSON in memory and stream it directly to S3 using `boto3.client('s3').put_object()` without writing to disk.
+{% endhint %}
+
+***
+
+## Troubleshooting
+
+### Spans not appearing in the UI
+
+| Symptom                                                    | Likely cause                                                            | Fix                                                                                    |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| File `status: completed` but no spans visible              | Time range filter in UI doesn't cover the span timestamps               | Change the UI date range to match `startTimeUnixNano` in your files                    |
+| File `status: completed` but spans under wrong application | `application.id` in the file doesn't match the Fiddler application UUID | Update your transformer to embed the correct `application.id` as a resource attribute  |
+| File `status: failed` with `invalid TraceID length`        | `traceId` / `spanId` encoded incorrectly                                | Use 32-char hex or standard base64. Fiddler auto-normalises hex; avoid other encodings |
+| File `status: failed` with `AccessDenied`                  | Worker IAM role lacks `s3:GetObject` on your bucket                     | Update the IAM policy — see [IAM Setup](#iam-setup)                                    |
+| File `status: failed` with `CredentialError`               | `OTEL_COLLECTOR_AUTH_TOKEN` not configured on the worker                | Contact your Fiddler admin to configure the collector auth token                       |
+| Files never appear (stuck in `pending`)                    | Manager cannot list the bucket                                          | Check `s3:ListBucket` permission and that `prefix` is correct                          |
+
+### Verifying file format locally
+
+Use the following Python snippet to validate your OTLP JSON file before uploading:
+
+```python
+import json
+from google.protobuf.json_format import ParseDict
+from opentelemetry.proto.trace.v1.trace_pb2 import ResourceSpans
+
+with open("my_trace.json") as f:
+    data = json.load(f)
+
+for rs_dict in data["resourceSpans"]:
+    try:
+        rs = ParseDict(rs_dict, ResourceSpans())
+        print(f"OK: {sum(len(ss.spans) for ss in rs.scope_spans)} spans")
+    except Exception as e:
+        print(f"ERROR: {e}")
+```
+
+***
+
+## File Naming and Organisation
+
+The S3 connector processes every file under the configured `prefix` that matches the configured `file_extensions`. Once a file is processed (whether `completed` or `failed`), it is not reprocessed unless you call the retry API.
+
+**Recommended S3 key structure:**
+
+```
+traces/
+  2026/04/10/
+    agent-run-abc123.json
+    agent-run-def456.json
+  2026/04/11/
+    agent-run-ghi789.json
+```
+
+This date-partitioned layout makes it easy to manage retention policies and audit ingestion history.
+
+***
+
+## Related Documentation
+
+* [Exporting OTel Traces to Fiddler](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/otel-trace-export.md) — client-side protobuf export for custom pipelines
+* [Fiddler LangGraph SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) — direct SDK integration for LangGraph applications
+* [OpenTelemetry Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md) — live OTLP export for custom agent frameworks
+* [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) — decorator-based tracing for custom Python agents
+
+
+---

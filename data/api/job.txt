@@ -1,0 +1,221 @@
+# Job
+
+Represents an asynchronous operation in the Fiddler platform.
+
+A Job tracks the execution of long-running operations such as data publishing, model artifact uploads, surrogate model training, and other async tasks. Jobs provide status monitoring, progress tracking, and error handling for operations that may take significant time to complete.
+
+Key Features:
+
+* **Status Monitoring**: Real-time tracking of job execution state
+* **Progress Tracking**: Percentage completion for running operations
+* **Error Reporting**: Detailed error messages and failure reasons
+* **Timeout Handling**: Configurable timeouts for job completion
+* **Responsive Polling**: Efficient status checking with backoff strategies
+
+Job States:
+
+* **PENDING**: Job queued and waiting to start execution
+* **STARTED**: Job actively running with progress updates
+* **SUCCESS**: Job completed successfully
+* **FAILURE**: Job failed with detailed error information
+* **RETRY**: Job being retried after a failure
+* **REVOKED**: Job cancelled or terminated
+
+## Example
+
+```python
+# Get a job by ID
+job = Job.get(id_="550e8400-e29b-41d4-a716-446655440000")
+print(f"Job: {job.name} - Status: {job.status}")
+print(f"Progress: {job.progress:.1f}%")
+
+# Wait for job completion
+job.wait(timeout=1800)  # 30 minute timeout
+print("Job completed successfully!")
+
+# Monitor job progress in real-time
+for job_update in job.watch(interval=10, timeout=3600):
+
+    print(f"{job_update.name}: {job_update.progress:.1f}%")
+    if job_update.status in [JobStatus.SUCCESS, JobStatus.FAILURE]:
+
+        break
+```
+
+{% hint style="info" %}
+Jobs are created automatically by async operations and cannot be instantiated directly. Use Job.get() to retrieve existing jobs and the monitoring methods to track progress and handle completion.
+{% endhint %}
+
+Initialize a Job instance.
+
+Creates a job object for tracking asynchronous operations. This constructor is typically used internally when deserializing API responses rather than for direct job creation.
+
+{% hint style="info" %}
+Jobs are automatically created by async operations (like Model.publish(), Model.add\_artifact(), etc.) and cannot be created directly. Use Job.get() to retrieve existing jobs and monitoring methods to track progress.
+
+**Return type:** None
+{% endhint %}
+
+## *classmethod* get(id\_, verbose=False)
+
+Retrieve a job by its unique identifier.
+
+Fetches a job from the Fiddler platform using its UUID. This is the primary way to retrieve job information for monitoring async operations.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description                                                                                                            |
+| --------- | ------ | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`                                                                                                                 |
+| `verbose` | `bool` | ✗        | `None`  | Whether to include detailed task execution information. When True, provides additional debugging and progress details. |
+
+## Returns
+
+The job instance with current status, progress, and metadata.
+
+**Return type:** `Job`
+
+## Raises
+
+* **NotFound** -- If no job exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get basic job information
+job = Job.get(id_="550e8400-e29b-41d4-a716-446655440000")
+print(f"Job: {job.name} - Status: {job.status}")
+print(f"Progress: {job.progress:.1f}%")
+
+# Get detailed job information for debugging
+detailed_job = Job.get(
+    id_="550e8400-e29b-41d4-a716-446655440000",
+    verbose=True
+)
+print(f"Task details: {detailed_job.info}")
+
+# Check for errors
+if job.status == JobStatus.FAILURE:
+
+    print(f"Error: {job.error_reason}")
+    print(f"Details: {job.error_message}")
+```
+
+{% hint style="info" %}
+This method makes an API call to fetch the latest job state from the server. Use verbose=True when debugging failed jobs to get additional task details.
+{% endhint %}
+
+## watch()
+
+Monitor job progress with real-time status updates.
+
+Continuously polls the job status at specified intervals and yields updated job instances. This method provides real-time monitoring of job progress and automatically handles network errors and retries.
+
+## Parameters
+
+| Parameter  | Type  | Required | Default | Description                                                                                                                        |
+| ---------- | ----- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `interval` | `int` | ✗        | `6`     | Polling interval in seconds between status checks. Default is configured by `JOB_POLL_INTERVAL` (typically 5-10 seconds).          |
+| `timeout`  | `int` | ✗        | `1800`  | Maximum time in seconds to monitor the job before giving up. Default is configured by `JOB_WAIT_TIMEOUT` (typically 1800 seconds). |
+
+## Yields
+
+`Job` -- Updated job instances with current status and progress.
+
+## Raises
+
+* **TimeoutError** -- If the job doesn't complete within the specified timeout.
+* **AsyncJobFailed** -- If the job fails during execution (raised by wait() method). **Return type:** *Iterator*\[[*Job*](#job)]
+
+## Example
+
+```python
+# Monitor job progress with default settings
+job = model.publish(source="large_dataset.csv")
+for job_update in job.watch():
+
+    print(f"Progress: {job_update.progress:.1f}%")
+    print(f"Status: {job_update.status}")
+    if job_update.status in [JobStatus.SUCCESS, JobStatus.FAILURE]:
+
+        break
+
+        # Custom polling interval and timeout
+        for job_update in job.watch(interval=30, timeout=7200):  # 2 hour timeout
+
+        print(f"{job_update.name}: {job_update.progress:.1f}%")
+        if job_update.status == JobStatus.SUCCESS:
+
+            print("Job completed successfully!")
+        break
+
+    elif job_update.status == JobStatus.FAILURE:
+        print(f"Job failed: {job_update.error_message}")
+        break
+
+        # Progress tracking with custom logic
+        last_progress = 0
+        for job_update in job.watch(interval=15):
+
+            if job_update.progress > last_progress + 10:
+                print(f"Progress milestone: {job_update.progress:.1f}%")
+                last_progress = job_update.progress
+```
+
+{% hint style="info" %}
+This method handles network errors gracefully and continues monitoring. It automatically stops when the job reaches a terminal state (SUCCESS, FAILURE, or REVOKED). Use shorter intervals for more responsive monitoring but be mindful of API rate limits.
+{% endhint %}
+
+## wait()
+
+Wait for job completion with automatic progress logging.
+
+Blocks execution until the job completes (successfully or with failure). Provides automatic progress logging and raises an exception if the job fails. This is the most convenient method for simple job completion waiting.
+
+## Parameters
+
+| Parameter  | Type  | Required | Default | Description                                                                                                               |
+| ---------- | ----- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `interval` | `int` | ✗        | `6`     | Polling interval in seconds between status checks. Default is configured by `JOB_POLL_INTERVAL` (typically 5-10 seconds). |
+| `timeout`  | `int` | ✗        | `1800`  | Maximum time in seconds to wait for job completion. Default is configured by `JOB_WAIT_TIMEOUT` (typically 1800 seconds). |
+
+## Raises
+
+* **TimeoutError** -- If the job doesn't complete within the specified timeout.
+* **AsyncJobFailed** -- If the job fails during execution, includes error details. **Return type:** None
+
+## Example
+
+```python
+# Simple job completion waiting
+job = model.publish(source="training_data.csv")
+job.wait()  # Blocks until completion
+print("Data publishing completed!")
+
+# Custom timeout for long-running jobs
+job = model.add_artifact(model_dir="./model_package")
+job.wait(timeout=3600)  # 1 hour timeout
+print("Model artifact upload completed!")
+
+# Handle job failures
+try:
+
+    job = model.publish(source="invalid_data.csv")
+    job.wait()
+
+except AsyncJobFailed as e:
+    print(f"Job failed: {e}")
+    # Handle failure (retry, alert, etc.)
+
+    # Fast polling for critical operations
+    job = model.update_surrogate(dataset_id=dataset.id)
+    job.wait(interval=5, timeout=600)  # 5 second polling, 10 min timeout
+```
+
+{% hint style="info" %}
+This method automatically logs progress updates to the logger. For custom progress handling, use the watch() method instead. The method blocks the current thread until completion, so consider using watch() for non-blocking monitoring in async applications.
+{% endhint %}
+
+
+---

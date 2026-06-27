@@ -1,0 +1,27 @@
+# Model Editor
+
+## Model Onboarding Process
+
+1. Access your project
+   * Sign in to Fiddler and navigate to the Projects tab
+   * Select an existing project or create a new one
+2. Add a model
+   * Select Add Model in the top-right corner
+   * Choose a model task type: Not Set, Regression, Binary Classification, or Multi-Class Classification
+3. Upload and analyze your dataset
+   * Upload your CSV file
+   * Review the automatically inferred schema
+   * Verify flagged columns that need additional attention
+4. Choose your onboarding approach
+   * For immediate publication: Enter a model name and select Create Model
+   * For draft mode: Select Save as Draft
+5. Work with your draft (Draft Mode)
+   * Access your draft from the Draft Models tab
+   * Edit schema details as needed
+   * Publish sample data to validate your configuration
+   * When ready, publish the finalized model
+
+For specific details and best practices see the [Model Schema Editing Guide](/observability/model-ui/model-schema-editing.md).
+
+
+---

@@ -1,0 +1,203 @@
+# Email Login
+
+This guide covers email-based authentication in Fiddler, including user management, security requirements, and administrative procedures.
+
+## Overview
+
+Email authentication is Fiddler's built-in authentication method for organizations that don't use Single Sign-On (SSO) or need to provide access to users outside their SSO system. With email authentication, users log in using their email address and a password they create during the account setup process.
+
+## When to Use Email Authentication
+
+Email authentication is ideal for:
+
+* Organizations without an identity provider
+* Adding specific users who don't have SSO access
+* Mixed environments where some users need different authentication methods
+* Adding service accounts
+
+{% hint style="info" %}
+**Note**: Each user account can only use one authentication method—either email authentication or SSO, not both.
+{% endhint %}
+
+## User Management with Authentication Console
+
+Fiddler provides a separate UI for managing your authentication: the AuthN console.
+
+{% hint style="info" %}
+The URL to the AuthN management console is your Fiddler instance base URL preprended with `authn-`. For example, if your base URL is `https://acme.cloud.fiddler.ai` then you can access the AuthN management console at `https://authn-acme.cloud.fiddler.ai`.
+{% endhint %}
+
+### Prerequisites for User Management
+
+To manage email authentication users, you need:
+
+* **Administrator access**: Your user account must have the "Org Owner" or "Org User Manager" role in the authentication management system
+* **Console access**: Access to the Fiddler authentication management console
+
+### Adding Users to Fiddler
+
+**Step 1: Access the Authentication Management Console**
+
+* Navigate to the Fiddler AuthN authentication management console
+
+{% hint style="info" %}
+The URL to the AuthN management console is your Fiddler instance base URL preprended with \`authn-\`. For example, if your base URL is \`<https://acme.cloud.fiddler.ai\\`> then you can access the AuthN management console at \`<https://authn-acme.cloud.fiddler.ai\\`>.
+{% endhint %}
+
+* Ensure you have the necessary administrator permissions. To assign user management privilege to another user, add either the "Org Owner" or "Org User Manager" role in the Organizations tab of the AuthN console:
+
+  <figure><img src="/files/rMoLSydnIyvKa51qt4NY" alt="Adding a manager using Fiddler user management console Organizations tab"><figcaption><p>Select the + to open the role assignment window</p></figcaption></figure>
+
+  <figure><img src="/files/9yc4RhIojYsqd96WyMrD" alt="Selecting a role for a user in the Fiddler user management console"><figcaption><p>Choose the appropriate privilege for another user to manage authentication</p></figcaption></figure>
+
+**Step 2: Create User Account**
+
+{% hint style="warning" %}
+
+* The email and username fields must match exactly
+* Only lower-case letters should be used to avoid case-sensitivity issues
+  {% endhint %}
+
+1. In the authentication console, navigate to **Users**
+2. Click **New** to create a new user.
+
+   <figure><img src="/files/MFlG3qQLPVCcUtF3Pbgo" alt="Authn console add new user form"><figcaption><p>Add New User Form</p></figcaption></figure>
+3. Fill in the required contact details:
+   * **Email address**: This will be the user's login identifier and must be unique
+   * **User Name**: This field must contain the email address exactly
+   * **First name** and **Last name**
+   * **Email Verified**: Choose whether to mark the email as "verified" automatically
+   * **Set Initial Password**: Choose whether to set the password yourself or allow the new user to set their own
+
+{% hint style="info" %}
+It is recommended to leave both the Email Verified and the Set Initial Password checkboxes unchecked. Doing so results in the user receiving an email with a link to Fiddler to confirm their invitation and choose their password.
+
+* Checking Email Verified means the user does not need to validate that they own the email address assigned
+* If both checkboxes are checked, the user will receive no email, and the AuthN admin must communicate the sign-in credentials
+  {% endhint %}
+
+**Step 3: Configure Authentication Setup**
+
+Choose one of the following authentication setup options:
+
+**Option A: Set up Authentication Later**
+
+* Select **"Setup authentication later for this user"**
+* Use this option if you want to prepare the account before the user needs access
+* The user will not be able to log in until they set up an authentication method
+* Useful for preparing accounts for future employees
+
+**Option B: Send Invitation Email (Recommended)**
+
+* Select **"Send an invitation E-Mail for authentication setup and E-Mail verification"**
+* The user will receive an email with instructions to set up their authentication
+* The user can choose their preferred authentication method (password, passkey, or external SSO)
+* This provides the most flexibility for users
+
+**Option C: Set Initial Password**
+
+* Select **"Set an initial password for the user"**
+* Enter a temporary password for the user
+* The user will receive an email notification about their account
+* The user should change this password on first login
+
+**Step 4: Complete User Creation**
+
+1. Click **Create** to save the user account
+2. The system will process the user creation based on your selected authentication option
+3. If you chose email invitation, the user will automatically receive setup instructions
+
+### Managing User Invitations
+
+**Invitation and Setup Process**:
+
+**Email Verification and Initial Setup**:
+
+* By default, users receive an initialization email with a verification code
+* Users must verify this code on their first login
+* If you marked the email as "verified" during creation, this step may be skipped
+
+**Authentication Method Selection**:
+
+* Users can choose from available authentication methods based on your organization's configuration:
+  * **Password**: Traditional username/password authentication
+  * **Passkey**: Modern passwordless authentication using biometrics or security keys
+  * **External SSO**: If configured, users can authenticate through external identity providers
+
+**Invitation Properties**:
+
+* Email invitations do not expire automatically
+* Users can complete their setup at any time after receiving the invitation
+* Account setup must be completed before users can access Fiddler
+
+**Resending Invitations**: If you need to resend setup instructions to a user:
+
+1. Go to the **Users** section in the authentication console
+2. Find the specific user account
+3. Use the available options to resend invitation or setup emails
+4. Users who haven't completed setup will receive fresh instructions
+
+### User Account Lifecycle
+
+**Account Activation**: When users receive their setup email, they:
+
+1. Click the setup link in the email
+2. Verify their email address (if required)
+3. Choose and configure their preferred authentication method:
+   * **Password**: Create a password meeting security requirements
+   * **Passkey**: Set up biometric or security key authentication
+   * **External SSO**: Link to configured external identity providers (if available)
+4. Complete their profile information if prompted
+5. Confirm their account to gain access to Fiddler
+
+**Account Management**:
+
+* **User deactivation**: Temporarily disable user access
+* **User deletion**: Permanently remove user accounts
+* **Password reset**: Users can reset forgotten passwords through the login interface
+
+### Password Management
+
+**Forgotten Passwords**: Users can reset forgotten passwords by:
+
+1. Clicking **Forgot Password** on the login page
+2. Entering their email address
+3. Following the instructions in the password reset email
+4. Creating a new password that meets security requirements
+
+### User Role Considerations
+
+**AuthN Administrative Roles**: Ensure at least one user has the "Org Owner" or "Org User Manager" role to continue managing email authentication users.
+
+**Fiddler Roles**: After email authentication users log in, Org Admins can assign appropriate Fiddler application roles (Org Admin, Org Member, etc.) for access control.
+
+## Troubleshooting
+
+### Common Issues
+
+**Users Cannot Access Console**:
+
+* Verify the user has "Org Owner" or "Org User Manager" role
+* Check authentication console network accessibility
+* Confirm user account status
+
+**Invitation Links Not Working**:
+
+* Verify the invitation hasn't been revoked
+* Check for email delivery issues
+* Regenerate invitation links if necessary
+
+**Login Problems**:
+
+* Verify password meets all requirements
+* Check for account lockouts due to failed attempts
+* Confirm user account is active and not suspended
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

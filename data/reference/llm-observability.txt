@@ -1,0 +1,100 @@
+# LLM Observability
+
+[LLM Observability](/welcome/readme.md) is the practice of monitoring, measuring, and analyzing Large Language Model systems in production environments to ensure their reliability, safety, and performance. It involves the systematic collection and analysis of LLM inputs, outputs, and associated metrics to provide visibility into model behavior, detect anomalies, ensure alignment with business objectives, and maintain trust.
+
+Unlike traditional ML model monitoring, LLM Observability addresses unique challenges specific to generative AI, including hallucination detection, prompt safety evaluation, response quality assessment, and embedding analysis. This comprehensive approach enables organizations to understand how their LLM applications perform in real-world scenarios and take proactive measures to maintain quality and mitigate risks.
+
+## How Fiddler Provides LLM Observability
+
+Fiddler's LLM Observability platform provides a comprehensive approach to monitoring and protecting LLM applications through enrichments, which are custom features designed to augment data provided in events. The platform requires publication of LLM application inputs and outputs, including prompts, prompt context, responses, and source documents (for RAG-based applications).
+
+Fiddler generates various AI trust and safety metrics through its enrichment pipeline, allowing users to detect data drift, visualize embeddings, identify hallucinations, assess response quality, detect harmful content, and monitor overall application health. These metrics can be used for alerting, analysis, and debugging purposes across the application lifecycle.
+
+## Why LLM Observability Is Important
+
+LLM Observability is crucial for organizations deploying generative AI applications in production environments. As LLMs become increasingly integrated into critical business processes and customer-facing applications, maintaining transparency, quality, and safety becomes essential. Effective LLM Observability enables teams to detect issues early, continuously improve model performance, ensure responsible AI deployment, and maintain compliance with evolving regulatory requirements.
+
+* **Quality Assurance and Hallucination Detection**: LLM Observability helps identify instances of hallucinations, factual inaccuracies, or low-quality outputs through metrics like faithfulness and answer relevance, ensuring that generated content meets quality standards.
+* **Safety and Trust Monitoring**: Monitoring ensures LLM applications remain safe and trustworthy by detecting harmful, toxic, or inappropriate content through metrics like safety scores, profanity detection, and toxicity assessment.
+* **Performance Optimization**: By tracking operational metrics such as token usage, embedding quality, and response times, organizations can optimize their LLM applications for both cost efficiency and user satisfaction.
+* **Root Cause Analysis**: When issues arise, LLM Observability provides the tools to conduct detailed analysis, identify the root causes of problems, and implement targeted improvements.
+* **Drift Detection**: As the world changes and user behavior evolves, LLM Observability helps detect shifts in prompt patterns or content distribution that might affect model performance.
+* **Regulatory Compliance**: With growing regulatory scrutiny of AI systems, LLM Observability provides the transparency and documentation needed to demonstrate responsible AI practices to stakeholders and regulators.
+
+## Types of LLM Observability
+
+* **Input Monitoring**: Tracking and analyzing user prompts, prompt context, and embedding patterns to identify trends, anomalies, and potential security risks like jailbreak attempts or prompt injections.
+* **Output Quality Assessment**: Evaluating LLM responses for quality metrics including faithfulness, coherence, conciseness, and relevance to ensure outputs align with user expectations and business requirements.
+* **Safety and Trust Evaluation**: Monitoring for harmful content, inappropriate language, PII leakage, toxicity, and other trust-related concerns that might compromise user safety or organizational reputation.
+* **Embedding Visualization**: Using techniques like UMAP to visualize high-dimensional embeddings in 2D or 3D space, enabling identification of clusters, patterns, and anomalies in LLM data.
+* **Performance Monitoring**: Tracking system-level metrics such as response times, token usage, error rates, and throughput to optimize operational efficiency and cost management.
+
+## Challenges
+
+Implementing effective LLM Observability presents unique challenges due to the complex, generative nature of these models and the contextual importance of their outputs.
+
+* **Defining Meaningful Metrics**: Unlike traditional ML models with clear accuracy metrics, defining and measuring "quality" for LLM outputs is subjective and context-dependent, requiring multiple complementary evaluation approaches.
+* **Hallucination Detection**: Reliably identifying when LLMs generate false or misleading information requires sophisticated evaluation techniques and often involves comparing outputs against trusted knowledge sources.
+* **Balancing Performance and Safety**: Organizations must navigate the trade-off between optimizing for response quality and speed while maintaining robust safety guardrails and content filtering.
+* **Managing High-Dimensionality Data**: LLM embeddings and feature spaces are highly dimensional, making them challenging to analyze, visualize, and interpret without specialized techniques like UMAP.
+* **Handling Diverse Use Cases**: Different LLM applications (customer service, content creation, code generation) require different monitoring approaches and metrics, making it difficult to establish universal standards.
+* **Privacy and Security**: LLM applications may process sensitive user data, creating challenges for monitoring that must be balanced with privacy requirements and security considerations.
+* **Real-time vs. Batch Analysis**: Organizations must decide which metrics require real-time monitoring with immediate alerts versus those that can be analyzed in batch processes, balancing responsiveness with resource efficiency.
+
+## LLM Observability Implementation How-to Guide
+
+1. **Define Monitoring Objectives**
+   * Identify key performance indicators (KPIs) most relevant to your specific LLM application use case.
+   * Determine acceptable thresholds for safety, quality, and performance metrics based on business requirements.
+2. **Set Up Data Collection**
+   * Implement comprehensive logging for all LLM application inputs and outputs, including prompts, context, and responses.
+   * For RAG applications, capture retrieved documents and sources to enable faithfulness evaluation.
+3. **Implement Essential Enrichments**
+   * Configure embedding generation for semantic analysis of prompts and responses.
+   * Set up basic safety and quality enrichments including toxicity detection, PII scanning, and relevance metrics.
+4. **Establish Visualization Capabilities**
+   * Implement UMAP visualization for embedding spaces to identify clusters and anomalies.
+   * Create dashboards displaying key metrics over time to track performance trends.
+5. **Configure Alerting and Guardrails**
+   * Set up threshold-based alerts for critical metrics related to safety, performance, and quality.
+   * Implement guardrails for proactive protection against harmful content and prompt injections.
+6. **Develop Analysis Workflows**
+   * Create standard procedures for investigating alerts and conducting root cause analysis.
+   * Establish regular review cycles to assess LLM application health and identify areas for improvement.
+
+## Frequently Asked Questions
+
+**Q: How is LLM Observability different from traditional ML monitoring?**
+
+LLM Observability addresses unique challenges like hallucinations, prompt effectiveness, safety concerns, and nuanced quality metrics that aren't present in traditional ML models. It focuses on unstructured text outputs requiring qualitative and semantic evaluation rather than simple accuracy metrics.
+
+**Q: What metrics should I prioritize for my LLM application?**
+
+Priority metrics depend on your use case but typically include safety metrics (toxicity, harmful content), quality metrics (faithfulness, coherence, relevance), and operational metrics (response time, token usage). Applications handling sensitive information should prioritize PII detection, while customer-facing applications may emphasize response quality.
+
+**Q: How can I detect LLM hallucinations in production?**
+
+Fiddler offers multiple approaches to hallucination detection. **FTL Faithfulness** (Fast Trust Model) provides real-time faithfulness scoring in LLM Observability and Guardrails. **RAG Faithfulness** (LLM-as-a-Judge) provides binary assessment with detailed reasoning in Agentic Monitoring and Experiments. For RAG applications, the RAG Health Metrics diagnostic triad (Answer Relevance 2.0, Context Relevance, RAG Faithfulness) helps pinpoint whether issues stem from retrieval or generation. See [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md).
+
+**Q: How do embedding visualizations help with LLM monitoring?**
+
+UMAP embedding visualizations help identify clusters of similar prompts or responses, detect outliers, visualize concept drift, and identify problematic patterns like jailbreak attempts or toxic content clusters, providing intuitive visual analysis of high-dimensional data.
+
+## Related Terms
+
+* [Enrichments](/reference/glossary/enrichment.md)
+* [Guardrails](/reference/glossary/guardrails.md)
+* [Embedding Visualization](/reference/glossary/embedding-visualization.md)
+* [Data Drift](/reference/glossary/data-drift.md)
+
+## Related Resources
+
+* [LLM Monitoring Overview](/welcome/readme.md)
+* [LLM-based Metrics Guide](/observability/llm/llm-based-metrics.md)
+* [Embedding Visualization with UMAP](/observability/llm/embedding-visualization-with-umap.md)
+* [Selecting Enrichments](/observability/llm/selecting-enrichments.md)
+* [Enrichments Documentation](/observability/llm/enrichments.md)
+* [Guardrails for Proactive Application Protection](/reference/glossary/guardrails.md)
+
+
+---

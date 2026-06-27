@@ -1,0 +1,110 @@
+# Evaluator
+
+Abstract base class for creating custom evaluators in Fiddler Evals.
+
+The Evaluator class provides a flexible framework for creating builtin and custom evaluators that can assess LLM outputs against various criteria. Each evaluator is responsible for a single, specific evaluation task (e.g., hallucination detection, answer relevance, exact match, etc.).
+
+Parameter Mapping: : Evaluators can define their own parameter mappings using score\_fn\_kwargs\_mapping in the constructor. These mappings specify how data from the evaluation context (inputs, outputs, expected\_outputs) should be passed to the evaluator's score method.\
+Mapping Priority (highest to lowest):
+
+1. Evaluator-level score\_fn\_kwargs\_mapping (set in constructor)
+2. Evaluation-level kwargs\_mapping (passed to evaluate function)
+3. Default parameter resolution<br>
+
+This allows evaluators to define sensible defaults while still permitting customization at the evaluation level.
+
+Creating Custom Evaluators: : To create a custom evaluator, inherit from this class and implement the score method with parameters specific to your evaluation needs:\
+Example - Custom evaluator with parameter mapping: class ExactMatchEvaluator(Evaluator):<br>
+
+> def **init**(self, output\_key: str = "answer", score\_name\_prefix: str = None): : super().**init**( : score\_name\_prefix=score\_name\_prefix, score\_fn\_kwargs\_mapping={"output": output\_key}\
+> )
+>
+> \
+> def score(self, output: str, expected\_output: str) -> Score: : is\_match = output.strip().lower() == expected\_output.strip().lower() return Score(\
+> \> name=f"{self.score\_name\_prefix}exact\_match", > value=1.0 if is\_match else 0.0, > reasoning=f"Match: {is\_match}"\
+> )
+
+## Parameters
+
+| Parameter                 | Type                       | Required | Default | Description |
+| ------------------------- | -------------------------- | -------- | ------- | ----------- |
+| `score_name_prefix`       | \`str                      | None\`   | ✗       | `None`      |
+| `score_fn_kwargs_mapping` | \`ScoreFnKwargsMappingType | None\`   | ✗       | `None`      |
+
+{% hint style="info" %}
+The score method signature is intentionally flexible using \*args and \*\*kwargs to allow each evaluator to define its own parameter requirements. This design enables maximum flexibility while maintaining a consistent interface across all evaluators in the framework.
+{% endhint %}
+
+Initialize the evaluator with parameter mapping configuration.
+
+## Parameters
+
+| Parameter                 | Type             | Required                                      | Default | Description |
+| ------------------------- | ---------------- | --------------------------------------------- | ------- | ----------- |
+| `score_name_prefix`       | \`str            | None\`                                        | ✗       | `None`      |
+| `score_fn_kwargs_mapping` | \`Dict\[str, str | Callable\[\[Dict\[str, Any]], Any]] \| None\` | ✗       | `None`      |
+
+## Example
+
+```python
+# Simple string mapping
+evaluator = MyEvaluator(score_fn_kwargs_mapping={"output": "answer"})
+
+# Complex transformation function
+evaluator = MyEvaluator(score_fn_kwargs_mapping={
+        "question": lambda x: x["inputs"]["question"],
+        "response": "answer"
+    })
+
+    # Using score name prefix for multiple instances
+    evaluator1 = RegexSearch(r"\d+", score_name_prefix="question")
+    evaluator2 = RegexSearch(r"\d+", score_name_prefix="answer")
+    # Results in scores named "question_has_number" and "answer_has_number"
+```
+
+## Raises
+
+**ScoreFunctionInvalidArgs** -- If the mapping contains invalid parameter names that don't match the evaluator's score method signature. **Return type:** None
+
+## *property* name *: str*
+
+## *abstractmethod* score(\*args, \*\*kwargs)
+
+Evaluate inputs and return a score or list of scores.
+
+This method must be implemented by all concrete evaluator classes. Each evaluator can define its own parameter signature based on what it needs for evaluation.
+
+Common parameter patterns:
+
+* Output-only: score(self, output: str) -> Score
+* Input-Output: score(self, input: str, output: str) -> Score
+* Comparison: score(self, output: str, expected\_output: str) -> Score
+* All parameters: score(self, input: str, output: str, context: list\[str]) -> Score
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                             |
+| --------- | ----- | -------- | ------- | ------------------------------------------------------- |
+| `*args`   | `Any` | ✗        | `None`  | Positional arguments specific to the evaluator's needs. |
+
+## Returns
+
+A single Score object or list of Score objects : representing the evaluation results. Each Score should include:
+
+* name: The score name (e.g., "has\_zipcode")
+* evaluator\_name: The evaluator name (e.g., "RegexMatch")
+* value: The score value (typically 0.0 to 1.0)
+* status: SUCCESS, FAILED, or SKIPPED
+* reasoning: Optional explanation of the score
+* error: Optional error information if evaluation failed
+
+**Return type:** Score | list\[Score]
+
+## Raises
+
+* **ValueError** -- If required parameters are missing or invalid.
+* **TypeError** -- If parameters have incorrect types.
+* **Exception** -- Any other evaluation-specific errors.
+
+
+---

@@ -1,0 +1,111 @@
+# Template-Based Alerts
+
+The Template-Based Alerts feature streamlines alert rule configuration and generation, significantly reducing manual effort. By using a Google Sheet to input key data and generate a recipe YAML file, this feature enables the efficient and accurate creation of alert rules. This approach ensures more relevant alerts, enhancing monitoring capabilities and enabling proactive issue resolution.
+
+This guide outlines the process of generating and deploying template-based alerts to monitor your model's performance and data.
+
+### Overview
+
+Template-based alerts involve two primary steps:
+
+1. **Generate a YAML configuration:** This involves using a provided Google Sheet to define your alert rules.
+2. **Consume the YAML configuration:** This utilizes a Python notebook from the Alert Recipes repository to create the alerts in your Fiddler deployment.
+
+### Step 1: Generating the Alert Recipe YAML Configuration
+
+The first step is to create a YAML configuration file containing your desired alert rules. This is done using a pre-configured Google Sheet.
+
+#### 1.1 Copying the Alert Recipes Sheet
+
+To begin, you need to copy the Alert Recipes Google Sheet. This ensures you have a personal, editable version without affecting the base sheet.
+
+* **Action**: Copy the entire content of the Alert Recipes sheet, including the recipe generator script it contains.
+
+#### 1.2 Understanding the Sheet Structure
+
+Once copied, note that the Google Sheet is organized into several worksheets:
+
+* `AlertRecipes`: This is the main sheet where you define individual alert rules.
+* `RecipeParameters` and `NotificationPacks`: These sheets need to be edited according to your preferences.
+* `MetricIdMap` and `ThresholdTypeMap`: These sheets are locked and should not be edited unless you have a deep understanding of their function.
+
+#### 1.3 Configuring Recipe Parameters
+
+The `RecipeParameters` sheet is crucial for defining the context of your alerts.
+
+![RecipeParameters Sheet](/files/inX6sJ4TVHAoRzbbRWYd)
+
+* **Columns:**
+  * **Project name**: Enter the name of your project.
+  * **Model name**: Enter the name of your model.
+  * **High-priority features**: List the key features for this project and model, separated by commas.
+  * **Medium-priority features**: Provide a comma-separated list of features you consider medium priority for this project and model.
+  * **Low-priority features**: Provide a comma-separated list of features you consider low priority for this project and model.
+
+{% hint style="info" %}
+**Important Note**: The script only considers the first row of this sheet. Any additional rows will be ignored.
+{% endhint %}
+
+#### 1.4 Configuring notification packs
+
+Notification packs allow you to bundle email, PagerDuty, or webhook notifications to be applied to your alert rules.
+
+![NotificationPacks Sheet](/files/J77mxT1bHbLSv7WivAKN)
+
+* **Definition**: A notification pack is a collection of one or more notification types (email, PagerDuty, webhook) that can be attached to an alert rule.
+* **Customization**:
+  * You can create custom notification packs in new rows.
+  * Each new pack can contain any combination of email, PagerDuty service, and webhook UUID.
+  * **Important Note**: The webhook user ID must be the actual UUID of the webhook, not its service name.
+* **Availability**: Any notification packs you define or modify in this sheet will be available for selection in the main `AlertRecipes` sheet.
+
+#### 1.5 Defining Alert Rules in AlertRecipes
+
+The `AlertRecipes` sheet is where you configure individual alert rules.
+
+![AlertRecipes Sheet](/files/9DTDZlHqvkIyd5x1DDA4)
+
+* **Columns:**
+  * **Monitor type**: Specifies the type of metric on which the alert rule will be created.
+  * **Alert rule name**: If provided, this name will be used for the alert rule. Otherwise, a name will be inferred from the monitor type, appended with a unique identifier.
+  * **Time window**: Defines the time bin over which evaluations will happen and alerts will be raised.
+  * **Enabled (Y or N)**: Determines whether this alert rule will be included in the generated YAML configuration.
+  * **Features**: Select from 'High-Priority', 'Low-Priority', 'Medium-Priority', or 'All'. The specific features are chosen from the RecipeParameters sheet based on your selection.
+  * **Threshold algo**: Currently, only 'standard deviation' is supported.
+  * **Critical multiplier**: This multiplier is used to calculate the critical threshold dynamically. For example, a value of `2` means a critical alert will be raised if the metric value is 2 standard deviations away from the mean of the reference data.
+  * **Warning multiplier**: This multiplier is used to calculate the warning threshold dynamically. For example, a value of `1` means a warning alert will be raised if the metric value is 1 standard deviation away from the mean of the reference data. These multipliers are customizable (e.g., 0.5, 1.5).
+  * **Notification pack**: Select a pre-defined notification pack from the `NotificationPacks` sheet to attach to this alert rule.
+
+#### 1.6 Generating the Alert Recipe YAML
+
+Once you have configured the `RecipeParameters`, `NotificationPacks`, and `AlertRecipe` sheets, you can generate the YAML file.
+
+* **Action**: Click the "Generate Alert Recipe" button in the `AlertRecipe` Sheet.
+* **Permissions**: You will be prompted to grant specific permissions for the script to run. These permissions are necessary for the script to access your Google Drive (to save the YAML file) and to run within the Google Sheet environment.
+* **Output**: The YAML file will be generated. Copy its content.
+
+### Step 2: Consuming the YAML Configuration
+
+After generating the YAML file, the next step is to use it to create the alert rules in your Fiddler deployment. This is done using the Alert Recipes repository and a Python notebook.
+
+#### 2.1 Setting Up the Alert Recipes Repository
+
+You'll need to work within the Alert Recipes repository.
+
+* **File Creation**: Inside the root of the repository, create two files:
+  * `config.py`
+  * `alert_recipes.yaml`
+* **Configuration**:
+  * `config.py`: Populate this file with the correct URL and authentication token for your Fiddler deployment. You can copy the structure from existing example files(`config.py.example`).
+  * `alert_recipes.yaml`: Paste the content of the YAML file you copied from the Google Sheet into this file.
+
+#### 2.2 Running the Python Notebook
+
+With the configuration files set up, you can now run the Python notebook to create the alert rules.
+
+* **Action**: Open the `create_alert_rules.ipynb` notebook within the Alert Recipes repository.
+* **Execution**: Run all cells within the notebook.
+* **Verification**: The logs in the notebook will show which new alert rules have been created. You can then verify the creation of these rules within your Fiddler deployment.
+
+
+---

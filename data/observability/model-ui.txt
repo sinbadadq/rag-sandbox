@@ -1,0 +1,47 @@
+# Model UI
+
+### Adding and Editing Models in the UI
+
+#### Overview
+
+UI-based Model Onboarding lets you add models to Fiddler without writing Python code. You can define schemas, validate data, and register models directly through the Fiddler interface—making model onboarding accessible to more team members and streamlining the process.
+
+Key benefits:
+
+* No coding required - Onboard models through an intuitive web interface
+* Faster deployment - Use automatic schema inference and guided validation to reduce setup time
+* Early error detection - Identify issues like missing categories, incorrect ranges, or invalid data types immediately
+* Draft mode flexibility - Save work-in-progress schemas, consult with your team, and validate sample data before publishing
+
+### Model Onboarding Modes
+
+Fiddler offers two approaches to model onboarding through the UI: Standard Onboarding and enhanced Draft Mode.
+
+#### Standard Onboarding
+
+With Standard Onboarding, you proceed directly through the complete process by:
+
+* Uploading your dataset
+* Reviewing the inferred schema
+* Making necessary adjustments
+* Publishing the model immediately
+
+#### Draft Mode
+
+Draft Mode provides additional flexibility when you need to refine your model configuration before publication:
+
+* Iterate without commitment - Save a draft version to refine column names, data types, and inferred ranges
+* Collaborate with your team - Share and review the draft before finalizing
+* Validate with sample data - Upload sample data to visualize charts and validate before production rollout
+* Refine as needed - Return to the onboarding process to make additional adjustments at any time
+
+#### Technical Considerations
+
+* File size limits: CSV uploads are limited to 2 GB
+* Schema validation: All fundamental schema mismatches must be corrected before publication
+* Draft limitations: While you can visualize sample data in drafts, some features like saving charts have limitations
+
+For detailed instructions and best practices, see the [Model Editor](/observability/model-ui/model-editor.md) documentation.
+
+
+---

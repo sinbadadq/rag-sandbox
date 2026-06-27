@@ -1,0 +1,85 @@
+# WindowBinSize
+
+Time granularities for rolling baseline window aggregation.
+
+Window bin sizes define the time intervals used for rolling baseline calculations. They determine how far back in time the rolling baseline looks and at what granularity the data is aggregated. This parameter is only used with rolling baselines and works in conjunction with offset\_delta.
+
+Rolling Baseline Mechanics:
+
+* Window bin size sets the granularity of the sliding window
+* offset\_delta determines how many bins to look back
+* Together they define the rolling window: offset\_delta × window\_bin\_size
+* Example: WEEK + offset\_delta=4 creates a 4-week rolling window
+
+Granularity Trade-offs:
+
+* **Finer granularity (HOUR)**: More responsive to recent changes, higher sensitivity
+* **Coarser granularity (MONTH)**: More stable patterns, reduced noise
+* **Medium granularity (DAY/WEEK)**: Balanced responsiveness and stability
+
+Selection Guidelines:
+
+* HOUR: High-frequency models with rapid data changes
+* DAY: Standard operational monitoring for most models
+* WEEK: Weekly business cycles, batch processing patterns
+* MONTH: Long-term trends, seasonal patterns, strategic monitoring
+
+## Example
+
+```python
+# Daily rolling baseline looking back 30 days
+daily_rolling = fdl.Baseline(
+    name="daily_rolling_baseline",
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.ROLLING,
+    window_bin_size=fdl.WindowBinSize.DAY,
+    offset_delta=30
+).create()
+
+# Weekly rolling baseline looking back 8 weeks
+weekly_rolling = fdl.Baseline(
+    name="weekly_rolling_baseline",
+    model_id=model.id,
+    environment=fdl.EnvType.PRODUCTION,
+    type_=fdl.BaselineType.ROLLING,
+    window_bin_size=fdl.WindowBinSize.WEEK,
+    offset_delta=8
+).create()
+```
+
+Data Volume Considerations:
+
+```python
+- Ensure sufficient data volume within each bin for statistical reliability
+- Finer granularities require higher prediction frequencies
+- Consider your model's prediction patterns when selecting bin size
+- Balance between responsiveness and statistical stability
+```
+
+## HOUR
+
+Hourly time bins for high-frequency rolling baselines
+
+## DAY
+
+Daily time bins for standard rolling baseline monitoring
+
+## WEEK
+
+Weekly time bins for trend analysis and batch patterns
+
+## MONTH
+
+Monthly time bins for long-term seasonal pattern detection
+
+## HOUR *= 'Hour'*
+
+## DAY *= 'Day'*
+
+## WEEK *= 'Week'*
+
+## MONTH *= 'Month'*
+
+
+---

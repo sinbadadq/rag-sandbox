@@ -1,0 +1,367 @@
+# Building Custom Judge Evaluators
+
+Create domain-specific evaluators using `CustomJudge` to encode business rules, quality criteria, or classification tasks that built-in evaluators don't cover.
+
+**Use this cookbook when:** You need evaluation criteria specific to your domain, such as topic classification, brand voice matching, compliance checking, or custom quality rubrics.
+
+**Time to complete**: \~20 minutes
+
+```mermaid
+graph LR
+    A["Define Prompt\nTemplate"] --> B["Set Output\nFields"]
+    B --> C["Run\nEvaluation"]
+    C --> D["Check\nAccuracy"]
+    D -->|Misclassifications| E["Refine Prompt\n& Add Constraints"]
+    E --> C
+    D -->|Accurate| F["Deploy"]
+
+    style E fill:#ffd,stroke:#333
+    style F fill:#6f9,stroke:#333
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals pandas`
+  {% endhint %}
+
+***
+
+{% stepper %}
+{% step %}
+**Connect to Fiddler**
+
+{% hint style="info" %}
+Replace `URL`, `TOKEN`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import pandas as pd
+from fiddler_evals import init
+from fiddler_evals.evaluators import CustomJudge
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+LLM_CREDENTIAL_NAME = 'your-llm-credential'
+LLM_MODEL_NAME = 'openai/gpt-4o'
+
+init(url=URL, token=TOKEN)
+```
+
+{% endstep %}
+
+{% step %}
+**Prepare Test Data**
+
+This example classifies news summaries into topics — **Sci/Tech**, **Sports**, **Business**, or **World**:
+
+```python
+df = pd.DataFrame(
+    [
+        {
+            'text': 'Google announces new AI chip designed to accelerate '
+                'machine learning workloads.',
+            'ground_truth': 'Sci/Tech',
+        },
+        {
+            'text': 'The Lakers defeated the Celtics 112-108 in overtime, '
+                'with LeBron James scoring 35 points.',
+            'ground_truth': 'Sports',
+        },
+        {
+            'text': 'Federal Reserve raises interest rates by 0.25% citing '
+                'persistent inflation concerns.',
+            'ground_truth': 'Business',
+        },
+        {
+            'text': 'United Nations Security Council votes to impose new '
+                'sanctions on North Korea.',
+            'ground_truth': 'World',
+        },
+        {
+            'text': 'Microsoft acquires gaming company Activision Blizzard '
+                'for $69 billion.',
+            'ground_truth': 'Sci/Tech',
+        },
+    ]
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Create a CustomJudge**
+
+Define your evaluation criteria using a `prompt_template` with `{{ placeholder }}` markers and `output_fields` that define the structured response:
+
+```python
+simple_judge = CustomJudge(
+    prompt_template="""
+        Determine the topic of the given news summary.
+        Pick one of: Sports, World, Sci/Tech, Business.
+
+        News Summary:
+        {{ news_summary }}
+    """,
+    output_fields={
+        'topic': {'type': 'string'},
+        'reasoning': {'type': 'string'},
+    },
+    model=LLM_MODEL_NAME,
+    credential=LLM_CREDENTIAL_NAME,
+)
+```
+
+{% hint style="info" %}
+**How It Works**
+
+* **`prompt_template`**: Your evaluation prompt with `{{ placeholder }}` markers (Jinja syntax). Placeholders are filled from the `inputs` dict passed to `.score()`.
+* **`output_fields`**: Schema defining the expected outputs. Each field specifies a `type` (`string`, `boolean`, `integer`, `number`) and optional `choices` or `description`.
+  {% endhint %}
+  {% endstep %}
+
+{% step %}
+**Run Evaluator**
+
+```python
+results = []
+for _, row in df.iterrows():
+    scores = simple_judge.score(inputs={'news_summary': row['text']})
+    scores_dict = {s.name: s for s in scores}
+    results.append(
+        {
+            'ground_truth': row['ground_truth'],
+            'predicted': scores_dict['topic'].label,
+            'reasoning': scores_dict['reasoning'].label,
+        }
+    )
+
+results_df = pd.DataFrame(results)
+accuracy = (results_df['ground_truth'] == results_df['predicted']).mean()
+print(f'Accuracy: {accuracy:.0%}')
+
+# Show misclassified
+misclassified = results_df[results_df['ground_truth'] != results_df['predicted']]
+if len(misclassified) > 0:
+    print(f'\nMisclassified ({len(misclassified)}):')
+    for _, row in misclassified.iterrows():
+        print(f'  Expected: {row["ground_truth"]}, Predicted: {row["predicted"]}')
+```
+
+**Expected output:**
+
+```
+Accuracy: 80%
+
+Misclassified (1):
+  Expected: Sci/Tech, Predicted: Business
+```
+
+{% hint style="warning" %}
+The simple prompt often confuses tech company acquisitions (like the Microsoft-Activision deal) with Business news. The next step shows how to fix this with clearer topic guidelines.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Improve the Prompt**
+
+Add clearer topic guidelines and constrain outputs with `choices`:
+
+```python
+improved_judge = CustomJudge(
+    prompt_template="""
+        Determine the topic of the given news summary.
+
+        Use topic 'Sci/Tech' if the news summary is about a company or
+        business in the tech industry, or if the news summary is about
+        a scientific discovery or research, including health and medicine.
+        Use topic 'Sports' if the news summary is about a sports event
+        or athlete.
+        Use topic 'Business' if the news summary is about a company or
+        industry outside of science, technology, or sports.
+        Use topic 'World' if the news summary is about a global event
+        or issue.
+
+        News Summary:
+        {{ news_summary }}
+    """,
+    output_fields={
+        'topic': {
+            'type': 'string',
+            'choices': ['Sci/Tech', 'Sports', 'Business', 'World'],
+        },
+        'reasoning': {'type': 'string'},
+    },
+    model=LLM_MODEL_NAME,
+    credential=LLM_CREDENTIAL_NAME,
+)
+```
+
+Key improvements:
+
+* **Explicit guidelines** for each topic eliminate ambiguity
+* **`choices`** constrains the LLM output to valid categories only
+
+**Compare Results**
+
+```python
+improved_results = []
+for _, row in df.iterrows():
+    scores = improved_judge.score(inputs={'news_summary': row['text']})
+    scores_dict = {s.name: s for s in scores}
+    improved_results.append(
+        {
+            'ground_truth': row['ground_truth'],
+            'predicted': scores_dict['topic'].label,
+        }
+    )
+
+improved_df = pd.DataFrame(improved_results)
+original_accuracy = (results_df['ground_truth'] == results_df['predicted']).mean()
+improved_accuracy = (improved_df['ground_truth'] == improved_df['predicted']).mean()
+
+print(f'Simple prompt:   {original_accuracy:.0%}')
+print(f'Improved prompt: {improved_accuracy:.0%}')
+```
+
+**Expected output:**
+
+```
+Simple prompt:   80%
+Improved prompt: 100%
+```
+
+{% endstep %}
+{% endstepper %}
+
+***
+
+## Output Field Types
+
+`CustomJudge` supports four output field types:
+
+| Type      | Description                                    | Example Use                             |
+| --------- | ---------------------------------------------- | --------------------------------------- |
+| `string`  | Free-form text or categorical (with `choices`) | Topic classification, reasoning         |
+| `boolean` | True/False                                     | Compliance checks, binary quality gates |
+| `integer` | Whole numbers                                  | 1-5 rating scales                       |
+| `number`  | Floating-point                                 | 0.0-1.0 confidence scores               |
+
+### Using `choices` for Categorical Output
+
+```python
+output_fields={
+    'sentiment': {
+        'type': 'string',
+        'choices': ['positive', 'negative', 'neutral'],
+    },
+}
+```
+
+### Using `description` to Guide the LLM
+
+```python
+output_fields={
+    'quality_score': {
+        'type': 'integer',
+        'description': 'Overall quality rating from 1 (poor) to 5 (excellent)',
+    },
+}
+```
+
+***
+
+## Real-World Examples
+
+### Brand Voice Match
+
+Evaluate whether generated content adheres to brand guidelines:
+
+```python
+brand_judge = CustomJudge(
+    prompt_template="""
+        Determine whether the provided content adheres to the provided
+        brand guidelines.
+
+        Content: {{ content }}
+        Brand Guidelines: {{ brand_guidelines }}
+    """,
+    output_fields={
+        'voice_match_score': {
+            'type': 'string',
+            'choices': ['Perfect Match', 'Minor Deviations', 'Off-Brand'],
+        },
+        'reasoning': {'type': 'string'},
+    },
+    model=LLM_MODEL_NAME,
+    credential=LLM_CREDENTIAL_NAME,
+)
+
+scores = brand_judge.score(inputs={
+    'content': 'Hey! Check out our AMAZING new product!!!',
+    'brand_guidelines': 'Use professional tone. Avoid exclamation marks '
+        'and all-caps. Address customers formally.',
+})
+```
+
+**Expected output:**
+
+```
+voice_match_score: Off-Brand
+reasoning: The content uses informal language ("Hey!"), multiple exclamation
+marks, and all-caps ("AMAZING"), all of which violate the brand guidelines.
+```
+
+### Compliance Checking
+
+Verify responses meet regulatory requirements:
+
+```python
+compliance_judge = CustomJudge(
+    prompt_template="""
+        Review the following financial advice response for regulatory
+        compliance.
+
+        Customer Question: {{ question }}
+        Advisor Response: {{ response }}
+
+        Check for: unauthorized guarantees, missing disclaimers,
+        inappropriate risk characterization.
+    """,
+    output_fields={
+        'compliant': {
+            'type': 'boolean',
+            'description': 'Does the response meet regulatory standards?',
+        },
+        'issues_found': {
+            'type': 'string',
+            'description': 'List any compliance issues identified',
+        },
+    },
+    model=LLM_MODEL_NAME,
+    credential=LLM_CREDENTIAL_NAME,
+)
+```
+
+***
+
+## Next Steps
+
+* [Running RAG Experiments at Scale](/developers/cookbooks/rag-experiments-at-scale.md) — Use CustomJudge evaluators in structured experiments
+* [Monitoring Agentic Content Generation](/developers/cookbooks/agentic-content-generation.md) — Combine built-in evaluators with custom Brand Voice judges
+* [Evaluator Rules](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evaluator-rules) — Deploy custom evaluators in production monitoring
+
+***
+
+**Source notebook**: [Fiddler Cookbook: Custom Judge Evaluators](https://github.com/fiddler-labs/fiddler-examples/blob/main/cookbooks/Fiddler_Cookbook_Custom_Judge_Evaluators.ipynb)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

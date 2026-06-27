@@ -1,0 +1,122 @@
+# ModelInputType
+
+Input data types supported by Fiddler models.
+
+This enum defines the different types of input data that models can process. The input type determines how Fiddler handles data preprocessing, validation, and monitoring for the model.
+
+## Examples
+
+Defining model input type during onboarding:
+
+```python
+# Tabular data model (traditional ML)
+model = fdl.Model.from_data(
+    name='credit_model',
+    source=credit_data,
+    spec=model_spec,
+    task=fdl.ModelTask.BINARY_CLASSIFICATION,
+    input_type=fdl.ModelInputType.TABULAR
+)
+
+# Text-based model (NLP)
+model = fdl.Model.from_data(
+    name='sentiment_model',
+    source=text_data,
+    spec=model_spec,
+    task=fdl.ModelTask.MULTICLASS_CLASSIFICATION,
+    input_type=fdl.ModelInputType.TEXT
+)
+
+# Mixed data model (multimodal)
+model = fdl.Model.from_data(
+    name='multimodal_model',
+    source=mixed_data,
+    spec=model_spec,
+    task=fdl.ModelTask.REGRESSION,
+    input_type=fdl.ModelInputType.MIXED
+)
+```
+
+{% hint style="info" %}
+Input type affects data validation, preprocessing, and available monitoring features. Choose the type that best matches your model's primary input data format.
+{% endhint %}
+
+## TABULAR *= 'structured'*
+
+Structured tabular data with rows and columns.
+
+Used for traditional machine learning models that operate on structured datasets with well-defined features. This includes most supervised learning models trained on CSV data, database tables, or pandas DataFrames.
+
+Characteristics:
+
+* Fixed schema with defined columns
+* Numeric and categorical features
+* Traditional ML algorithms (trees, linear models, etc.)
+* Standard drift detection on individual features
+
+Typical use cases:
+
+* Credit scoring models
+* Fraud detection systems
+* Customer churn prediction
+* Sales forecasting models
+* Risk assessment models
+
+Supported data types: All DataType enum values
+
+## TEXT *= 'text'*
+
+Natural language text data.
+
+Used for models that primarily process text inputs such as NLP models, language models, and text classification systems. Enables text-specific monitoring and embedding-based drift detection.
+
+Characteristics:
+
+* Text strings as primary input
+* Embedding-based feature monitoring
+* Text-specific preprocessing
+* Language model optimizations
+
+Typical use cases:
+
+* Sentiment analysis models
+* Document classification
+* Named entity recognition
+* Text summarization models
+* Chatbots and conversational AI
+
+Special considerations:
+
+* May require text embedding custom features
+* Supports text-specific enrichments
+* Drift detection on embedding vectors
+
+## MIXED *= 'mixed'*
+
+Combination of structured and unstructured data.
+
+Used for multimodal models that process both structured tabular data and unstructured data like text, images, or embeddings. Enables comprehensive monitoring across different data types.
+
+Characteristics:
+
+* Multiple data modalities
+* Complex feature interactions
+* Flexible schema definitions
+* Advanced custom feature support
+
+Typical use cases:
+
+* Recommendation systems (user features + content)
+* Fraud detection (transaction data + text descriptions)
+* Medical diagnosis (structured data + images/text)
+* E-commerce search (product features + text queries)
+* Content moderation (metadata + text/images)
+
+Special considerations:
+
+* Requires careful schema design
+* May need multiple custom feature types
+* Complex drift monitoring setup
+
+
+---

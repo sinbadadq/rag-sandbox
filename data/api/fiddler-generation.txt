@@ -1,0 +1,78 @@
+# FiddlerGeneration
+
+Wrapper for LLM generation spans with semantic convention helpers.
+
+Initialize LLM generation wrapper.
+
+## **enter**()
+
+Enter context and set LLM type.
+
+**Return type:** [*FiddlerGeneration*](#fiddlergeneration)
+
+## set\_model()
+
+Set the LLM model name (gen\_ai.request.model).
+
+**Return type:** None
+
+## set\_system()
+
+Set the LLM system/provider (gen\_ai.system).
+
+**Return type:** None
+
+## set\_system\_prompt()
+
+Set the system prompt (gen\_ai.llm.input.system).
+
+**Return type:** None
+
+## set\_user\_prompt()
+
+Set the user prompt (gen\_ai.llm.input.user).
+
+**Return type:** None
+
+## set\_completion()
+
+Set the LLM completion/output (gen\_ai.llm.output).
+
+**Return type:** None
+
+## set\_usage()
+
+Set token usage information (gen\_ai.usage.\*).
+
+**Return type:** None
+
+## set\_context()
+
+Set additional context (gen\_ai.llm.context).
+
+**Return type:** None
+
+## set\_messages()
+
+Set input messages in OpenAI chat format (gen\_ai.input.messages).
+
+Accepts simple format: \[{'role': 'user', 'content': '...'}] Auto-converts to OTel format: \[{'role': 'user', 'parts': \[{'type': 'text', 'content': '...'}]}]
+
+**Return type:** None
+
+## set\_output\_messages()
+
+Set output messages in OpenAI chat format (gen\_ai.output.messages).
+
+Accepts simple format: \[{'role': 'assistant', 'content': '...'}] Auto-converts to OTel format: \[{'role': 'assistant', 'parts': \[{'type': 'text', 'content': '...'}]}]
+
+**Return type:** None
+
+## set\_tool\_definitions()
+
+Set available tool definitions for this LLM call (gen\_ai.tool.definitions).
+
+**Return type:** None
+
+
+---

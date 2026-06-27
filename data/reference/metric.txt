@@ -1,0 +1,113 @@
+# Metric
+
+[Metrics](/observability/platform/data-drift-platform.md) in Fiddler refer to the quantitative measurements and calculations that Fiddler performs on inference data published to the platform. These metrics provide insights into model behavior, data characteristics, and performance over time.
+
+Metrics serve as key indicators that help monitor model health, detect anomalies, and ensure that AI/ML systems are functioning as expected in production environments. Fiddler calculates various types of metrics ranging from statistical measures of data drift to sophisticated evaluations of LLM outputs.
+
+By tracking these metrics, users can gain visibility into how their models are performing in real-world scenarios, identify potential issues before they impact business outcomes, and maintain trust in their AI systems.
+
+## How Fiddler Uses Metrics
+
+Fiddler leverages metrics as the foundation of its monitoring and observability capabilities. When inference data is published to the Fiddler platform, it automatically calculates relevant metrics based on the model type and configuration. These metrics are then displayed in dashboards, used to trigger alerts when thresholds are exceeded, and stored for historical trend analysis.
+
+For traditional ML models, Fiddler calculates metrics like data drift, performance tracking, and data integrity. For LLM/GenAI systems, Fiddler extends its metrics suite to include specialized measurements like faithfulness, safety scores, and other LLM-specific evaluations.
+
+## Why Metrics Are Important
+
+Metrics are essential for maintaining reliable and trustworthy AI systems in production. They provide quantifiable evidence of model behavior and performance, enabling teams to make data-driven decisions about when interventions are necessary. Without proper metrics, organizations would be operating their AI systems blindly, unable to detect degradation, bias, or unexpected behaviors until they cause significant business impact.
+
+By establishing a comprehensive metrics framework, organizations can proactively monitor their AI systems, demonstrate compliance with regulations, and build confidence in their deployment practices.
+
+* **Performance Monitoring**: Metrics enable continuous evaluation of model accuracy, precision, recall, and other performance indicators to ensure models are delivering expected results.
+* **Drift Detection**: Statistical metrics like JSD (Jensen-Shannon Divergence) and PSI (Population Stability Index) help identify when input data distributions shift away from training data, potentially impacting model performance.
+* **Data Quality Assurance**: Data integrity metrics reveal missing values, outliers, and other quality issues that might affect model predictions.
+* **Operational Insights**: Traffic metrics and response time measurements provide visibility into the operational aspects of deployed models.
+* **LLM Output Evaluation**: Specialized metrics for LLM/GenAI systems assess output quality, safety, and alignment with human expectations.
+* **Compliance and Governance**: Metrics support regulatory requirements by providing evidence of ongoing monitoring and model governance.
+* **Issue Debugging**: When problems occur, metrics provide crucial diagnostic information to identify root causes.
+
+## Types of Metrics
+
+* **Data Drift Metrics**: Measurements that quantify distributional differences between reference and production data, including JSD, PSI, and other statistical distance measures.
+* **Performance Metrics**: Indicators of model accuracy and effectiveness, such as precision, recall, F1 score, and custom business performance KPIs.
+* **Data Integrity Metrics**: Measurements that assess data quality, completeness, and validity, highlighting missing values, outliers, and schema violations.
+* **Traffic Metrics**: Counts and rates of model invocations, response times, and utilization patterns that reveal operational characteristics.
+* **Statistical Metrics**: Basic descriptive statistics such as mean, median, standard deviation, and correlation that characterize data distributions.
+* **Custom Metrics**: User-defined calculations tailored to specific business needs and use cases.
+* **LLM-Based Metrics**: Specialized evaluations for generative AI outputs, including faithfulness, safety, toxicity, bias, and relevance scores.
+
+## Challenges
+
+While metrics provide essential visibility into AI systems, implementing an effective metrics strategy comes with several challenges that organizations must navigate.
+
+* **Metric Selection**: Choosing the right metrics for specific use cases can be challenging, as different models and applications require different evaluation approaches.
+* **Threshold Setting**: Determining appropriate threshold values that balance sensitivity to real issues against false alarms requires expertise and context-specific knowledge.
+* **Computational Overhead**: Calculating complex metrics at scale can introduce performance overhead, especially for high-volume inference systems.
+* **Interpretation Complexity**: Some advanced metrics may be difficult to interpret without specialized knowledge, making it challenging to translate metric values into actionable insights.
+* **Metric Drift**: The relevance of metrics themselves may change over time as business requirements evolve or as models are updated.
+* **Correlation vs. Causation**: Changes in metrics may correlate with issues but not necessarily reveal their root causes, requiring additional analysis.
+* **LLM Evaluation Subjectivity**: Metrics for generative AI often involve subjective judgments about quality, making standardization difficult.
+
+## Metrics Implementation How-to Guide
+
+1. **Define Monitoring Objectives**
+   * Identify key performance indicators relevant to your model and business use case.
+   * Determine which aspects of model behavior require closest monitoring.
+2. **Select Appropriate Metrics**
+   * Choose data drift metrics based on your feature data types (categorical vs. continuous).
+   * Select performance metrics aligned with your model type (classification, regression, LLM).
+3. **Configure Baselines**
+   * Upload training or reference data to establish baseline distributions for drift detection.
+   * Set initial performance benchmarks for comparison.
+4. **Establish Thresholds**
+   * Define alert thresholds for each metric based on tolerance for risk.
+   * Consider implementing tiered alerting with warning and critical levels.
+5. **Integrate with Workflows**
+   * Connect metric alerts to notification systems (email, Slack, etc.).
+   * Establish response procedures for different types of metric anomalies.
+
+## Frequently Asked Questions
+
+**Q: How frequently should metrics be calculated?**
+
+The calculation frequency depends on your use case. Critical applications may require real-time or hourly metrics, while less sensitive applications might use daily or weekly calculations. Consider both the business impact of issues and the computational resources required.
+
+**Q: Can I create custom metrics in Fiddler?**
+
+Yes, Fiddler supports custom metrics through its API and interface. You can define calculations based on your specific business needs and model characteristics.
+
+**Q: How do I know which thresholds to set for my metrics?**
+
+Start by monitoring metrics without alerts to establish normal operational patterns. Then set thresholds that balance sensitivity (catching real issues) with specificity (avoiding false alarms). Initial thresholds often require adjustment based on experience.
+
+**Q: What's the difference between data drift and performance metrics?**
+
+Data drift metrics measure changes in the statistical properties of input data, while performance metrics evaluate the accuracy and effectiveness of model outputs. Both are important as drift often precedes performance degradation.
+
+**Q: How does Fiddler calculate LLM metrics differently?**
+
+For LLM/GenAI systems, Fiddler calculates specialized metrics that evaluate text quality, safety, and alignment. Some of these metrics are generated by Fiddler's proprietary algorithms and purpose-built LLMs, while others may leverage external APIs like Anthropic and OpenAI for specific evaluations.
+
+## Related Terms
+
+* [Data Drift](/reference/glossary/data-drift.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+* [Baseline](/reference/glossary/baseline.md)
+* [Custom Metric](/reference/glossary/custom-metrics.md)
+
+## Related Resources
+
+* [ML Metrics Reference](/reference/ml-metrics-reference.md) — Complete list of all built-in ML metrics
+* [LLM Observability Metrics Reference](/reference/llm-observability-metrics.md) — Complete list of all LLM enrichments
+* [Monitoring Platform Overview](/welcome/readme.md)
+* [Data Drift Monitoring](/welcome/readme.md)
+* [Performance Tracking](/observability/platform/performance-tracking-platform.md)
+* [Data Integrity Monitoring](/observability/platform/data-integrity-platform.md)
+* [Traffic Monitoring](/observability/platform/traffic-platform.md)
+* [Statistical Metrics](/observability/platform/statistics.md)
+* [Custom Metrics](/reference/glossary/custom-metrics.md)
+* [LLM-Based Metrics](/observability/llm/llm-based-metrics.md)
+* [Selecting LLM Enrichments](/observability/llm/selecting-enrichments.md)
+
+
+---

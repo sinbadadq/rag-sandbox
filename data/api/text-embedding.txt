@@ -1,0 +1,38 @@
+# TextEmbedding
+
+Represents custom features derived from text embeddings with TF-IDF analysis.
+
+TextEmbedding extends VectorFeature to handle text-based embeddings with additional text-specific analysis capabilities. It combines vector clustering with TF-IDF analysis to provide both semantic clustering and keyword extraction for text data.
+
+The feature type is automatically set to CustomFeatureType.FROM\_TEXT\_EMBEDDING and uses clustering combined with TF-IDF summarization for drift computation.
+
+## Examples
+
+```python
+# Creating a text embedding feature for review analysis:
+
+text_feature = TextEmbedding(
+    name="review_sentiment_clusters",
+    column="review_embedding",
+    source_column="review_text",
+    n_clusters=8,
+    n_tags=20
+)
+
+# Creating a feature for document classification:
+
+doc_feature = TextEmbedding(
+    name="document_topic_clusters",
+    column="doc_embedding",
+    source_column="document_content",
+    n_clusters=12,
+    n_tags=15
+)
+```
+
+## *classmethod* validate\_n\_tags(value)
+
+**Return type:** int
+
+
+---

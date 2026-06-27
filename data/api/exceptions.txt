@@ -1,0 +1,14 @@
+# Exceptions
+
+- [ApiError](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/api-error.md): ApiError
+- [AsyncJobFailed](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/async-job-failed.md): AsyncJobFailed
+- [Conflict](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/conflict.md): Conflict
+- [ConnError](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/conn-error.md): ConnError
+- [ConnTimeout](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/conn-timeout.md): ConnTimeout
+- [HttpError](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/http-error.md): HttpError
+- [IncompatibleClient](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/incompatible-client.md): IncompatibleClient
+- [NotFound](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/not-found.md): NotFound
+- [Unsupported](https://docs.fiddler.ai/api/fiddler-python-client-sdk/exceptions/unsupported.md): Unsupported
+
+
+---

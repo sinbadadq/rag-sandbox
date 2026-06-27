@@ -1,0 +1,184 @@
+# Segment
+
+Data segment for targeted monitoring and cohort analysis.
+
+Segment defines subsets of model data based on specific criteria using SQL-like expressions. Segments enable cohort analysis, A/B testing evaluation, targeted monitoring of specific populations, and fairness analysis across different groups.
+
+## Example
+
+```python
+# High-value customer segment
+high_value_segment = Segment(
+    name="high_value_customers",
+    model_id=model.id,
+    definition="customer_lifetime_value > 10000 and account_age_days > 365",
+    description="Customers with high LTV and established accounts"
+).create()
+
+# Geographic segment
+west_coast_segment = Segment(
+    name="west_coast_users",
+    model_id=model.id,
+    definition="state == 'CA' or state == 'OR' or state == 'WA'",
+    description="Users from West Coast states"
+).create()
+
+# Risk-based segment
+high_risk_segment = Segment(
+    name="high_risk_applications",
+    model_id=model.id,
+    definition="credit_score < 600 or debt_to_income > 0.4",
+    description="Loan applications with elevated risk factors"
+).create()
+
+# Age-based demographic segment
+young_adults_segment = Segment(
+    name="young_adults",
+    model_id=model.id,
+    definition="age >= 18 and age <= 35",
+    description="Young adult demographic (18-35 years)"
+).create()
+
+# Use segment in alert rule for targeted monitoring
+segment_alert = AlertRule(
+    name="high_value_drift_alert",
+    model_id=model.id,
+    metric_id="drift_score",
+    priority=Priority.HIGH,
+    compare_to=CompareTo.BASELINE,
+    condition=AlertCondition.GT,
+    bin_size=BinSize.HOUR,
+    critical_threshold=0.7,
+    baseline_id=baseline.id,
+    segment_id=high_value_segment.id
+).create()
+```
+
+{% hint style="info" %}
+Segments are evaluated during data processing and can be used with any monitoring metric. Complex segment definitions may impact performance, so optimize for efficiency. Segments are particularly useful for fairness monitoring and business-critical cohort analysis.
+{% endhint %}
+
+## create()
+
+Create a new Segment on the Fiddler platform.
+
+Registers this Segment with the Fiddler platform. The expression must have a name, model\_id, and definition specified before calling create().
+
+## Returns
+
+The same Segment instance with updated server-side attributes (id, created\_at, etc.).
+
+## Raises
+
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+* **Conflict** -- If a Segment with the same name already exists for this model.
+
+**Return type:** *Segment*
+
+## delete()
+
+Delete this Segment from the Fiddler platform.
+
+Permanently removes the Segment. This action cannot be undone. Any alert rules or monitors using this Segment must be deleted first.
+
+## Raises
+
+* **NotFound** -- If the Segment no longer exists.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+* **Conflict** -- If the Segment is still being used by alert rules or monitors. **Return type:** None
+
+## *classmethod* from\_name(name, model\_id)
+
+Retrieve a Segment by name and model.
+
+Fetches a Segment from the Fiddler platform using its name and associated model ID.
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description                          |
+| ---------- | ------ | -------- | ------- | ------------------------------------ |
+| `name`     | `str`  | ✗        | `None`  | The name of the Segment to retrieve. |
+| `model_id` | \`UUID | str\`    | ✗       | `None`                               |
+
+## Returns
+
+The Segment instance for the provided parameters.
+
+## Raises
+
+* **NotFound** -- If no Segment exists with the specified name and model.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+**Return type:** *Segment*
+
+## *classmethod* get(id\_)
+
+Retrieve a Segment by its unique identifier.
+
+Fetches a Segment from the Fiddler platform using its UUID.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+The Segment instance with all its configuration and metadata.
+
+## Raises
+
+* **NotFound** -- If no Segment exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+**Return type:** *Segment*
+
+## *classmethod* get\_organization\_id()
+
+Get the organization UUID from the global connection.
+
+## Returns
+
+Unique identifier of the organization associated with the current connection.
+
+**Return type:** UUID
+
+## *classmethod* get\_organization\_name()
+
+Get the organization name from the global connection.
+
+## Returns
+
+Name of the organization associated with the current connection.
+
+**Return type:** str
+
+## *classmethod* list(model\_id)
+
+List all Segment instances for a model.
+
+Retrieves all Segment instances associated with a specific model.
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description |
+| ---------- | ------ | -------- | ------- | ----------- |
+| `model_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## Yields
+
+Segment instances for each Segment in the model.
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API. **Return type:** *Iterator*\[*Segment*]
+
+## **init**(name, model\_id, definition, description=None)
+
+Construct a segment instance.
+
+**Return type:** None
+
+
+---

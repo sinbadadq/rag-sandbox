@@ -1,0 +1,20 @@
+# Schemas
+
+- [CustomFeature](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/custom-feature.md): CustomFeature
+- [Enrichment](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/enrichment.md): Enrichment
+- [ImageEmbedding](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/image-embedding.md): ImageEmbedding
+- [Multivariate](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/multivariate.md): Multivariate
+- [TextEmbedding](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/text-embedding.md): TextEmbedding
+- [VectorFeature](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/vector-feature.md): VectorFeature
+- [DeploymentParams](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/deployment-params.md): DeploymentParams
+- [Column](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/column.md): Column
+- [ModelSchema](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/model-schema.md): ModelSchema
+- [ModelSpec](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/model-spec.md): ModelSpec
+- [ModelTaskParams](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/model-task-params.md): ModelTaskParams
+- [DatasetDataSource](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/dataset-data-source.md): DatasetDataSource
+- [EventIdDataSource](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/event-id-data-source.md): EventIdDataSource
+- [RowDataSource](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/row-data-source.md): RowDataSource
+- [XaiParams](https://docs.fiddler.ai/api/fiddler-python-client-sdk/schemas/xai-params.md): XaiParams
+
+
+---

@@ -1,0 +1,131 @@
+# Model Schema Editing
+
+## Overview
+
+This guide explains how to edit your model's schema in Fiddler to better align with production data. Schema editing helps you maintain accurate monitoring as your data evolves.
+
+Key capabilities
+
+* Adjust numeric feature ranges when real-world data deviates from your original sample data
+* Customize histogram bin boundaries for numerical columns to better represent data distributions
+* Edit categorical feature values to add or remove categories as new patterns emerge
+* Add metadata columns to include additional contextual information for improved insights
+
+### Adjusting numeric feature ranges
+
+**Access the Schema tab**
+
+1. Navigate to the Model Page of your desired model
+2. Select the Schema tab
+
+**Edit numeric column range**
+
+1. Find the numeric column you want to adjust
+2. Select the edit icon (✏️) next to the column name
+3. In the dialog box, modify the minimum and/or maximum values
+4. Select Update to save your changes
+
+**Impact of changes**
+
+* **Data drift metrics**: Changes apply to all data, including historical data
+  * A job will run to recalculate aggregates and update metrics
+* **Data integrity metrics**: Changes only apply to new data going forward
+
+#### Editing histogram bins
+
+You can customize the histogram bin boundaries for numerical columns to better represent your data distribution (e.g., quantile-based bins instead of uniform).
+
+**Edit bins for a numeric column**
+
+1. Find the numeric column you want to adjust
+2. Select the edit icon (✏️) next to the column name
+3. In the dialog box, enter comma-separated bin boundary values in the **Bins** field
+   * Example: `350, 450, 550, 650, 750, 850`
+   * Values must be strictly increasing, span the column's \[min, max] range, and have at most 16 boundary values (15 bins)
+4. To revert to auto-generated uniform bins, clear the Bins field
+5. Select Update to save your changes
+
+**Impact of changes**
+
+* **Data drift metrics**: Changes apply to all data, including historical data
+  * A job will run to recalculate aggregates and update histogram metrics
+* **Feature distribution charts**: Histogram visualizations will use the new bin boundaries
+
+#### Editing categorical variables
+
+**Access the Schema tab**
+
+1. Navigate to the Model Page of your desired model
+2. Select the **Schema** tab
+
+**Edit categorical column**
+
+1. Locate the categorical column you want to modify
+2. Select the edit icon (✏️) next to the column name
+3. Add or remove categories as needed
+4. Select Update to save your changes
+
+**Impact of changes**
+
+* For both data drift and data integrity metrics:
+  * Changes only apply to new data going forward
+  * Historical data remains unchanged
+
+#### Adding metadata columns
+
+**Access the Schema tab**
+
+1. Navigate to the Model Page of your desired model
+2. Select the Schema tab
+
+**Add a Metadata Column**
+
+1. Select Add Metadata
+2. Provide the required information:
+   * Column Name: Specify the name of the new metadata column
+   * Data Type: Choose a data type (integer, float, string, or boolean)
+   * Range: For numeric types, define minimum and maximum values
+3. Select Add to save
+
+**Impact of Changes**
+
+* New metadata columns are effective immediately for new data
+
+### Best Practices
+
+* Analyze production data to set realistic range values and identify useful metadata columns
+* Monitor metrics after adjustments to ensure changes effectively address your needs
+* Use annotations for transparency to maintain a clear history of schema changes
+
+{% hint style="warning" %}
+Schema updates that change numeric column properties (min, max, bins) trigger re-computation of historical aggregates. Models with more than 10 million events in any environment are not eligible for these updates. Contact support for assistance with large-scale schema changes.
+{% endhint %}
+
+### Frequently Asked Questions
+
+**Can I change column names or data types?**
+
+No, changing column names or data types is not supported.
+
+**What if I make a mistake?**
+
+You can edit the values again and save the updated schema.
+
+**How long do changes take to apply?**
+
+Application time depends on dataset size and complexity. For example, processing 10 million rows over six months takes approximately 12 minutes.
+
+**Can I delete a metadata column?**
+
+No, metadata columns cannot be deleted once added.
+
+**Can I customize histogram bins?**
+
+Yes, you can set custom bin boundaries for numerical columns via the Bins field in the schema editor, or programmatically via the Python client using `model.update()`. Leave the field empty to use auto-generated uniform bins.
+
+**What happens if I add a category that doesn't exist in the data?**
+
+The category will be listed but won't impact existing calculations.
+
+
+---

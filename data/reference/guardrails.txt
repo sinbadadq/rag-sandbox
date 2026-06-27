@@ -1,0 +1,110 @@
+# Fiddler Guardrails
+
+[Fiddler Guardrails](/reference/glossary/guardrails.md) is a real-time content safety solution that evaluates and filters potentially harmful outputs from large language models (LLMs) before they reach end users. It serves as a protective layer between LLM systems and their users, ensuring that generated content adheres to organizational policies and safety standards.
+
+Built on Fiddler's [Trust Service](/reference/glossary/trust-service.md) infrastructure, Fiddler Guardrails leverages purpose-built models optimized for efficient content evaluation. The system processes LLM outputs in real-time, detecting problematic content across multiple safety dimensions including harmfulness, toxicity, illegal activity, bias, and more. When violations are detected, Guardrails can either filter out the content entirely or provide detailed explanations of the specific policies that were violated.
+
+Fiddler Guardrails is available both as a standalone service for organizations seeking content safety without full monitoring capabilities and as an integrated component within Fiddler's comprehensive LLM observability platform.
+
+## How Fiddler Uses Guardrails
+
+Fiddler Guardrails integrates with the broader Fiddler platform to provide comprehensive protection and visibility for LLM and GenAI applications. As part of Fiddler's end-to-end LLM governance solution, Guardrails helps organizations maintain control over their generative AI deployments by ensuring outputs meet safety standards before reaching users.
+
+When integrated with Fiddler's monitoring capabilities, Guardrails contributes to a complete approach where potentially harmful content is both blocked in real-time and analyzed for patterns that might indicate systemic issues. This dual approach enables organizations to maintain strong protections while continuously improving their LLM systems.
+
+Fiddler offers Guardrails through a simple API that can be integrated into existing LLM application workflows, allowing organizations to implement protection without significant architectural changes.
+
+## Why Fiddler Guardrails Is Important
+
+As organizations increasingly deploy generative AI applications across their operations, ensuring the safety and appropriateness of LLM outputs becomes a critical governance concern. Fiddler Guardrails addresses this need by providing real-time protection against potentially harmful, toxic, or inappropriate content generation.
+
+Without robust guardrails in place, organizations face significant risks from LLM deployments, including reputational damage, compliance violations, and potential harm to users. By implementing Fiddler Guardrails, organizations can confidently deploy generative AI with protections that minimize these risks.
+
+The importance of Guardrails extends beyond individual content filtering to enable trustworthy, responsible AI deployment at scale across an organization.
+
+* **Risk Mitigation**: Guardrails prevents harmful, toxic, or inappropriate content from reaching end users, protecting both users and the organization from potential negative impacts of unsafe LLM outputs.
+* **Compliance Support**: By enforcing content policies consistently, Guardrails helps organizations meet regulatory requirements and internal governance standards for responsible AI use.
+* **Deployment Confidence**: With protective measures in place, organizations can more confidently deploy LLM applications across a broader range of use cases and user groups.
+* **Brand Protection**: By filtering inappropriate content before it reaches customers, Guardrails helps protect brand reputation and maintain trust in AI-powered services.
+* **Operational Efficiency**: Real-time protection reduces the need for human review of all LLM outputs, allowing teams to focus on improving models rather than constantly monitoring for problematic content.
+* **Educational Feedback**: When content is filtered, Guardrails provides detailed explanations about policy violations, helping developers understand and address recurring issues in their prompting strategies or model configurations.
+* **Customizable Protection**: Organizations can tailor protection levels to their specific needs and risk tolerance, ensuring appropriate safeguards without unnecessarily restrictive filtering.
+
+## Types of Guardrails Protection
+
+* **Safety Guardrails**: Core protections against harmful, toxic, illegal, or objectionable content across multiple categories including violence, hate speech, explicit content, and illegal activities.
+* **Custom Policy Guardrails**: Organization-specific policy enforcement that can be configured to reflect particular industry requirements, company values, or audience sensitivities.
+* **Standalone Guardrails Service**: The Guardrails API offered as an independent service for organizations seeking content safety without full monitoring capabilities.
+* **Integrated Platform Guardrails**: Guardrails functionality within the comprehensive Fiddler observability platform, working alongside monitoring features for complete LLM governance.
+* **Multi-level Protection**: Tiered protection options allowing organizations to set different filtering thresholds for different applications or user contexts.
+
+## Challenges
+
+Implementing effective content safety for LLM applications presents several challenges that Fiddler Guardrails is designed to address.
+
+* **Latency Management**: Adding protective layers can potentially slow response times, a challenge Guardrails addresses through efficient purpose-built models optimized for evaluation speed.
+* **Nuanced Content Evaluation**: Distinguishing between genuinely harmful content and benign discussions of sensitive topics requires sophisticated evaluation capabilities beyond simple keyword filtering.
+* **False Positive Balance**: Setting appropriate thresholds that protect against harmful content without excessive blocking of legitimate outputs requires careful calibration.
+* **Context Awareness**: Properly evaluating content requires understanding the broader context of the conversation, not just analyzing isolated responses.
+* **Policy Customization**: Different organizations have varying standards for acceptable content, requiring flexible guardrail systems that can be tailored to specific needs.
+* **Multilingual Support**: Ensuring consistent protection across content in different languages presents challenges in evaluation consistency.
+* **Evolving Threat Landscape**: As LLM capabilities advance and new exploitation techniques emerge, guardrail systems must continuously update to address novel risks.
+
+## Fiddler Guardrails Implementation Guide
+
+1. **Define Your Content Safety Requirements**
+   * Identify which safety dimensions are most important for your LLM use cases.
+   * Determine appropriate filtering thresholds based on your user base and risk tolerance.
+2. **Choose Deployment Approach**
+   * Decide between standalone Guardrails API or integrated platform approach based on your needs.
+   * Select between cloud-hosted or on-premises deployment options.
+3. **Integrate Guardrails API**
+   * Implement API calls in your application flow to route LLM outputs through Guardrails before display.
+   * Set up appropriate error handling for cases where content is filtered.
+4. **Configure Safety Policies**
+   * Set appropriate thresholds for different safety dimensions.
+   * Configure custom policies if needed for organization-specific requirements.
+5. **Test and Refine**
+   * Verify protection effectiveness with representative test cases.
+   * Refine thresholds based on observed false positive/negative rates.
+6. **Monitor and Improve**
+   * Track guardrail filtering patterns to identify recurring issues.
+   * Use insights to improve prompt engineering and LLM configuration.
+
+## Frequently Asked Questions
+
+**Q: How does Fiddler Guardrails differ from prompt engineering for safety?**
+
+While prompt engineering attempts to elicit safe behavior through careful input design, Guardrails provides a dedicated protection layer that evaluates outputs regardless of prompt quality. This approach is more robust as it doesn't rely on the effectiveness of prompts alone and can catch unsafe responses even when prompt constraints fail.
+
+**Q: What types of content can Fiddler Guardrails detect and filter?**
+
+Fiddler Guardrails can detect and filter content across multiple safety dimensions including but not limited to harmful content, toxicity, hate speech, violence, sexual content, illegal activities, bias, profanity, and content faithfulness.
+
+**Q: How does Guardrails impact response latency?**
+
+Fiddler Guardrails is designed to minimize latency impact through highly optimized models specifically built for efficient content evaluation. While there is some processing overhead, it's typically measured in milliseconds rather than seconds, and significantly faster than using general-purpose LLMs for evaluation.
+
+**Q: Can I customize the safety policies to fit my organization's needs?**
+
+Yes, Fiddler Guardrails allows for customization of safety policies and thresholds to align with specific organizational requirements, industry regulations, and risk tolerance levels.
+
+**Q: Is Guardrails available as a standalone service or only as part of the full Fiddler platform?**
+
+Fiddler Guardrails is available both as a standalone service for organizations that only need content safety capabilities and as an integrated component within the comprehensive Fiddler LLM observability platform.
+
+## Related Terms
+
+* [Fiddler Trust Service](/reference/glossary/trust-service.md)
+* [Trust Score](/reference/glossary/trust-score.md)
+
+## Related Resources
+
+* [Getting Started with Fiddler Guardrails](/getting-started/guardrails.md)
+* [Guardrails in the Fiddler Platform](/reference/glossary/guardrails.md)
+* [Guardrails FAQ](/protect-and-guardrails/guardrails-faq.md)
+* [Fiddler Trust Service Overview](https://www.fiddler.ai/trust-service)
+* [Fast Safety Enrichments](/observability/llm/enrichments.md#fast-safety)
+
+
+---

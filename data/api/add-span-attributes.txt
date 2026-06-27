@@ -1,0 +1,136 @@
+# add\_span\_attributes
+
+Adds custom span-level attributes to a specific runnable component's metadata.
+
+Span attributes are key-value pairs that apply to a specific component (LLM, tool, or retriever) and are included in the OpenTelemetry spans created when that component executes. Use this to add metadata that describes the component's configuration, purpose, or operational context.
+
+Unlike session attributes (which apply to all spans in a context), span attributes are scoped to individual components. This is useful for:
+
+* Identifying which model or tool is being used
+* Tagging components by purpose or category
+* Adding version information or deployment metadata
+* Tracking A/B test variants or experimental configurations
+
+The attributes are stored in the component's metadata dictionary under the key '\_fiddler\_attributes' and will be automatically included in spans when the component executes. Attributes persist for the lifetime of the component instance.
+
+Supported component types:
+
+* **BaseLanguageModel**: LLM calls (ChatOpenAI, ChatAnthropic, etc.)
+* **BaseRetriever**: Document retrieval operations
+* **BaseTool**: Tool/function calls in agent workflows
+
+## Parameters
+
+| Parameter | Type                | Required      | Default    | Description |
+| --------- | ------------------- | ------------- | ---------- | ----------- |
+| `node`    | \`BaseLanguageModel | BaseRetriever | BaseTool\` | ✓           |
+
+## Returns
+
+None
+
+**Return type:** None
+
+## Examples
+
+Tagging an LLM with model information:
+
+```python
+from langchain_openai import ChatOpenAI
+from fiddler_langgraph import add_span_attributes
+
+llm = ChatOpenAI(model="gpt-4")
+add_span_attributes(
+    llm,
+    model_name="gpt-4",
+    provider="openai",
+    purpose="summarization"
+)
+```
+
+Adding version and environment metadata:
+
+```python
+add_span_attributes(
+    llm,
+    version="v2.1.0",
+    environment="production",
+    region="us-west-2"
+)
+```
+
+Tagging tools in a multi-tool agent:
+
+```python
+from langchain.tools import Tool
+
+search_tool = Tool(
+    name="search",
+    func=search_function,
+    description="Search the web"
+)
+add_span_attributes(
+    search_tool,
+    tool_category="external_api",
+    rate_limit="100/min",
+    cost_per_call=0.001
+)
+```
+
+A/B testing different retrievers:
+
+```python
+from langchain_community.vectorstores import FAISS
+
+retriever_a = FAISS.from_documents(docs, embeddings).as_retriever()
+add_span_attributes(
+    retriever_a,
+    variant="semantic_search",
+    experiment_id="exp_2024_q1",
+    retrieval_strategy="similarity"
+)
+
+retriever_b = FAISS.from_documents(docs, embeddings).as_retriever(
+    search_type="mmr"
+)
+add_span_attributes(
+    retriever_b,
+    variant="mmr_search",
+    experiment_id="exp_2024_q1",
+    retrieval_strategy="maximum_marginal_relevance"
+)
+```
+
+Combining with session attributes:
+
+```python
+from fiddler_langgraph import (
+    add_session_attributes,
+    add_span_attributes,
+    set_conversation_id,
+)
+
+# Session-level: applies to all spans
+set_conversation_id("conv_12345")
+add_session_attributes("user_id", "user_789")
+
+# Span-level: applies only to this LLM's spans
+llm = ChatOpenAI(model="gpt-4-turbo")
+add_span_attributes(
+    llm,
+    model_tier="premium",
+    use_case="customer_support"
+)
+```
+
+{% hint style="info" %}
+
+* Attributes are stored in the component's metadata dictionary, which persists for the lifetime of the component instance
+* If the component doesn't have a metadata attribute, one will be created
+* Multiple calls to add\_span\_attributes on the same component will merge attributes
+* Later calls with the same key will overwrite previous values
+* This modifies the component in place - no need to reassign the return value
+  {% endhint %}
+
+
+---

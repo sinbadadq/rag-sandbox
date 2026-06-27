@@ -1,0 +1,51 @@
+# FiddlerSpanProcessor
+
+Span processor for Fiddler that denormalizes attributes from parent spans.
+
+This processor copies specific attributes from parent spans to child spans, enabling better trace analysis and monitoring in Fiddler's observability platform.
+
+## DENORMALIZED\_ATTRIBUTES
+
+**Type:** `List[str]`
+
+**Values:**
+
+* `'gen_ai.agent.name'`
+* `'gen_ai.agent.id'`
+* `'gen_ai.conversation.id'`
+* `'system_prompt'`
+* `'gen_ai.tool.definitions'`
+
+## on\_start()
+
+Called when a span is started.
+
+Copies denormalized attributes from the parent span to the current span.
+
+## Parameters
+
+| Parameter        | Type      | Required | Default | Description                    |
+| ---------------- | --------- | -------- | ------- | ------------------------------ |
+| `span`           | `Span`    | ✗        | `None`  | The span that is being started |
+| `parent_context` | \`Context | None\`   | ✗       | `None`                         |
+
+## force\_flush()
+
+Force flush any pending spans. No-op for this processor.
+
+This method is required by the SpanProcessor interface but is not needed for FiddlerSpanProcessor since it processes spans synchronously on\_start.
+
+## Parameters
+
+| Parameter        | Type  | Required | Default | Description                                                                                 |
+| ---------------- | ----- | -------- | ------- | ------------------------------------------------------------------------------------------- |
+| `timeout_millis` | `int` | ✗        | `30000` | Maximum time in milliseconds to wait for flush completion. Not used in this implementation. |
+
+## Returns
+
+Always returns True since this is a no-op implementation
+
+**Return type:** bool
+
+
+---

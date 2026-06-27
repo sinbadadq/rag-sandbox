@@ -1,0 +1,42 @@
+# Priority
+
+Alert priority levels for notification routing and escalation.
+
+Determines the urgency and routing behavior of alert notifications. Higher priority alerts may trigger immediate notifications, phone calls, or escalation to on-call personnel.
+
+## HIGH
+
+Critical issues requiring immediate attention. Examples: Model completely down, severe data quality issues.
+
+## MEDIUM
+
+Important issues that should be addressed promptly. Examples: Performance degradation, moderate drift.
+
+## LOW
+
+Minor issues for awareness and trend monitoring. Examples: Small drift increases, non-critical feature changes.
+
+## Example
+
+```python
+# High priority for production model failures
+critical_alert = AlertRule(
+        name="Model Down",
+        priority=Priority.HIGH
+    )
+
+    # Medium priority for performance monitoring
+    perf_alert = AlertRule(
+            name="Accuracy Drop",
+            priority=Priority.MEDIUM
+        )
+```
+
+## HIGH *= 'HIGH'*
+
+## MEDIUM *= 'MEDIUM'*
+
+## LOW *= 'LOW'*
+
+
+---

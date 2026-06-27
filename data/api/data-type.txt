@@ -1,0 +1,327 @@
+# DataType
+
+Data types supported for model columns in Fiddler.
+
+This enum defines the supported data types for model schema columns. Data types determine how Fiddler processes, validates, and monitors individual columns in your model's input and output data.
+
+Type Categories:
+
+* **Numeric**: FLOAT, INTEGER - enable statistical analysis
+* **Categorical**: BOOLEAN, CATEGORY - enable distribution analysis
+* **Textual**: STRING - enable text-based monitoring
+* **Temporal**: TIMESTAMP - enable time-based analysis
+* **Vector**: VECTOR - enable embedding-based monitoring
+
+## Examples
+
+Defining column data types in model schema:
+
+```python
+from fiddler import Column, DataType
+
+# Define columns with appropriate data types
+columns = [
+    Column(name='age', data_type=DataType.INTEGER),
+    Column(name='income', data_type=DataType.FLOAT),
+    Column(name='is_member', data_type=DataType.BOOLEAN),
+    Column(name='category', data_type=DataType.CATEGORY),
+    Column(name='description', data_type=DataType.STRING),
+    Column(name='created_at', data_type=DataType.TIMESTAMP),
+    Column(name='embedding', data_type=DataType.VECTOR)
+]
+
+# Create model schema
+schema = fdl.ModelSchema(columns=columns)
+```
+
+Data type validation and monitoring:
+
+```python
+# Numeric types enable statistical monitoring
+if column.data_type.is_numeric():
+
+    # Statistical drift detection available
+    # Range validation enabled
+    # Distribution analysis supported
+    pass
+
+    # Categorical types enable distribution monitoring
+    if column.data_type.is_bool_or_cat():
+
+        # Category distribution tracking
+        # New category detection
+        # Frequency analysis
+        pass
+
+        # Vector types enable embedding monitoring
+        if column.data_type.is_vector():
+
+            # Embedding drift detection
+            # Clustering analysis
+            # Dimensionality monitoring
+            pass
+```
+
+{% hint style="info" %}
+Choose data types that accurately represent your data for optimal monitoring and validation. Incorrect data types may lead to inappropriate metrics or monitoring failures.
+{% endhint %}
+
+## FLOAT *= 'float'*
+
+Floating-point numerical values.
+
+Used for continuous numerical data with decimal precision. Enables comprehensive statistical analysis and numerical drift detection.
+
+Characteristics:
+
+* Decimal precision values
+* Statistical distribution analysis
+* Range and outlier detection
+* Correlation analysis support
+
+Monitoring features:
+
+* Mean, median, standard deviation tracking
+* Distribution drift detection (KS test, PSI)
+* Range violation alerts
+* Outlier detection and analysis
+
+Typical use cases:
+
+* Prices, costs, revenues
+* Probabilities and confidence scores
+* Measurements and sensor readings
+* Performance metrics and ratios
+* Model prediction scores
+
+Validation: Numeric range checks, NaN detection
+
+## INTEGER *= 'int'*
+
+Integer numerical values.
+
+Used for whole number data without decimal places. Supports numerical analysis while recognizing discrete nature of integer data.
+
+Characteristics:
+
+* Whole number values only
+* Discrete distribution analysis
+* Count-based statistics
+* Range validation
+
+Monitoring features:
+
+* Count distribution tracking
+* Range violation detection
+* Discrete value frequency analysis
+* Statistical drift detection
+
+Typical use cases:
+
+* Counts and quantities
+* Age, years, days
+* IDs and identifiers (when numeric)
+* Ranking positions
+* Categorical codes (when numeric)
+
+Validation: Integer format checks, range validation
+
+## BOOLEAN *= 'bool'*
+
+True/false binary values.
+
+Used for binary flag data with exactly two possible values. Enables binary distribution analysis and proportion tracking.
+
+Characteristics:
+
+* Exactly two values (True/False, 1/0, Yes/No)
+* Binary distribution analysis
+* Proportion-based metrics
+* Simple categorical handling
+
+Monitoring features:
+
+* True/False ratio tracking
+* Binary distribution drift
+* Proportion change detection
+* Flag frequency analysis
+
+Typical use cases:
+
+* Feature flags and indicators
+* Binary classifications
+* Yes/No survey responses
+* Membership status
+* Activation states
+
+Validation: Binary value format checks
+
+## STRING *= 'str'*
+
+Text string values.
+
+Used for textual data of variable length. Supports text-based analysis and can be combined with text embeddings for advanced monitoring.
+
+Characteristics:
+
+* Variable length text
+* Text-based analysis
+* String pattern detection
+* Encoding-aware processing
+
+Monitoring features:
+
+* Length distribution tracking
+* Pattern and format analysis
+* Text embedding integration
+* String uniqueness analysis
+
+Typical use cases:
+
+* Names and descriptions
+* Comments and reviews
+* URLs and paths
+* Free-form text inputs
+* JSON or XML strings
+
+Special considerations:
+
+* Can be converted to embeddings for semantic monitoring
+* Supports text enrichment features
+* May require text preprocessing
+
+## CATEGORY *= 'category'*
+
+Categorical values with limited distinct options.
+
+Used for data with a finite set of possible values or categories. Enables categorical distribution analysis and new category detection.
+
+Characteristics:
+
+* Limited set of possible values
+* Categorical distribution tracking
+* Category frequency analysis
+* New category detection
+
+Monitoring features:
+
+* Category distribution drift
+* New/missing category alerts
+* Frequency change detection
+* Category proportion analysis
+
+Typical use cases:
+
+* Product categories
+* Geographic regions
+* Status codes
+* Demographic categories
+* Classification labels
+
+Best practices:
+
+* Use for data with < 1000 unique values
+* Consider STRING type for high-cardinality categories
+* Define expected categories during schema creation
+
+## TIMESTAMP *= 'timestamp'*
+
+Date and time values.
+
+Used for temporal data including dates, times, and timestamps. Enables time-based analysis and temporal pattern detection.
+
+Characteristics:
+
+* Date/time information
+* Temporal ordering
+* Time-based aggregations
+* Timezone awareness
+
+Monitoring features:
+
+* Temporal pattern analysis
+* Time gap detection
+* Seasonal trend monitoring
+* Data freshness tracking
+
+Typical use cases:
+
+* Event timestamps
+* Creation/modification dates
+* Transaction times
+* Log timestamps
+* Scheduled events
+
+Supported formats:
+
+* Unix timestamps
+* ISO 8601 strings
+* Pandas datetime objects
+* Various date formats (with parsing)
+
+## VECTOR *= 'vector'*
+
+Multi-dimensional numerical vectors (embeddings).
+
+Used for embedding vectors, feature vectors, and other multi-dimensional numerical data. Enables embedding-based drift detection and clustering analysis.
+
+Characteristics:
+
+* Fixed-dimension numerical arrays
+* Embedding-based analysis
+* Vector similarity metrics
+* Clustering support
+
+Monitoring features:
+
+* Embedding drift detection
+* Cluster analysis and visualization
+* Vector similarity tracking
+* Dimensionality validation
+
+Typical use cases:
+
+* Text embeddings (Word2Vec, BERT, etc.)
+* Image embeddings (CNN features)
+* User/item embeddings
+* Feature vectors from neural networks
+* Recommendation system embeddings
+
+Special considerations:
+
+* Requires consistent vector dimensions
+* Benefits from custom feature definitions
+* Supports clustering and UMAP visualization
+
+## is\_numeric()
+
+Check if the data type is numeric.
+
+## Returns
+
+True if data type is INTEGER or FLOAT
+
+**Return type:** bool
+
+## is\_bool\_or\_cat()
+
+Check if the data type is boolean or categorical.
+
+## Returns
+
+True if data type is BOOLEAN or CATEGORY
+
+**Return type:** bool
+
+## is\_vector()
+
+Check if the data type is vector.
+
+## Returns
+
+True if data type is VECTOR
+
+**Return type:** bool
+
+
+---

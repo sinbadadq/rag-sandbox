@@ -1,0 +1,579 @@
+# Agentic Document Extraction
+
+Build reliable, measurable document extraction pipelines using Fiddler's agentic observability (tracing), custom evaluators, and experiments to catch hallucinated fields, schema drift, and silent accuracy degradation. While this cookbook uses invoice extraction as a running example, the patterns apply to any pipeline that extracts structured data from documents — medical records, legal filings, research papers, support tickets, or any other source.
+
+**Use this cookbook when:** You have an LLM-based agent extracting structured data from any document type — invoices, medical records, legal contracts, research papers, support tickets, or other sources — and need observability, automated quality evaluation, and production monitoring.
+
+**Time to complete**: \~30 minutes
+
+```mermaid
+graph LR
+    A["Source\nDocument"] --> B["Parse"]
+    B --> C["Extract\n(LLM)"]
+    C --> D["Validate"]
+
+    subgraph "Fiddler Observability"
+        E["Tracing\n(OpenTelemetry)"]
+        F["Evaluators\n(Custom + Built-In)"]
+        G["Experiments\n(Benchmarking)"]
+    end
+
+    D --> E
+    D --> F
+    F --> G
+    G --> H{"Quality\nGate"}
+
+    H -->|Pass| I["Production"]
+    H -->|Fail| J["Review"]
+
+    style I fill:#6f9,stroke:#333
+    style J fill:#f96,stroke:#333
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals pandas`
+  {% endhint %}
+
+***
+
+## Understanding the Problem
+
+Document extraction — pulling structured data from unstructured or semi-structured documents — is one of the most common enterprise AI applications. Whether the source is an invoice, a medical record, a legal filing, or a support ticket, the core challenge is the same. When an LLM-based agent handles this work, it introduces new failure modes that traditional rule-based parsers never had: hallucinated field values, inconsistent schemas, and silent accuracy degradation after model updates.
+
+A document extraction agent typically follows a multi-step workflow:
+
+1. **Parse** — normalize raw document text into a consistent format
+2. **Extract** — use an LLM to pull structured fields (vendor name, invoice number, line items, totals) into JSON
+3. **Validate** — check that the output is complete, correctly formatted, and mathematically consistent
+
+Each step can fail in different ways, and the failures compound. A parsing step that drops a line item produces an extraction that looks correct but is missing data. An LLM that hallucinates a subtotal produces a validation that passes the schema check but fails the math check. Without observability at every step, these issues are invisible until a downstream system — or a customer — catches them.
+
+**Common failure modes in document extraction:**
+
+* **Schema drift:** The model starts omitting fields it previously extracted reliably
+* **Numeric hallucination:** Dollar amounts or quantities that don't match the source document
+* **Date format inconsistency:** Dates returned in varying formats despite explicit instructions
+* **Math errors:** Extracted totals that don't equal subtotal + tax
+* **Silent degradation:** Accuracy drops gradually after a model update, with no hard errors to trigger alerts
+
+***
+
+## How Fiddler Helps: Three Layers of Observability
+
+Fiddler provides three complementary capabilities for document extraction pipelines:
+
+### 1. Agentic Observability (Tracing)
+
+By instrumenting your extraction pipeline with OpenTelemetry, every step — parse, extract, validate — appears as a span in Fiddler's trace view. This gives you:
+
+* **Span hierarchy:** A root `chain` span with child `tool` and `llm` spans, showing exactly how the agent orchestrates each step
+* **LLM telemetry:** Model name, token usage (input/output/total), and the full prompt and response captured on the extraction span
+* **Error attribution:** When an extraction fails, you can see which step failed and why, including error type and message
+* **Custom attributes:** Tag spans with metadata like `document_type`, `invoice_id`, or any business-relevant dimension for filtering in dashboards
+
+**Learn more:** [OpenTelemetry Quick Start](/developers/agentic-ai-monitoring/opentelemetry-quick-start.md)
+
+{% hint style="info" %}
+**Other integration options:** While this cookbook uses OpenTelemetry for maximum flexibility, Fiddler also provides dedicated SDKs with auto-instrumentation for popular agentic frameworks — including [LangGraph](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/langgraph-sdk), [Strands](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/strands-sdk), [LangChain](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/langchain-sdk), and [LiteLLM](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/litellm-integration). These SDKs require minimal code changes (often a single `instrument()` call) and produce the same traces in Fiddler. For custom Python agents without a framework, the [Fiddler OTel SDK](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/fiddler-otel-sdk) (`fiddler-otel`) provides a `@trace` decorator for lightweight instrumentation. See the [full integration guide](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai) to choose the right option for your stack.
+{% endhint %}
+
+### 2. Fiddler Experiments (Offline Evaluation)
+
+Experiments let you systematically measure extraction quality against a ground-truth dataset. You define a dataset of test cases (source documents + expected extractions), run your pipeline against them, and score the results with custom evaluators. This gives you:
+
+* **Repeatable benchmarks:** Compare extraction accuracy across model versions, prompt changes, or schema updates
+* **Per-test-case drill-down:** See exactly which fields mismatched and why, for every test case
+* **Side-by-side comparison:** Run the same dataset against different model versions and compare field accuracy in a single view
+
+**Learn more:** [Experiments](/getting-started/experiments.md)
+
+### 3. Production Monitoring Signals
+
+In production, you compute aggregate signals over rolling time windows and set alerts on threshold breaches. These signals act as early warning systems for extraction quality degradation.
+
+**Learn more:** [Agentic Monitoring](/getting-started/agentic-monitoring.md)
+
+***
+
+## Definition: Built-In Evaluators (Fiddler Evals SDK)
+
+The Fiddler Evals SDK (`fiddler-evals`) provides pre-built evaluators that deliver immediate, generalized assessments of LLM performance. For document extraction, they establish a baseline for output quality without requiring ground-truth data. Built-in evaluators include `Coherence`, `Conciseness`, `AnswerRelevance`, `Sentiment`, and more — each available as a Python class you instantiate and pass to the `evaluate()` function.
+
+**Learn more:** [Evals SDK Reference](/api/fiddler-evals-sdk/evals.md)
+
+## Definition: Custom Evaluators
+
+Custom evaluators allow you to encode domain-specific quality standards directly into the evaluation process. For document extraction, this means comparing extracted fields against known correct values, checking schema completeness, and validating mathematical consistency. The Fiddler Evals SDK provides three approaches for building custom evaluators:
+
+* **`CustomJudge`** — An LLM-as-a-Judge evaluator that uses a Jinja prompt template and structured output fields. Ideal for nuanced, qualitative assessments like per-field accuracy or math consistency checks.
+* **`EvalFn`** — Wraps any Python function as an evaluator. Best for deterministic checks like schema completeness or exact-match comparisons.
+* **Subclass `Evaluator`** — Extend the base `Evaluator` class for full control over scoring logic, input handling, and multi-score returns.
+
+**Learn more:** [CustomJudge Evaluators](/api/fiddler-evals-sdk/evaluators/custom-judge.md)
+
+***
+
+## Recommended Evaluators for Document Extraction
+
+| Evaluator                                                        | What does it measure?                                                                                                        | What value does it provide?                                                                                                                |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Coherence**                                                    | Assesses the logical flow and clarity of the LLM's extraction output.                                                        | **Output Quality:** Catches garbled or malformed extraction responses before they reach downstream systems.                                |
+| **Conciseness**                                                  | Evaluates whether the extraction output is focused and free of extraneous commentary.                                        | **Schema Discipline:** Ensures the model returns structured data, not explanations or caveats mixed into the output.                       |
+| **"Field Accuracy" Custom Evaluator** (See Deep Dive below)      | Compares each extracted scalar field (vendor name, invoice number, date, subtotal, tax, total) against a ground-truth value. | **Granular Quality Control:** Pinpoints exactly which fields the model extracts reliably vs. which require prompt tuning or model changes. |
+| **"Schema Completeness" Custom Evaluator** (See Deep Dive below) | Measures the fraction of required fields that are present and non-null in the extraction output.                             | **Completeness Assurance:** Catches schema drift — when a model starts silently omitting fields it previously extracted correctly.         |
+| **"Per-Field Accuracy" `CustomJudge`** (See Deep Dive below)     | Uses a `CustomJudge` evaluator to assess extraction accuracy for each specific field against the source text.                | **Automated Review:** Provides human-like accuracy assessment at scale without requiring manual comparison of every extraction.            |
+| **"Math Consistency" Custom Evaluator**                          | Checks whether extracted numeric fields are internally consistent (e.g., total == subtotal + tax).                           | **Numeric Integrity:** Catches hallucinated dollar amounts that pass schema validation but fail basic arithmetic.                          |
+
+## Recommended Production Monitoring Signals
+
+Beyond per-document evaluators, you should track aggregate signals over rolling time windows to detect systemic issues.
+
+| Signal                      | What does it measure?                                                                                        | Alert threshold (suggested)                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| **Success Rate**            | Fraction of extractions completing without exception.                                                        | Alert when < 95%. Catches API errors, timeouts, and crashes. |
+| **Validation Failure Rate** | Fraction of extractions with at least one validation error (missing fields, bad date format, math mismatch). | Alert when > 20%. Catches silent quality degradation.        |
+| **Field Completeness**      | Average fraction of required fields present and non-null across all extractions.                             | Alert when < 90%. Catches schema drift after model updates.  |
+| **Math Accuracy**           | Fraction of extractions where `total == subtotal + tax` within a small tolerance.                            | Alert when < 90%. Catches numeric hallucination trends.      |
+
+In production, these signals would be computed over rolling windows (e.g., hourly or daily) and configured as Fiddler alerts. A sudden drop in math accuracy after a model update, for example, would trigger an alert before the bad data propagates to downstream accounting systems.
+
+***
+
+## Deep Dive: Tracing an Extraction Pipeline with OpenTelemetry
+
+Fiddler's agentic observability uses OpenTelemetry (OTEL) to capture the full execution of your extraction pipeline as a structured trace. Each trace consists of spans with a parent-child hierarchy that mirrors your agent's logic.
+
+{% stepper %}
+{% step %}
+**Span Hierarchy for Document Extraction**
+
+A typical extraction trace has the following structure:
+
+```
+extraction_pipeline (chain)
+  ├── parse_document (tool)
+  ├── extract_fields (llm)
+  └── validate_output (tool)
+```
+
+* **`extraction_pipeline`** — the root span, typed as `chain`. Carries agent-level metadata: `gen_ai.agent.name`, `gen_ai.agent.id`, and custom attributes like `fiddler.span.user.document_type` and `fiddler.span.user.invoice_id`.
+* **`parse_document`** — a `tool` span. Records the raw input and cleaned output of the normalization step.
+* **`extract_fields`** — an `llm` span. This is where the richest telemetry lives: `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.input.messages`, and `gen_ai.output.messages`.
+* **`validate_output`** — a `tool` span. Records the validation result: which checks passed, which failed, and the specific error messages.
+  {% endstep %}
+
+{% step %}
+**Why This Matters**
+
+When an extraction produces incorrect data, the span hierarchy lets you pinpoint the root cause:
+
+* **Parse failed?** The `parse_document` span shows the raw input was garbled or the normalization dropped content.
+* **LLM hallucinated?** The `extract_fields` span shows the exact prompt and response, plus token usage that may indicate the model was truncating output.
+* **Validation caught it?** The `validate_output` span shows which checks failed, so you know whether the issue is a missing field, a bad date, or a math error.
+
+Without this trace structure, you only see "extraction failed" — with it, you see *why*.
+{% endstep %}
+
+{% step %}
+**Error Handling in Traces**
+
+When any step throws an exception, the root span captures `fiddler.error.message` and `fiddler.error.type`, making it filterable in Fiddler dashboards. You can quickly find all traces where the LLM returned unparseable JSON, or where the OpenAI API timed out, without searching through logs.
+
+**Learn more:** [OpenTelemetry Integration](https://app.gitbook.com/s/kcq97TxAnbTVaNJOQHbQ/agentic-ai-llm-frameworks/agentic-ai/opentelemetry-integration)
+{% endstep %}
+{% endstepper %}
+
+***
+
+## Deep Dive: Custom Evaluators for Extraction Quality
+
+While built-in evaluators like `Coherence` catch general output quality issues, document extraction requires domain-specific evaluators that understand your schema and can compare against ground truth. The Fiddler Evals SDK provides multiple ways to build these: subclassing `Evaluator` for complex scoring logic, wrapping functions with `EvalFn` for simple checks, and using `CustomJudge` for LLM-based assessment.
+
+{% stepper %}
+{% step %}
+**Field Accuracy Evaluator (Subclass `Evaluator`)**
+
+This evaluator compares each extracted scalar field against a known correct value. It handles numeric fields with a tolerance (to account for rounding differences) and string fields with case-insensitive comparison.
+
+**What it checks:** `vendor_name`, `invoice_number`, `date`, `subtotal`, `tax`, `total`
+
+**Scoring:** Returns the fraction of fields that match (0.0–1.0). A score of `0.83` means 5 out of 6 fields matched.
+
+```python
+from fiddler_evals import Evaluator, Score
+
+class FieldAccuracyEvaluator(Evaluator):
+    NUMERIC_FIELDS = ['subtotal', 'tax', 'total']
+
+    def score(self, extracted: dict, expected: dict) -> Score:
+        matches = 0
+        total_fields = len(expected)
+        for field in expected.keys():
+            ext_val = extracted.get(field)
+            exp_val = expected.get(field)
+            if ext_val is None or exp_val is None:
+                continue
+            if field in self.NUMERIC_FIELDS:
+                if abs(float(ext_val) - float(exp_val)) < 0.01:
+                    matches += 1
+            else:
+                if str(ext_val).strip().lower() == str(exp_val).strip().lower():
+                    matches += 1
+        accuracy = matches / total_fields
+        return Score(
+            name="field_accuracy",
+            evaluator_name=self.name,
+            value=accuracy,
+            reasoning=f"{matches}/{total_fields} fields matched",
+        )
+```
+
+**Why it matters:** Aggregate field accuracy tells you how reliable your pipeline is. But the per-field breakdown tells you *where* to focus improvement. If `date` is the field that most often mismatches, you know to adjust the date formatting instructions in your prompt — not rebuild the entire pipeline.
+{% endstep %}
+
+{% step %}
+**Schema Completeness Evaluator (`EvalFn`)**
+
+This evaluator checks what fraction of required fields are present and non-null in the extraction output, independent of whether the values are correct. Wrapping a simple Python function with `EvalFn` is the most concise way to build deterministic evaluators.
+
+**What it checks:** All required schema fields (`vendor_name`, `invoice_number`, `date`, `line_items`, `subtotal`, `tax`, `total`)
+
+**Scoring:** Returns the fraction present (0.0–1.0). A score of `0.86` means 6 out of 7 required fields were populated.
+
+```python
+from fiddler_evals.evaluators import EvalFn
+
+REQUIRED_FIELDS = ['vendor_name', 'invoice_number', 'date',
+                   'line_items', 'subtotal', 'tax', 'total']
+
+def schema_completeness(extracted: dict) -> float:
+    present = sum(1 for f in REQUIRED_FIELDS
+                  if extracted.get(f) is not None)
+    return present / len(REQUIRED_FIELDS)
+
+schema_completeness_evaluator = EvalFn(
+    schema_completeness, score_name="schema_completeness"
+)
+```
+
+**Why it matters:** Schema completeness is the earliest signal of extraction degradation. A model may still extract *some* fields correctly while silently dropping others. Tracking completeness separately from accuracy lets you distinguish between "the model is wrong" and "the model isn't even trying."
+{% endstep %}
+
+{% step %}
+**Per-Field Accuracy `CustomJudge`**
+
+For cases where you want a more nuanced assessment — or where ground-truth data is unavailable — you can use a `CustomJudge` to evaluate extraction quality directly from the source text. `CustomJudge` uses a Jinja prompt template with `{{ placeholder }}` syntax and structured `output_fields` to define what the LLM judge should return.
+
+```python
+from fiddler_evals.evaluators import CustomJudge
+
+field_accuracy_judge = CustomJudge(
+    prompt_template="""
+        Evaluate the accuracy of extracted fields from the source document.
+        Compare each extracted field against the original text and determine
+        whether it was extracted correctly.
+
+        Source Document:
+        {{ source_text }}
+
+        Extracted Data:
+        {{ extracted_fields }}
+
+        Required Fields:
+        {{ required_fields }}
+    """,
+    output_fields={
+        "vendor_name_correct": {
+            "type": "boolean",
+            "description": "Was the vendor name extracted correctly?",
+        },
+        "invoice_number_correct": {
+            "type": "boolean",
+            "description": "Was the invoice number extracted correctly?",
+        },
+        "date_correct": {
+            "type": "boolean",
+            "description": "Was the date extracted correctly?",
+        },
+        "amounts_correct": {
+            "type": "boolean",
+            "description": "Were the dollar amounts extracted correctly?",
+        },
+        "overall_accuracy": {
+            "type": "string",
+            "choices": ["All Correct", "Partially Correct", "Mostly Incorrect"],
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "Explain which fields matched or mismatched and why.",
+        },
+    },
+    model="openai/gpt-4o",
+    credential="your-openai-credential",
+)
+
+# Score a single extraction
+scores = field_accuracy_judge.score(inputs={
+    "source_text": raw_document_text,
+    "extracted_fields": json.dumps(extracted_data),
+    "required_fields": "vendor_name, invoice_number, date, subtotal, tax, total",
+})
+
+# Access individual scores
+scores_dict = {s.name: s for s in scores}
+print(scores_dict["overall_accuracy"].label)  # e.g. "All Correct"
+print(scores_dict["reasoning"].label)         # detailed explanation
+```
+
+* The judge takes the original source document and the extracted fields as inputs — no ground truth required.
+* It assesses each field independently, producing both per-field booleans and an overall accuracy classification.
+* By flagging "Mostly Incorrect" extractions, you can route them for human review or reprocessing.
+* This approach scales to production volumes where maintaining ground-truth datasets is impractical.
+  {% endstep %}
+
+{% step %}
+**Math Consistency `CustomJudge`**
+
+This `CustomJudge` evaluates whether the extracted numeric fields are internally consistent with the source document.
+
+```python
+from fiddler_evals.evaluators import CustomJudge
+
+math_consistency_judge = CustomJudge(
+    prompt_template="""
+        Verify the mathematical consistency of extracted invoice fields.
+        Check that:
+        (1) the total equals subtotal plus tax,
+        (2) line item prices multiplied by quantities sum to the subtotal,
+        (3) all numeric values match the source document.
+
+        Source Document:
+        {{ source_text }}
+
+        Extracted Data:
+        {{ extracted_fields }}
+    """,
+    output_fields={
+        "total_matches_sum": {
+            "type": "boolean",
+            "description": "Does total equal subtotal + tax?",
+        },
+        "line_items_sum_correct": {
+            "type": "boolean",
+            "description": "Do line item totals sum to the subtotal?",
+        },
+        "values_match_source": {
+            "type": "boolean",
+            "description": "Do all numeric values match the source document?",
+        },
+        "math_consistency": {
+            "type": "string",
+            "choices": ["Fully Consistent", "Minor Discrepancy", "Major Error"],
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "Explain any discrepancies found.",
+        },
+    },
+    model="openai/gpt-4o",
+    credential="your-openai-credential",
+)
+```
+
+* This judge catches a category of errors that schema validation alone cannot: values that are present and correctly formatted but numerically wrong.
+* A "Major Error" flag on `math_consistency` indicates the model hallucinated dollar amounts — a critical failure for any financial document extraction system.
+* Tracking the `line_items_sum_correct` field over time reveals whether the model struggles more with line-item aggregation than with reading individual totals.
+  {% endstep %}
+  {% endstepper %}
+
+***
+
+## Deep Dive: Using Fiddler Experiments for Extraction Benchmarking
+
+Fiddler Experiments provide a structured way to benchmark your extraction pipeline against a ground-truth dataset. This is especially valuable when you need to:
+
+* **Compare model versions:** Does your current model extract dates more accurately than a smaller or newer variant?
+* **Test prompt changes:** Does adding "Return 0 for tax if not applicable" reduce errors on tax-exempt invoices?
+* **Validate schema changes:** After adding a new required field, does the existing accuracy hold?
+
+{% stepper %}
+{% step %}
+**Set Up the Experiment**
+
+The Fiddler Evals SDK (`fiddler-evals`) provides the `evaluate()` function as the main entry point for running experiments. The workflow is:
+
+1. **Create a Dataset** with source documents as inputs and ground-truth extractions as expected outputs
+2. **Define a Task** — a Python function that runs your extraction pipeline on each input
+3. **Attach Evaluators** — built-in evaluators, `CustomJudge` instances, `EvalFn`-wrapped functions, or `Evaluator` subclasses
+4. **Run with `evaluate()`** and review per-test-case scores in the Fiddler UI
+
+{% hint style="info" %}
+Replace `url`, `token`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import json
+from fiddler_evals import init, Project, Application, Dataset, evaluate
+from fiddler_evals.pydantic_models.dataset import NewDatasetItem
+from fiddler_evals.evaluators import Coherence, Conciseness
+
+# 1. Initialize connection
+init(url="https://your-org.fiddler.ai", token="your-token")
+
+# 2. Set up project hierarchy: Project > Application > Dataset
+project = Project.get_or_create(name="document_extraction")
+app = Application.get_or_create(
+    name="invoice_extractor", project_id=project.id
+)
+dataset = Dataset.create(
+    name="invoice_test_set", application_id=app.id
+)
+
+# 3. Add test cases with ground-truth expected outputs
+dataset.insert([
+    NewDatasetItem(
+        inputs={
+            "source_text": "Invoice #12345\nFrom: Acme Corp\nDate: 2025-01-15\n"
+                           "Widget A  2 x $50.00 = $100.00\nSubtotal: $100.00\n"
+                           "Tax: $8.00\nTotal: $108.00",
+        },
+        expected_outputs={
+            "vendor_name": "Acme Corp",
+            "invoice_number": "12345",
+            "date": "2025-01-15",
+            "subtotal": 100.00,
+            "tax": 8.00,
+            "total": 108.00,
+        },
+        metadata={"document_type": "invoice"},
+    ),
+    # ... additional test cases
+])
+
+# 4. Define the extraction task
+def extraction_task(inputs: dict, extras: dict, metadata: dict) -> dict:
+    # Replace with your actual extraction logic
+    result = run_extraction_pipeline(inputs["source_text"])
+    return {
+        "extracted_fields": result,                # raw dict for custom evaluators
+        "source_text": inputs["source_text"],
+        "response": str(result),                   # string for built-in evaluators
+    }
+
+# 5. Run the experiment with multiple evaluators
+results = evaluate(
+    dataset=dataset,
+    task=extraction_task,
+    evaluators=[
+        FieldAccuracyEvaluator(),                # Evaluator subclass
+        schema_completeness_evaluator,            # EvalFn
+        field_accuracy_judge,                     # CustomJudge
+        math_consistency_judge,                   # CustomJudge
+        Coherence(model="openai/gpt-4o", credential="your-cred"),
+        Conciseness(model="openai/gpt-4o", credential="your-cred"),
+    ],
+    name_prefix="invoice_extraction_v1",
+    # Maps dataset columns and task outputs to evaluator score() arguments
+    score_fn_kwargs_mapping={
+        "extracted": "extracted_fields",              # for FieldAccuracyEvaluator (from task output)
+        "expected": lambda x: x["expected_outputs"],  # for FieldAccuracyEvaluator (from dataset item)
+        "source_text": "source_text",                 # for CustomJudge evaluators
+        "extracted_fields": "extracted_fields",       # for CustomJudge evaluators
+        "response": "response",                       # for Coherence & Conciseness
+    },
+    max_workers=4,
+)
+
+# 6. Analyze results
+for result in results.results:
+    print(f"\nDataset item {result.experiment_item.dataset_item_id}:")
+    for score in result.scores:
+        print(f"  {score.name}: {score.value} — {score.reasoning}")
+```
+
+The experiment results show you not just aggregate scores, but individual test cases where your pipeline struggled. If 7 out of 8 invoices score 100% field accuracy but one scores 67%, you can drill into that specific case to see what went wrong — perhaps it was an invoice with an unusual date format or a tax-exempt order.
+{% endstep %}
+
+{% step %}
+**Iterate with Experiments**
+
+The real power of Experiments is iterative improvement. Because `evaluate()` returns structured results and each experiment is tracked in the Fiddler UI, you can run A/B comparisons:
+
+1. Run a baseline experiment with your current prompt and model
+2. Identify the weakest test cases (lowest field accuracy or schema completeness)
+3. Adjust your prompt, model, or preprocessing to address those failures
+4. Run a new experiment against the same dataset and compare side-by-side with the baseline
+5. Repeat until accuracy meets your threshold
+
+```python
+# Compare two model versions against the same dataset
+results_gpt4o = evaluate(
+    dataset=dataset, task=extraction_task_gpt4o,
+    evaluators=evaluators, name_prefix="gpt4o_baseline",
+)
+results_gpt4o_mini = evaluate(
+    dataset=dataset, task=extraction_task_gpt4o_mini,
+    evaluators=evaluators, name_prefix="gpt4o_mini_comparison",
+)
+
+# View side-by-side in the Fiddler UI
+print(f"GPT-4o:      {results_gpt4o.experiment.get_app_url()}")
+print(f"GPT-4o-mini: {results_gpt4o_mini.experiment.get_app_url()}")
+```
+
+This workflow turns prompt engineering from guesswork into a measurable process.
+
+**Learn more:** [Experiments](/getting-started/experiments.md)
+{% endstep %}
+{% endstepper %}
+
+***
+
+## How These Evaluators Can Help
+
+### 1. Catching Silent Quality Degradation
+
+Document extraction pipelines rarely fail loudly. More often, they degrade gradually — a model update causes date formatting to shift, or a prompt change inadvertently reduces field completeness. By tracking Field Accuracy and Schema Completeness over time, you catch these regressions before they reach downstream systems. A 5% drop in math accuracy after a model update is invisible in error logs but immediately visible in Fiddler dashboards.
+
+### 2. Reducing Manual Review Burden
+
+Without automated evaluation, every extracted document needs human review to verify accuracy. With Fiddler evaluators acting as an automated quality gate, your team reviews only the extractions flagged for low accuracy or missing fields. If 95% of extractions pass validation, your reviewers focus on the 5% that need attention — not the full volume.
+
+### 3. Enabling Confident Model and Prompt Changes
+
+Changing a model or prompt in a document extraction pipeline is risky without a way to measure the impact. Fiddler Experiments give you a controlled environment to test changes against a known dataset before deploying to production. You can prove that a prompt change improved date accuracy from 87% to 98% before it touches a single real document.
+
+### 4. Building Trust with Downstream Consumers
+
+Finance teams, compliance officers, and ERP systems that consume extracted data need to trust its accuracy. Fiddler's monitoring signals — success rate, field completeness, math accuracy — provide auditable evidence that your extraction pipeline is performing within acceptable bounds. When a downstream consumer questions a data point, you can trace it back to the specific span that produced it.
+
+### 5. Detecting Document-Type-Specific Weaknesses
+
+By tagging traces with custom attributes like `document_type` (invoice, receipt, contract) or `vendor_name`, you can segment your monitoring signals and discover that your pipeline handles standard invoices at 98% accuracy but struggles with receipts (85%) or international invoices with VAT (78%). This guides where to invest in prompt engineering or training data.
+
+***
+
+## Next Steps
+
+* [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) — Deep-dive into `CustomJudge` capabilities
+* [Running RAG Experiments at Scale](/developers/cookbooks/rag-experiments-at-scale.md) — Structured experiments with Datasets and golden label validation
+* [Monitoring Agentic Content Generation](/developers/cookbooks/agentic-content-generation.md) — Quality and brand compliance for content agents
+* [Evaluator Rules](/evaluate-and-test/evaluator-rules.md) — Deploy evaluators in production
+* [Evals SDK Integration](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/evals-sdk.md) — Integration patterns for agentic workflows
+
+***
+
+**Related**: [OpenTelemetry Quick Start](/developers/agentic-ai-monitoring/opentelemetry-quick-start.md) | [Experiments Quick Start](/developers/experiments/experiments-quick-start.md) | [CustomJudge Evaluators](/developers/cookbooks/custom-judge-evaluators.md)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

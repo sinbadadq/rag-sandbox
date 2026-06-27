@@ -1,0 +1,240 @@
+# Project
+
+Represents a project container for organizing GenAI Apps and resources.
+
+A Project is the top-level organizational unit in Fiddler that groups related GenAI Applications, datasets, and monitoring configurations. Projects provide logical separation, access control, and resource management for GenAI App monitoring workflows.
+
+Key Features:
+
+* **GenAI Apps Organization**: Container for related GenAI apps
+* **Resource Isolation**: Separate namespaces prevent naming conflicts
+* **Access Management**: Project-level permissions and access control
+* **Monitoring Coordination**: Centralized monitoring and alerting configuration
+* **Lifecycle Management**: Coordinated creation, updates, and deletion of resources
+
+Project Lifecycle:
+
+1. **Creation**: Create project with unique name within organization
+2. **App creation**: Create GenAI applications with Application().create()
+3. **Configuration**: Set up monitoring, alerts, and evaluators.
+4. **Operations**: Publish logs, monitor performance, manage alerts
+5. **Maintenance**: Update configurations
+6. **Cleanup**: Delete project when no longer needed (removes all contained resources)
+
+## Example
+
+```python
+# Create a new project for fraud detection models
+project = Project.create(name="fraud-detection-2024")
+print(f"Created project: {project.name} (ID: {project.id})")
+```
+
+{% hint style="info" %}
+Projects are permanent containers - once created, the name cannot be changed. Deleting a project removes all contained models, datasets, and configurations. Consider the organizational structure carefully before creating projects.
+{% endhint %}
+
+## *classmethod* get\_by\_id(id\_)
+
+Retrieve a project by its unique identifier.
+
+Fetches a project from the Fiddler platform using its UUID. This is the most direct way to retrieve a project when you know its ID.
+
+## Parameters
+
+| Parameter | Type   | Required | Default | Description |
+| --------- | ------ | -------- | ------- | ----------- |
+| `id_`     | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+The project instance with all metadata and configuration.
+
+**Return type:** `Project`
+
+## Raises
+
+* **NotFound** -- If no project exists with the specified ID.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get project by UUID
+project = Project.get_by_id(id_="550e8400-e29b-41d4-a716-446655440000")
+print(f"Retrieved project: {project.name}")
+print(f"Created: {project.created_at}")
+```
+
+{% hint style="info" %}
+This method makes an API call to fetch the latest project state from the server. The returned project instance reflects the current state in Fiddler.
+{% endhint %}
+
+## *classmethod* get\_by\_name(name)
+
+Retrieve a project by name.
+
+Finds and returns a project using its name within the organization. This is useful when you know the project name but not its UUID. Project names are unique within an organization, making this a reliable lookup method.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                                                                                  |
+| --------- | ----- | -------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `name`    | `str` | ✗        | `None`  | The name of the project to retrieve. Project names are unique within an organization and are case-sensitive. |
+
+## Returns
+
+The project instance matching the specified name.
+
+**Return type:** `Project`
+
+## Raises
+
+* **NotFound** -- If no project exists with the specified name in the organization.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Get project by name
+project = Project.get_by_name(name="fraud-detection")
+print(f"Found project: {project.name} (ID: {project.id})")
+print(f"Created: {project.created_at}")
+
+# Get project for specific environment
+prod_project = Project.get_by_name(name="fraud-detection-prod")
+staging_project = Project.get_by_name(name="fraud-detection-staging")
+```
+
+{% hint style="info" %}
+Project names are case-sensitive and must match exactly. Use this method when you have a known project name from configuration or user input.
+{% endhint %}
+
+## *classmethod* list()
+
+List all projects in the organization.
+
+Retrieves all projects that the current user has access to within the organization. Returns an iterator for memory efficiency when dealing with many projects.
+
+## Yields
+
+`Project` -- Project instances for all accessible projects.
+
+## Raises
+
+**ApiError** -- If there's an error communicating with the Fiddler API. **Return type:** *Iterator*\[[*Project*](#project)]
+
+## Example
+
+```python
+# List all projects
+for project in Project.list():
+    print(f"Project: {project.name}")
+    print(f"  ID: {project.id}")
+    print(f"  Created: {project.created_at}")
+
+# Convert to list for counting and filtering
+projects = list(Project.list())
+print(f"Total accessible projects: {len(projects)}")
+
+# Find projects by name pattern
+prod_projects = [
+    p for p in Project.list()
+    if "prod" in p.name.lower()
+]
+print(f"Production projects: {len(prod_projects)}")
+
+# Get project summaries
+for project in Project.list():
+    print(f"{project.name}")
+```
+
+{% hint style="info" %}
+This method returns an iterator for memory efficiency. Convert to a list with list(Project.list()) if you need to iterate multiple times or get the total count. The iterator fetches projects lazily from the API.
+{% endhint %}
+
+## *classmethod* create(name)
+
+Create the project on the Fiddler platform.
+
+Persists this project instance to the Fiddler platform, making it available for adding GenAI Apps, configuring monitoring, and other operations. The project must have a unique name within the organization.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                                                                                                                                                               |
+| --------- | ----- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`    | `str` | ✗        | `None`  | Project name, must be unique within the organization. Should follow slug-like naming conventions: Use lowercase letters, numbers, hyphens, and underscores; Start with a letter or number |
+
+## Returns
+
+This project instance, updated with server-assigned fields like : ID, creation timestamp, and other metadata.
+
+**Return type:** `Project`
+
+## Raises
+
+* **Conflict** -- If a project with the same name already exists in the organization.
+* **ValidationError** -- If the project configuration is invalid (e.g., invalid name format).
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Create a new project
+project = Project.create(name="customer-churn-analysis")
+print(f"Created project with ID: {project.id}")
+print(f"Created at: {project.created_at}")
+
+# Project is now available for adding GenAI Apps
+assert project.id is not None
+```
+
+{% hint style="info" %}
+After successful creation, the project instance is returned with server-assigned metadata. The project is immediately available for adding GenAI Apps and other resources.
+{% endhint %}
+
+## *classmethod* get\_or\_create(name)
+
+Get an existing project by name or create a new one if it doesn't exist.
+
+This is a convenience method that attempts to retrieve a project by name, and if not found, creates a new project with that name. Useful for idempotent project setup in automation scripts and deployment pipelines.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                                                                               |
+| --------- | ----- | -------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| `name`    | `str` | ✗        | `None`  | The name of the project to retrieve or create. Must follow project naming conventions (slug-like format). |
+
+## Returns
+
+Either the existing project with the specified name, : or a newly created project if none existed.
+
+**Return type:** `Project`
+
+## Raises
+
+* **ValidationError** -- If the project name format is invalid.
+* **ApiError** -- If there's an error communicating with the Fiddler API.
+
+## Example
+
+```python
+# Safe project setup - get existing or create new
+project = Project.get_or_create(name="fraud-detection-prod")
+print(f"Using project: {project.name} (ID: {project.id})")
+
+# Idempotent setup in deployment scripts
+project = Project.get_or_create(name="llm-pipeline-staging")
+
+# Use in configuration management
+environments = ["dev", "staging", "prod"]
+projects = {}
+for env in environments:
+    projects[env] = Project.get_or_create(name=f"fraud-detection-{env}")
+```
+
+{% hint style="info" %}
+This method is idempotent - calling it multiple times with the same name will return the same project. It logs when creating a new project for visibility in automation scenarios.
+{% endhint %}
+
+
+---

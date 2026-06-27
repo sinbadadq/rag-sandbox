@@ -1,0 +1,541 @@
+# ML Platforms Overview
+
+Integrate Fiddler into your MLOps workflow to monitor models across the entire machine learning lifecycle. From experiment tracking to production deployment, Fiddler works with the ML platforms you already use.
+
+## Why ML Platform Integrations Matter
+
+Modern ML teams use sophisticated platforms for experimentation, training, and deployment. Fiddler's integrations ensure you can:
+
+* **Unified Model Governance** - Track models from experiment to production in one platform
+* **Automated Monitoring Setup** - Auto-configure monitoring when models are registered
+* **Seamless Workflow Integration** - Add observability without changing existing processes
+* **Bi-Directional Sync** - Share metrics between Fiddler and your ML platform
+* **Experiment Comparison** - Compare production performance against training experiments
+
+## MLOps Platform Integrations
+
+### Databricks
+
+Integrate Fiddler with Databricks for unified ML development and monitoring.
+
+**Why Databricks + Fiddler:**
+
+* **Lakehouse Architecture** - Monitor models trained on Delta Lake data
+* **MLflow Integration** - Automatic sync of registered models to Fiddler
+* **Notebook Integration** - Use Fiddler SDK directly in Databricks notebooks
+* **Production Monitoring** - Monitor models served via Databricks Model Serving
+
+**Key Features:**
+
+* **Automatic Model Registration** - Models registered in Databricks MLflow automatically appear in Fiddler
+* **Feature Store Integration** - Monitor drift using Databricks Feature Store definitions
+* **Collaborative Debugging** - Share Fiddler insights in Databricks notebooks
+* **Unified Data Access** - Use Delta Lake as data source for baselines and production data
+
+[**Get Started with Databricks →**](/integrations/ml-platforms-and-tools/ml-platforms/databricks-integration.md)
+
+**Quick Start:**
+
+```python
+from databricks import mlflow as dbx_mlflow
+from fiddler import FiddlerClient
+
+# Register model in Databricks MLflow
+model_uri = "models:/credit_risk_model/Production"
+model_version = dbx_mlflow.register_model(model_uri, "credit_risk_model")
+
+# Automatically sync to Fiddler
+client = FiddlerClient(api_key="fid_...")
+client.sync_from_databricks(
+    model_name="credit_risk_model",
+    version=model_version,
+    enable_monitoring=True
+)
+```
+
+### MLflow
+
+Connect Fiddler to MLflow for experiment tracking and model registry integration.
+
+**Why MLflow + Fiddler:**
+
+* **Open-Source Standard** - Works with any MLflow deployment (Databricks, AWS, GCP, self-hosted)
+* **Model Registry Sync** - Automatically monitor models when they transition to "Production"
+* **Experiment Tracking** - Compare production metrics with training experiment metrics
+* **Model Versioning** - Track performance across model versions
+
+**Key Features:**
+
+* **Automatic Model Onboarding** - Models in MLflow registry auto-configure in Fiddler
+* **Metric Synchronization** - Export Fiddler metrics back to MLflow for unified view
+* **Artifact Integration** - Link model artifacts between MLflow and Fiddler
+* **Stage-Based Monitoring** - Different monitoring configs for Staging vs Production
+
+[**Get Started with MLflow →**](/integrations/ml-platforms-and-tools/ml-platforms/ml-flow-integration.md)
+
+**Quick Start:**
+
+```python
+import mlflow
+from fiddler import FiddlerClient
+
+# Set MLflow tracking URI
+mlflow.set_tracking_uri("https://mlflow.example.com")
+
+# Configure Fiddler to sync with MLflow
+client = FiddlerClient(api_key="fid_...")
+client.add_mlflow_integration(
+    tracking_uri="https://mlflow.example.com",
+    auto_sync_on_stage_transition=True,
+    stages=["Production", "Staging"]
+)
+
+# Models transitioning to "Production" will automatically be monitored in Fiddler
+```
+
+## Experiment Tracking & Model Registry
+
+### Unified Model Lifecycle
+
+Track models from experimentation through production:
+
+```
+Experiment → Training → Registration → Staging → Production → Monitoring
+    ↓          ↓           ↓            ↓           ↓            ↓
+ MLflow    MLflow     MLflow        MLflow      MLflow       Fiddler
+  Runs      Runs      Registry      Registry    Registry    + MLflow
+```
+
+**Integration Benefits:**
+
+* **Single Source of Truth** - MLflow registry as canonical model inventory
+* **Automated Workflows** - Monitoring setup triggered by model registration
+* **Version Comparison** - Compare production metrics across model versions
+* **Rollback Readiness** - Quick rollback with historical performance data
+
+### Experiment-to-Production Comparison
+
+Compare production model performance against training experiments:
+
+```python
+from fiddler import FiddlerClient
+
+client = FiddlerClient(api_key="fid_...")
+
+# Get production metrics
+prod_metrics = client.get_metrics(
+    project="fraud-detection",
+    model="fraud_model_v3",
+    start_time="2024-11-01",
+    end_time="2024-11-10"
+)
+
+# Compare with training experiment (from MLflow)
+experiment_metrics = client.get_experiment_metrics(
+    mlflow_experiment_id="exp_12345",
+    mlflow_run_id="run_67890"
+)
+
+# Generate comparison report
+report = client.compare_metrics(
+    production=prod_metrics,
+    experiment=experiment_metrics,
+    metrics=["accuracy", "precision", "recall", "auc"]
+)
+```
+
+## ML Framework Support
+
+While Fiddler is framework-agnostic, we provide enhanced support for popular ML frameworks:
+
+### Supported ML Frameworks
+
+**Classical ML:**
+
+* **Scikit-Learn** - Full support for all estimators
+* **XGBoost** - Native explainability for tree models
+* **LightGBM** - Fast SHAP explanations
+* **CatBoost** - Categorical feature support
+
+**Deep Learning:**
+
+* **TensorFlow/Keras** - Model analysis and monitoring
+* **PyTorch** - Dynamic graph model support
+* **JAX** - High-performance model monitoring
+* **ONNX** - Framework-agnostic model format
+
+**AutoML:**
+
+* **H2O.ai** - AutoML model monitoring
+* **AutoGluon** - Tabular model support
+* **TPOT** - Pipeline optimization monitoring
+
+### Framework-Specific Features
+
+**Tree-Based Models (XGBoost, LightGBM, CatBoost):**
+
+* Fast SHAP explanations using native implementations
+* Feature importance tracking over time
+* Tree structure analysis for debugging
+
+**Deep Learning (TensorFlow, PyTorch):**
+
+* Layer-wise activation monitoring
+* Embedding drift detection
+* Custom metric support for complex architectures
+
+**Example - XGBoost Monitoring:**
+
+```python
+import xgboost as xgb
+from fiddler import FiddlerClient
+
+# Train XGBoost model
+model = xgb.XGBClassifier()
+model.fit(X_train, y_train)
+
+# Upload to Fiddler with automatic feature importance
+client = FiddlerClient(api_key="fid_...")
+client.upload_model(
+    project="credit-risk",
+    model_name="xgb_risk_model",
+    model=model,
+    task="binary_classification",
+    enable_shap=True  # Native XGBoost SHAP support
+)
+```
+
+## Integration Architecture Patterns
+
+### Pattern 1: MLflow-Centric Workflow
+
+Use MLflow as the central hub for all ML operations:
+
+```
+Data Preparation
+  ↓
+Experimentation (MLflow Tracking)
+  ↓
+Model Registry (MLflow)
+  ↓ (webhook on stage transition)
+Fiddler Auto-Onboarding
+  ↓
+Production Monitoring (Fiddler + MLflow metrics export)
+```
+
+**Configuration:**
+
+```python
+# One-time setup: Configure MLflow webhook
+client = FiddlerClient(api_key="fid_...")
+client.configure_mlflow_webhook(
+    mlflow_tracking_uri="https://mlflow.example.com",
+    webhook_secret="webhook_secret_key",
+    on_stage_transition={
+        "Production": "enable_full_monitoring",
+        "Staging": "enable_basic_monitoring",
+        "Archived": "disable_monitoring"
+    }
+)
+```
+
+### Pattern 2: Databricks Unity Catalog Integration
+
+Leverage Databricks Unity Catalog for governance and Fiddler for monitoring:
+
+```
+Unity Catalog (Model Registry)
+  ↓
+Databricks Model Serving
+  ↓
+Production Traffic
+  ↓ (streaming predictions)
+Fiddler Monitoring
+  ↓
+Alerts → Databricks Workflow Jobs (retraining)
+```
+
+**Configuration:**
+
+```python
+# Connect Fiddler to Unity Catalog
+client = FiddlerClient(api_key="fid_...")
+client.add_unity_catalog_integration(
+    workspace_url="https://dbc-xxxxx.cloud.databricks.com",
+    catalog="ml_models",
+    schema="production",
+    access_token=dbutils.secrets.get("fiddler", "databricks_token")
+)
+```
+
+### Pattern 3: Multi-Platform Model Tracking
+
+Monitor models across multiple ML platforms:
+
+```
+Training Platform Mix:
+├── Databricks (Lakehouse models)
+├── SageMaker (AWS-native models)
+├── Vertex AI (GCP models)
+└── On-Premises (Legacy models)
+     ↓ (all models sync to)
+Fiddler (Unified Monitoring)
+```
+
+## Getting Started
+
+### Prerequisites
+
+* **Fiddler Account** - Cloud or on-premises deployment
+* **ML Platform Access** - Databricks workspace or MLflow server
+* **Credentials** - Fiddler access token + ML platform credentials
+* **Network Connectivity** - Firewall rules for integration
+
+### General Setup Steps
+
+**1. Configure ML Platform Connection**
+
+```python
+from fiddler import FiddlerClient
+
+client = FiddlerClient(
+    api_key="fid_...",
+    url="https://app.fiddler.ai"
+)
+
+# Add ML platform integration
+client.add_integration(
+    type="databricks",  # or "mlflow"
+    config={
+        "workspace_url": "https://dbc-xxxxx.cloud.databricks.com",
+        "access_token": "dapi...",
+        "auto_sync": True
+    }
+)
+```
+
+**2. Sync Existing Models (Optional)**
+
+```python
+# One-time sync of existing models
+models = client.sync_models_from_platform(
+    platform="databricks",
+    filter={"stage": "Production"}
+)
+print(f"Synced {len(models)} models to Fiddler")
+```
+
+**3. Enable Auto-Monitoring**
+
+```python
+# Future model registrations will automatically be monitored
+client.configure_auto_monitoring(
+    platform="databricks",
+    enabled=True,
+    default_config={
+        "enable_drift_detection": True,
+        "enable_performance_tracking": True,
+        "enable_explainability": True
+    }
+)
+```
+
+## Advanced Integration Features
+
+### Feature Store Integration
+
+Monitor models using features from Databricks Feature Store:
+
+```python
+from databricks.feature_store import FeatureStoreClient
+
+fs = FeatureStoreClient()
+
+# Create feature spec
+feature_spec = fs.create_feature_spec(
+    table_name="ml_features.user_features",
+    primary_keys=["user_id"]
+)
+
+# Monitor model with feature store schema
+client.upload_model(
+    project="recommendations",
+    model="user_model",
+    feature_spec=feature_spec,  # Auto-generates schema from Feature Store
+    enable_drift_detection=True
+)
+```
+
+### Automated Retraining Triggers
+
+Trigger retraining workflows when drift is detected:
+
+```python
+# Configure alert to trigger Databricks job
+client.create_alert(
+    name="High Drift - Retrain Model",
+    trigger_type="drift",
+    threshold=0.15,
+    model="credit_risk_model",
+    actions=[{
+        "type": "databricks_job",
+        "job_id": "12345",
+        "parameters": {
+            "model_name": "credit_risk_model",
+            "reason": "drift_detected"
+        }
+    }]
+)
+```
+
+### Model Lineage Tracking
+
+Track complete model lineage from data to deployment:
+
+```python
+# Capture full model lineage
+lineage = {
+    "data_source": "s3://bucket/training-data-v2.parquet",
+    "feature_transformations": "feature_pipeline_v1",
+    "training_framework": "xgboost==1.7.0",
+    "mlflow_run_id": "run_67890",
+    "parent_model": "credit_risk_model_v1"
+}
+
+client.update_model_metadata(
+    project="credit-risk",
+    model="credit_risk_model_v2",
+    lineage=lineage
+)
+```
+
+## Integration Selector
+
+Choose the right ML platform integration for your workflow:
+
+| Your ML Platform     | Recommended Integration    | Why                                         |
+| -------------------- | -------------------------- | ------------------------------------------- |
+| Databricks Lakehouse | **Databricks integration** | Native MLflow, Unity Catalog, Feature Store |
+| Self-hosted MLflow   | **MLflow integration**     | Open-source, cloud-agnostic                 |
+| AWS SageMaker        | **SageMaker Pipelines**    | AWS-native, Partner AI App compatible       |
+| Azure ML             | **MLflow integration**     | Azure ML uses MLflow under the hood         |
+| Vertex AI (GCP)      | **MLflow integration**     | Vertex AI supports MLflow                   |
+| Multiple platforms   | **MLflow integration**     | Universal compatibility                     |
+
+## Bi-Directional Metric Sync
+
+Share metrics between Fiddler and your ML platform:
+
+### Export Fiddler Metrics to MLflow
+
+```python
+# Log Fiddler metrics to MLflow experiments
+client.export_metrics_to_mlflow(
+    fiddler_project="fraud-detection",
+    fiddler_model="fraud_model_v3",
+    mlflow_experiment_name="production_monitoring",
+    metrics=["drift_score", "accuracy", "f1_score"],
+    time_range="last_7_days"
+)
+```
+
+### Import MLflow Metrics to Fiddler
+
+```python
+# Import custom metrics from MLflow
+client.import_metrics_from_mlflow(
+    mlflow_run_id="run_67890",
+    fiddler_project="fraud-detection",
+    fiddler_model="fraud_model_v3",
+    metrics=["custom_business_metric", "validation_loss"]
+)
+```
+
+## Security & Access Control
+
+### Authentication Methods
+
+**Databricks:**
+
+* Personal Access Tokens (development)
+* Service Principal OAuth (production)
+* Azure AD Integration (enterprise)
+
+**MLflow:**
+
+* HTTP Basic Authentication
+* Token-Based Authentication
+* Custom Auth Plugins
+
+### Permission Requirements
+
+**Databricks Permissions:**
+
+* `CAN_MANAGE` on registered models
+* `CAN_READ` on Feature Store tables
+* `CAN_USE` on clusters (for SHAP computation)
+
+**MLflow Permissions:**
+
+* Read access to Model Registry
+* Read access to Experiment Tracking
+* Write access for metric export (optional)
+
+## Monitoring MLOps Pipeline Health
+
+### Track Integration Health
+
+```python
+# Check integration status
+status = client.get_integration_status("databricks")
+print(f"Status: {status.connected}")
+print(f"Last sync: {status.last_sync_time}")
+print(f"Models synced: {status.models_count}")
+```
+
+### Alerts for Sync Failures
+
+```python
+# Alert on integration failures
+client.create_alert(
+    name="MLflow Sync Failure",
+    trigger_type="integration_error",
+    integration="mlflow",
+    notification_channels=["email", "slack"]
+)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Models Not Syncing:**
+
+* Verify MLflow/Databricks credentials are valid
+* Check network connectivity from Fiddler to ML platform
+* Ensure models are in the correct stage (e.g., "Production")
+* Validate webhook endpoint is reachable (for event-driven sync)
+
+**Schema Mismatches:**
+
+* Ensure feature names match between training and production
+* Verify data types are consistent
+* Check for missing features in production data
+
+**Performance Issues:**
+
+* For large models, use SHAP sampling instead of full computation
+* Enable lazy loading for model artifacts
+* Use incremental sync for model registry (don't sync all historical versions)
+
+## Related Integrations
+
+* [**Data Platforms**](/integrations/data-platforms-and-pipelines/data-platforms.md) - Connect to Snowflake, BigQuery for training data
+* [**Cloud Platforms**](/integrations/cloud-platforms-and-deployment/cloud-platforms.md) - Deploy Fiddler on AWS, Azure, GCP
+* [**Agentic AI**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai.md) - Monitor LangGraph and LLM applications
+* [**Monitoring & Alerting**](/integrations/monitoring-and-alerting/monitoring-alerting.md) - Alert on model issues
+
+***
+
+
+---

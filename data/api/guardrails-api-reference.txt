@@ -1,0 +1,396 @@
+# Guardrails API Reference
+
+#### Free Guardrails Rate Limits
+
+The Fiddler Free Guardrails experience is subject to the following rate limits. To increase these limits, please contact sales (<https://www.fiddler.ai/contact-sales>).
+
+| Trust Model  | Requests Per Second | Requests Per Hour | Requests Per Day |
+| ------------ | ------------------- | ----------------- | ---------------- |
+| Safety       | 2                   | 70                | 200              |
+| Faithfulness | 2                   | 70                | 200              |
+| Fast PII     | 2                   | 70                | 200              |
+
+#### Understanding Trust Model Scores
+
+Fiddler Trust Models return scores in the range of 0 to 1. These scores represent the model's confidence that the input belongs to the target class (e.g., toxicity, hallucination).
+
+* Higher scores (closer to 1): Higher confidence that the input belongs to the target class
+* Lower scores (closer to 0): Lower confidence that the input belongs to the target class
+
+**Threshold Selection**
+
+You must select a threshold value between 0 and 1 to convert these scores into binary decisions. This creates a tradeoff:
+
+* Lower thresholds: Catch more true positives but include more false positives
+* Higher thresholds: Reduce false positives, but might miss some true positives
+
+Our quickstart examples include default thresholds that work well for many applications, but you should adjust these based on your specific requirements and risk tolerance.
+
+**Adjusting Your Thresholds**
+
+To find the optimal threshold for your use case:
+
+1. Start with the default threshold
+2. Monitor both missed detections and false alarms
+3. Adjust gradually based on which type of error is more problematic for your application
+
+#### Safety Model
+
+{% hint style="info" %}
+For the free guardrails experience, the safety guardrails are restricted to a 4096 token length. To increase these limits, don't hesitate to contact sales.
+{% endhint %}
+
+This Fiddler Trust Model evaluates prompt and response safety across ten dimensions:
+
+* Jailbreaking
+* Illegal content
+* Hateful content
+* Harassment
+* Racism
+* Sexism
+* Violence
+* Sexual content
+* Harmful content
+* Unethical content
+* Roleplaying
+
+The model requires a single string input and outputs ten distinct scores (0-1 range). For detailed information, see our official documentation.
+
+**How to Use Thresholding**
+
+Users can apply thresholds on individual safety dimensions (e.g., harmful, violent, racist) or evaluate all of them collectively. This flexibility allows you to tailor how strictly you filter content based on your unique requirements.
+
+**Safety Model OpenAPI Spec**
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Fiddler FTL Safety
+  version: 1.0.0
+servers:
+  - url: "https://{fiddler_endpoint}"
+paths:
+  /v3/guardrails/ftl-safety:
+    post:
+      summary: Assess the safety or harmfulness of the provided input text.
+      operationId: evaluateSafety
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    input:
+                      type: string
+                      description: The text to be evaluated for various safety indicators.
+                      example: "I am a dangerous person who will be wreaking havoc upon the world!!!"
+      responses:
+        '200':
+          description: Successful safety assessment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fdl_harmful:
+                    type: number
+                    format: float
+                    description: Likelihood score for harmful content.
+                  fdl_violent:
+                    type: number
+                    format: float
+                    description: Likelihood score for violent content.
+                  fdl_unethical:
+                    type: number
+                    format: float
+                    description: Likelihood score for unethical content.
+                  fdl_illegal:
+                    type: number
+                    format: float
+                    description: Likelihood score for illegal content.
+                  fdl_sexual:
+                    type: number
+                    format: float
+                    description: Likelihood score for sexual content.
+                  fdl_racist:
+                    type: number
+                    format: float
+                    description: Likelihood score for racist content.
+                  fdl_jailbreaking:
+                    type: number
+                    format: float
+                    description: Likelihood score for jailbreaking attempts (prompt manipulation).
+                  fdl_harassing:
+                    type: number
+                    format: float
+                    description: Likelihood score for harassing content.
+                  fdl_hateful:
+                    type: number
+                    format: float
+                    description: Likelihood score for hateful content.
+                  fdl_sexist:
+                    type: number
+                    format: float
+                    description: Likelihood score for sexist content.
+                  fdl_roleplaying:
+                    type: number
+                    format: float
+                    description: Likelihood score for roleplaying (prompting the model to adopt a certain persona).
+        '400':
+          description: Bad request (invalid input data)
+        '401':
+          description: Unauthorized (missing or invalid Bearer token)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+```
+
+#### FTL Faithfulness Model
+
+{% hint style="info" %}
+The faithfulness guardrails are restricted to a 3500 token length limit for context, and a 350 token length limit for response for the free guardrails experience. To increase these limits, please contact sales.
+{% endhint %}
+
+{% hint style="warning" %}
+**This is the FTL Faithfulness model** (`ftl_response_faithfulness`) — a proprietary Fast Trust Model for real-time guardrail use cases. For the LLM-as-a-Judge RAG Faithfulness evaluator used in Agentic Monitoring and Experiments, see the [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) guide.
+{% endhint %}
+
+This Fiddler Trust Model detects hallucinations by evaluating the accuracy and reliability of facts presented in AI-generated text responses in retrieval-augmented generation (RAG) contexts.
+
+The model requires two inputs:
+
+1. Response: the text generated by your generative application
+2. Context Documents: the reference text that the application response must remain faithful to
+
+The output is a single score (float) representing the factual consistency between the response and the provided context.
+
+**How to Use Thresholding**
+
+Our quick start examples use a default threshold that works well in various applications. You may wish to set this higher or lower to allow you to tailor how strictly you filter content based on your unique requirements.
+
+**Faithfulness Model OpenAPI Spec**
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Fiddler FTL Response Faithfulness
+  version: 1.0.0
+servers:
+  - url: "https://{fiddler_endpoint}"
+paths:
+  /v3/guardrails/ftl-response-faithfulness:
+    post:
+      summary: Evaluate the faithfulness of a provided response against given context.
+      operationId: evaluateFaithfulness
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    response:
+                      type: string
+                      description: The response text to be evaluated.
+                      example: "The Yorkshire Terrier and the Cavalier King Charles Spaniel are both small breeds of companion dogs."
+                    context:
+                      type: string
+                      description: The contextual text to compare against.
+                      example: "The Yorkshire Terrier is a small dog breed... The Cavalier King Charles Spaniel is a small spaniel..."
+      responses:
+        '200':
+          description: Successfully computed faithfulness score
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fdl_faithful_score:
+                    type: number
+                    format: float
+                    description: A numerical measure indicating how faithful the response is to the given context.
+        '400':
+          description: Bad request (invalid payload or missing parameters)
+        '401':
+          description: Unauthorized (missing or invalid Bearer token)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+```
+
+#### Fast PII Model (Sensitive Information Detection)
+
+{% hint style="info" %}
+For the free guardrails experience, the Fast PII guardrails are restricted to a 4096 token length. To increase these limits, please contact sales.
+{% endhint %}
+
+This Fiddler Trust Model detects and identifies sensitive information including personally identifiable information (PII), protected health information (PHI), and custom-defined entities in text data.
+
+The model supports three detection modes:
+
+1. **PII Detection**: 35+ entity types including personal, financial, and government identifiers
+2. **PHI Detection**: 7 healthcare-specific entity types for HIPAA compliance
+3. **Custom Entity Detection**: Organization-specific sensitive data patterns
+
+The model requires a single string input and outputs an array of detected entities with confidence scores, labels, and text positions.
+
+**Key Features**
+
+* **High Performance**: 0.1 confidence threshold with top-1024 entity filtering
+* **Comprehensive Coverage**: Supports 35+ PII and 7 PHI entity types
+* **Custom Entities**: Define organization-specific sensitive patterns
+* **Detailed Output**: Returns entity text, type, confidence score, and character positions
+
+**Supported PII Entity Types (35+)**
+
+* **Personal Identifiers**: person, date\_of\_birth
+* **Contact Information**: email, email\_address, phone\_number, mobile\_phone\_number, landline\_phone\_number, address, postal\_code
+* **Financial Data**: credit\_card\_number, credit\_card\_expiration\_date, cvv, cvc, bank\_account\_number, iban
+* **Government IDs**: social\_security\_number, passport\_number, drivers\_license\_number, tax\_identification\_number, cpf, cnpj, national\_health\_insurance\_number
+* **Digital Identifiers**: ip\_address, digital\_signature
+
+**Supported PHI Entity Types (7)**
+
+* **Medical Information**: medication, medical\_condition, medical\_record\_number
+* **Insurance Data**: health\_insurance\_number, health\_plan\_id
+* **Healthcare Identifiers**: birth\_certificate\_number, device\_serial\_number
+
+**How to Use Thresholding**
+
+The Fast PII model uses a default confidence threshold of 0.1, which works well for most applications. Entities with scores above this threshold are considered valid detections. You can adjust this threshold based on your specific requirements:
+
+* **Lower thresholds (< 0.1)**: Catch more potential sensitive data but may include more false positives
+* **Higher thresholds (> 0.1)**: Reduce false positives but might miss some valid sensitive information
+
+**Fast PII Model OpenAPI Spec**
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Fiddler Fast PII (Sensitive Information Detection)
+  version: 1.0.0
+servers:
+  - url: "https://{fiddler_endpoint}"
+paths:
+  /v3/guardrails/sensitive-information:
+    post:
+      summary: Detect sensitive information (PII, PHI, custom entities) in text
+      operationId: detectSensitiveInformation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  required:
+                    - input
+                  properties:
+                    input:
+                      type: string
+                      description: The text to analyze for sensitive information
+                      example: "John Doe's SSN is 123-45-6789 and email is john@example.com"
+                    entity_categories:
+                      oneOf:
+                        - type: string
+                          enum: ["PII", "PHI", "Custom Entities"]
+                        - type: array
+                          items:
+                            type: string
+                            enum: ["PII", "PHI", "Custom Entities"]
+                      default: "PII"
+                      description: Entity detection mode(s) to use
+                      example: ["PII", "PHI"]
+                    custom_entities:
+                      type: array
+                      items:
+                        type: string
+                      description: Custom entity patterns (required when using "Custom Entities" mode)
+                      example: ["employee id", "api key", "project code"]
+      responses:
+        '200':
+          description: Successfully detected sensitive information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fdl_sensitive_information_scores:
+                    type: array
+                    description: Array of detected sensitive entities
+                    items:
+                      type: object
+                      properties:
+                        score:
+                          type: number
+                          format: float
+                          description: Confidence score (0.0 to 1.0)
+                          example: 0.987
+                        label:
+                          type: string
+                          description: Entity type identifier
+                          example: "social_security_number"
+                        text:
+                          type: string
+                          description: The detected entity text
+                          example: "123-45-6789"
+                        start:
+                          type: integer
+                          description: Character position where entity starts
+                          example: 78
+                        end:
+                          type: integer
+                          description: Character position where entity ends
+                          example: 89
+        '400':
+          description: Bad request (invalid input data or missing custom_entities when required)
+        '401':
+          description: Unauthorized (missing or invalid Bearer token)
+        '413':
+          description: Input exceeds 4096 token limit
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+```
+
+#### Fiddler Trust Service Error Codes
+
+| Error Code  | Reason                                           | Resolution                                                                                                                                                                                                                                                         |
+| ----------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 400         | Invalid Input                                    | Adjust API input to follow above API specification.                                                                                                                                                                                                                |
+| 401         | Invalid Auth Token                               | The authentication token is invalid or expired. Please double-check your token if it is invalid, and contact <sales@fiddler.ai>                                                                                                                                    |
+| 404         | Invalid guardrail endpoint called                | API called must be either `ftl-safety` (safety model), `ftl-response-faithfulness` (faithfulness model), or `sensitive-information` (Fast PII model).                                                                                                              |
+| 413         | Input token length exceeds API token size limits | The safety guardrail has a limit of 4096 tokens. The faithfulness guardrail has a limit of 3500 tokens for the context field, and 350 tokens for the response field. The Fast PII guardrail has a limit of 4096 tokens. These limits are higher in our paid plans. |
+| 429         | Rate Limits exceeded                             | The rate limits for the free guardrails experience is 2 requests per second, 70 requests per minute, and 200 requests per day. These limits are higher in our paid plans                                                                                           |
+| 500/503/504 | Internal Server Error                            | We are experiencing some internal service errors. Please watch #fiddler-guardrails-support on Slack or contact technical support.                                                                                                                                  |
+
+
+---

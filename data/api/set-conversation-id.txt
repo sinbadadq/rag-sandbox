@@ -1,0 +1,25 @@
+# set\_conversation\_id
+
+Set the conversation ID for the current agent invocation.
+
+The conversation ID is used to group related agent invocations together, enabling conversation-level tracing and monitoring in Fiddler's platform. This ID will persist until it is explicitly changed by calling this function again with a new value.
+
+## Parameters
+
+| Parameter         | Type    | Required | Default | Description                                                        |
+| ----------------- | ------- | -------- | ------- | ------------------------------------------------------------------ |
+| `agent`           | `Agent` | ✗        | `None`  | The Strands Agent instance to associate with the conversation      |
+| `conversation_id` | `str`   | ✗        | `None`  | Unique identifier for the conversation (e.g., session ID, user ID) |
+
+## Example
+
+```python
+from strands import Agent
+from fiddler_strandsagents import set_conversation_id
+
+agent = Agent(model=model, system_prompt="...")
+set_conversation_id(agent, "session_12345")
+```
+
+
+---

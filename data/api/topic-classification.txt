@@ -1,0 +1,125 @@
+# TopicClassification
+
+Evaluator to classify text topics using Fiddler's zero-shot topic classification model.
+
+The TopicClassification evaluator uses Fiddler's implementation of the mortizlaurer/roberta-base-zeroshot-v2-0-c model to classify text content into predefined topic categories. This evaluator helps identify the main subject matter or theme of text content, providing both topic labels and confidence scores for topic classification.
+
+Key Features:
+
+* **Topic Classification**: Classifies text into predefined topic categories
+* **Dual Score Output**: Returns both topic label and probability confidence
+* **Zero-Shot Model**: Uses mortizlaurer/roberta-base-zeroshot-v2-0-c for flexible topic classification
+* **Multi-Score Output**: Returns both topic name and probability scores
+
+Topic Categories Evaluated:
+
+* **top\_topic**: The predicted topic name from the provided topics list
+* **top\_topic\_prob**: Probability score (0.0-1.0) for the predicted topic
+
+Use Cases:
+
+* **Content Categorization**: Automatically organizing content by topic
+* **Document Classification**: Sorting documents by subject matter
+* **News Analysis**: Categorizing news articles by topic
+* **Customer Support**: Routing tickets by topic or issue type
+* **Content Moderation**: Identifying content themes for policy enforcement
+
+Scoring Logic: : The topic classification provides two complementary scores:
+
+* **top\_topic**: The predicted topic name from the provided topics list<br>
+
+  > * Selected from the topics provided during initialization
+  > * Represents the most relevant topic for the input text
+* **top\_topic\_prob**: Confidence score (0.0-1.0) for the prediction : - **0.0-0.3**: Low confidence in topic prediction
+* **0.3-0.7**: Medium confidence in topic prediction
+* **0.7-1.0**: High confidence in topic prediction
+
+## Parameters
+
+| Parameter | Type        | Required | Default | Description                                     |
+| --------- | ----------- | -------- | ------- | ----------------------------------------------- |
+| `topics`  | `list[str]` | ✗        | `None`  | List of topic categories to classify text into. |
+
+## Returns
+
+A list of Score objects containing: : - top\_topic: Score object with predicted topic name
+
+* top\_topic\_prob: Score object with probability score (0.0-1.0)
+
+**Return type:** list\[Score]
+
+## Raises
+
+**ValueError** -- If the text is empty or None, or if no scores are returned from the API.
+
+## Example
+
+```python
+from fiddler_evals.evaluators import TopicClassification
+evaluator = TopicClassification(topics=["technology", "sports", "politics", "entertainment"])
+```
+
+```python
+# Technology topic
+scores = evaluator.score("The new AI model shows promising results in natural language processing.")
+print(f"Topic: {scores[0].label}")
+print(f"Confidence: {scores[1].value}")
+# Topic: technology
+# Confidence: 0.92
+
+# Sports topic
+sports_scores = evaluator.score("The team won the championship with an amazing performance!")
+print(f"Topic: {sports_scores[0].label}")
+print(f"Confidence: {sports_scores[1].value}")
+# Topic: sports
+# Confidence: 0.88
+
+# Politics topic
+politics_scores = evaluator.score("The new policy will affect millions of citizens.")
+print(f"Topic: {politics_scores[0].label}")
+print(f"Confidence: {politics_scores[1].value}")
+# Topic: politics
+# Confidence: 0.85
+
+# Filter based on topic and confidence
+if scores[0].label == "technology" and scores[1].value > 0.8:
+
+    print("High confidence technology topic detected")
+```
+
+{% hint style="info" %}
+This evaluator uses zero-shot classification, meaning it can classify text into any set of topics provided during initialization without requiring training data for those specific topics. The mortizlaurer/roberta-base-zeroshot-v2-0-c model is particularly effective for general-purpose topic classification across diverse domains. The dual-score output provides both categorical classification and confidence assessment for robust topic analysis workflows.
+{% endhint %}
+
+## name *= 'topic\_classification'*
+
+Initialize the TopicClassification evaluator.
+
+## Parameters
+
+| Parameter | Type        | Required | Default | Description                                     |
+| --------- | ----------- | -------- | ------- | ----------------------------------------------- |
+| `topics`  | `list[str]` | ✗        | `None`  | List of topic categories to classify text into. |
+
+## Raises
+
+**ValueError** -- If the topics are empty or None.
+
+## score()
+
+Score the topic classification of text content.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                            |
+| --------- | ----- | -------- | ------- | ------------------------------------------------------ |
+| `text`    | `str` | ✗        | `None`  | The text content to evaluate for topic classification. |
+
+## Returns
+
+A list of Score objects for topic name and probability.
+
+**Return type:** list\[Score]
+
+
+---

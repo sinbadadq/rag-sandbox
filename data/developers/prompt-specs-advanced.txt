@@ -1,0 +1,425 @@
+# Advanced Prompt Specs
+
+This comprehensive guide covers advanced LLM-as-a-Judge capabilities using Prompt Specs for **LLM Observability (Traditional Monitoring)**. It includes custom prompting, model configuration, performance optimization, and enterprise deployment patterns.
+
+{% hint style="info" %}
+**For Agentic Monitoring and Experiments**, use the `CustomJudge` class from the Fiddler Evals SDK instead of Prompt Specs. `CustomJudge` provides `prompt_template` (Jinja syntax) and `output_fields` for structured evaluation. See the [Custom Judge Evaluators Cookbook](/developers/cookbooks/custom-judge-evaluators.md) for examples.
+{% endhint %}
+
+### Prerequisites
+
+* Understanding of [Prompt Specs fundamentals](/observability/llm/llm-evaluation-prompt-specs.md)
+* Completion of the [LLM Evaluation Quickstart](/evaluate-and-test/prompt-specs-quick-start.md)
+* Familiarity with LLM evaluation concepts
+
+> Download this tutorial directly from [GitHub](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLMaaJ_Prompt_Spec.ipynb) or run it in [Google Colab](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_LLMaaJ_Prompt_Spec.ipynb)
+
+{% stepper %}
+{% step %}
+**Set Up Your Environment**
+
+```python
+import json
+import pandas as pd
+import requests
+
+FIDDLER_BASE_URL = "https://your_company.fiddler.ai"
+
+PROMPT_SPEC_URL = f"{FIDDLER_BASE_URL}/v3/llm-as-a-judge/prompt-spec"
+FIDDLER_HEADERS = {
+    "Authorization": f"Bearer {FIDDLER_TOKEN}",
+    "Content-Type": "application/json",
+}
+```
+
+{% endstep %}
+
+{% step %}
+**Prepare Sample Data**
+
+We'll use news article data for this example:
+
+```python
+# Load sample news data (using AG News dataset)
+df_news = pd.read_parquet(
+    "hf://datasets/fancyzhx/ag_news/data/test-00000-of-00001.parquet"
+).sample(20, random_state=25)
+
+# Map labels to topic names
+df_news["original_topic"] = df_news["label"].map({
+    0: "World", 1: "Sports", 2: "Business", 3: "Sci/Tech"
+})
+
+# Summarize the count of each unique topic
+print(df_news["original_topic"].value_counts())
+```
+
+{% endstep %}
+
+{% step %}
+**Start with a Basic Prompt Spec**
+
+Define a simple evaluation schema:
+
+```python
+basic_prompt_spec = {
+    "input_fields": {
+        "news_summary": {"type": "string"}
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": ["World", "Sports", "Business", "Sci/Tech"]
+        },
+        "reasoning": {"type": "string"}
+    }
+}
+```
+
+{% endstep %}
+
+{% step %}
+**Validate**
+
+Validate your Prompt Spec schema:
+
+```python
+validate_response = requests.post(
+    f"{PROMPT_SPEC_URL}/validate",
+    headers=FIDDLER_HEADERS,
+    json={"prompt_spec": prompt_spec_basic},
+)
+
+validate_response.raise_for_status()
+print("Status Code:", validate_response.status_code)
+print(json.dumps(validate_response.json(), indent=2))
+```
+
+{% endstep %}
+
+{% step %}
+**Test with Ad-hoc Data**
+
+Test with a larger set of data:
+
+```python
+def get_prediction(prompt_spec, input_data):
+    predict_response = requests.post(
+        f"{PROMPT_SPEC_URL}/predict",
+        headers=FIDDLER_HEADERS,
+        json={"prompt_spec": prompt_spec, "input_data": input_data},
+    )
+    if predict_response.status_code != 200:
+        print(f"Error ({predict_response.status_code}): {predict_response.text}")
+        return {"topic": None, "reasoning": None}
+    return predict_response.json()["prediction"]
+
+print(
+    json.dumps(
+        get_prediction(
+            prompt_spec_basic, {"news_summary": "Wimbledon 2025 is under way!"}
+        ),
+        indent=2,
+    )
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Test with a DataFrame**
+
+Evaluate a batch of data:
+
+```python
+df_ag_news[["topic", "reasoning"]] = df_ag_news.apply(
+    lambda row: get_prediction(prompt_spec_basic, {"news_summary": row["text"]}),
+    axis=1,
+    result_type="expand",
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Inspect the Results**
+
+Note several `Sci/Tech` articles were misclassified as `World`. The `reasoning` field helps identify trends. We'll use this to update our prompt spec in the next section.
+
+```python
+accuracy = (df_ag_news["original_topic"] == df_ag_news["topic"]).mean()
+print(f"Accuracy: {accuracy:.0%}")
+
+df_ag_news.value_counts(subset=["original_topic", "topic"])
+
+for r in df_ag_news[
+    (df_ag_news["original_topic"] == "Sci/Tech") & (df_ag_news["topic"] != "Sci/Tech")
+]["reasoning"]:
+    print(r)
+```
+
+{% endstep %}
+
+{% step %}
+**Improve the Accuracy with Descriptions**
+
+Just as descriptive field names can help improve model performance, you can also add a task instruction and field descriptions. Here, we will add a description to `topic` to help with classifying `Sci/Tech` articles. Note the improved results.
+
+```python
+prompt_spec_rich = {
+    "instruction": "Determine the topic of the given news summary.",
+    "input_fields": {
+        "news_summary": {
+            "type": "string",
+        }
+    },
+    "output_fields": {
+        "topic": {
+            "type": "string",
+            "choices": df_ag_news["original_topic"].unique().tolist(),
+            "description": """Use topic 'Sci/Tech' if the news summary is about a company or business in the tech industry, or if the news summary is about a scientific discovery or research, including health and medicine.
+            Use topic 'Sports' if the news summary is about a sports event or athlete.
+            Use topic 'Business' if the news summary is about a company or industry outside of science, technology, or sports.
+            Use topic 'World' if the news summary is about a global event or issue.
+            """,
+        },
+        "reasoning": {
+            "type": "string",
+            "description": "The reasoning behind the predicted topic.",
+        },
+    },
+}
+
+print(
+    json.dumps(
+        get_prediction(prompt_spec_rich, {"news_summary": df_ag_news.loc[267, "text"]}),
+        indent=2,
+    )
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Reevaluate the DataFrame with the New Prompt**
+
+Note the improvement of accuracy in the results:
+
+```python
+df_ag_news[["topic", "reasoning"]] = df_ag_news.apply(
+    lambda row: get_prediction(prompt_spec_rich, {"news_summary": row["text"]}),
+    axis=1,
+    result_type="expand",
+)
+
+accuracy = (df_ag_news["original_topic"] == df_ag_news["topic"]).mean()
+print(f"Accuracy: {accuracy:.0%}")
+
+df_ag_news.value_counts(subset=["original_topic", "topic"])
+```
+
+{% endstep %}
+{% endstepper %}
+
+### Deploying Your Evaluation to Production
+
+Once you see the results you expect with your test data, deploy the custom evaluation to production and monitor your production application:
+
+{% stepper %}
+{% step %}
+**Create a Fiddler Project for your Monitoring Application**
+
+```python
+from datetime import datetime
+import fiddler as fdl
+
+fdl.init(url=FIDDLER_BASE_URL, token=FIDDLER_TOKEN)
+
+PROJECT_NAME = "quickstart_examples"  # If the project already exists, the notebook will create the model under the existing project.
+MODEL_NAME = "fiddler_news_classifier"
+project = fdl.Project.get_or_create(name=PROJECT_NAME)
+
+```
+
+{% endstep %}
+
+{% step %}
+**Update the DataFrame Schema Names**
+
+Recall we used `news_summary` in our prompt. Let's make our dataframe match this and add some metadata.
+
+```python
+platform_df = df_ag_news.rename(columns={"text": "news_summary"})
+platform_df["id"] = platform_df.index
+```
+
+{% endstep %}
+
+{% step %}
+Add the Prediction as a Fiddler GenAI Enrichment
+
+* `name` will be used as part of the generated column name; set it to something meaningful for your use case.
+* `enrichment` must always be `llm_as_a_judge`.
+* `columns` matches all the input columns your prompt spec uses.
+* `config` must set the prompt spec.
+
+Then define the remainder of the schema that makes up this application to be monitored. For more details on setting up Fiddler to monitor your ML models and LLM/GenAI applications, refer to the [ML Monitoring Quick Start](/developers/ml-monitoring/simple-ml-monitoring.md) and the [LLM Monitoring Quick Start](/developers/llm-monitoring/simple-llm-monitoring.md) guides.
+
+```python
+fiddler_llm_enrichments = [
+    fdl.Enrichment(
+        name="news_topic",
+        enrichment="llm_as_a_judge",
+        columns=["news_summary"],
+        config={"prompt_spec": prompt_spec_rich},
+    )
+]
+
+model_spec = fdl.ModelSpec(
+    inputs=["news_summary"],
+    metadata=["id", "original_topic"],
+    custom_features=fiddler_llm_enrichments,
+)
+llm_application = fdl.Model.from_data(
+    source=platform_df,
+    name=MODEL_NAME,
+    project_id=project.id,
+    spec=model_spec,
+    task=fdl.ModelTask.LLM,
+    max_cardinality=5,
+)
+llm_application.create()
+```
+
+{% endstep %}
+
+{% step %}
+**Publish Data to Simulate LLM Activity**
+
+Our prediction will add two columns: `FDL news_topic (topic)` and `FDL news_topic (reasoning)`.
+
+> **Note**: The column names follow the pattern: `FDL {enrichment name} ({prompt spec output column})`, using values as specified.
+
+```python
+production_publish_job = llm_application.publish(platform_df)
+
+# wait for the job to complete
+production_publish_job.wait(interval=20)
+```
+
+{% endstep %}
+
+{% step %}
+Download the Data Enriched by Fiddler
+
+```python
+llm_application.download_data(
+    output_dir="test_download",
+    env_type=fdl.EnvType.PRODUCTION,
+    start_time=start_time,
+    end_time=datetime.now(),
+    columns=[
+        "id",
+        "news_summary",
+        "original_topic",
+        "FDL news_topic (topic)",
+        "FDL news_topic (reasoning)",
+    ],
+)
+
+# See the original data and the results of LLM-as-a-Judge
+fdl_data = pd.read_parquet("test_download/output.parquet")
+fdl_data.sample(15)
+```
+
+{% endstep %}
+{% endstepper %}
+
+### Advanced Prompt Specs Configuration
+
+#### Schema Design Patterns
+
+#### Multi-Output Evaluation
+
+**Domain-Specific Classification**
+
+#### Performance Optimization Techniques
+
+**Field Description Best Practices**
+
+* **Be Specific**: Use concrete examples rather than abstract descriptions
+* **Avoid Ambiguity**: Define edge cases and boundary conditions
+* **Include Context**: Reference domain-specific knowledge when needed
+
+### Bring-Your-Own-Prompt
+
+For maximum customization, Fiddler supports custom prompt templates with multiple output format options.
+
+#### Free-Form Output
+
+Best for open-ended evaluations where structure is less important:
+
+```json
+{
+  "prompt_template": {
+    "user": "Analyze the following text for potential bias: {text}. Provide detailed analysis."
+  },
+  "output_fields": ["analysis"],
+  "output_format": {
+    "type": "free_form"
+  }
+}
+```
+
+#### Guided Choice Output
+
+For single categorical outputs with high accuracy requirements:
+
+```json
+{
+  "prompt_template": {
+    "system": "You are an expert content moderator.",
+    "user": "Classify this content: {content}. Choose the most appropriate category."
+  },
+  "output_fields": ["classification"],
+  "output_format": {
+    "type": "guided_choice",
+    "choices": ["safe", "questionable", "harmful", "requires_review"]
+  }
+}
+```
+
+#### Guided JSON Output
+
+For complex structured outputs with validation:
+
+```json
+{
+  "prompt_template": {
+    "system": "Extract structured information from job postings.",
+    "user": "Extract key details from: {job_posting}"
+  },
+  "output_fields": ["title", "company", "salary_range", "remote_work"],
+  "output_format": {
+    "type": "guided_json",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "salary_range": { "type": "string" },
+        "remote_work": { "type": "boolean" }
+      },
+      "required": ["title", "company"]
+    }
+  }
+}
+```
+
+### Additional Documentation
+
+* [LLM Observability Overview](/observability/llm.md): Understanding Fiddler's broader LLM monitoring capabilities
+* [Enrichments](/observability/llm/enrichments.md): Technical details on Fiddler's evaluation infrastructure
+
+
+---

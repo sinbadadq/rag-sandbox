@@ -1,0 +1,77 @@
+# EvalFn
+
+Evaluator that wraps a user-provided function for dynamic evaluation.
+
+This class allows users to create evaluators from any callable function, automatically handling parameter passing, validation, and result conversion to Score objects.
+
+Key Features:
+
+* **Dynamic Function Wrapping**: Converts any callable into an evaluator
+* **Argument Validation**: Validates that provided arguments match function signature
+* **Smart Result Conversion**: Automatically converts various return types to Score
+* **Error Handling**: Gracefully handles function execution and argument errors
+* **Parameter Flexibility**: Supports functions with any parameter signature
+
+## Parameters
+
+| Parameter    | Type       | Required | Default | Description                                    |
+| ------------ | ---------- | -------- | ------- | ---------------------------------------------- |
+| `fn`         | `Callable` | ✗        | `None`  | The callable function to wrap as an evaluator. |
+| `score_name` | \`str      | None\`   | ✗       | `None`                                         |
+
+## Example
+
+```python
+def equals(a, b):
+        return a == b
+
+    evaluator = EvalFn(equals, score_name="exact_match")
+    score = evaluator.score(a="hello", b="hello")
+    print(score.value)  # 1.0
+
+    def length_check(text, min_length=5):
+            return len(text) >= min_length
+
+        evaluator = EvalFn(length_check)
+
+        # Invalid arguments raise TypeError
+        try:
+                evaluator.score(wrong_param="value")
+            except TypeError as e:
+                    print(f"Error: {e}")
+```
+
+## *property* name *: str*
+
+## score()
+
+Execute the wrapped function and convert result to Score.
+
+Calls the wrapped function with the provided arguments and converts the result to a Score object. Validates that the provided arguments match the function's signature.
+
+## Parameters
+
+| Parameter | Type  | Required | Default | Description                                           |
+| --------- | ----- | -------- | ------- | ----------------------------------------------------- |
+| `*args`   | `Any` | ✗        | `None`  | Positional arguments to pass to the wrapped function. |
+
+## Returns
+
+A Score object representing the function's evaluation result.
+
+**Return type:** Score
+
+## Raises
+
+**TypeError** -- If the provided arguments don't match the function signature.
+
+{% hint style="info" %}
+The function result is converted to a Score as follows:
+
+* bool: 1.0 for True, 0.0 for False
+* int/float: Direct value conversion
+* Score: Returns as-is
+  {% endhint %}
+
+
+---

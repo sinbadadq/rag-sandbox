@@ -1,0 +1,46 @@
+# Data Integrity
+
+{% hint style="info" %}
+For a complete list of all built-in ML metrics including data integrity, see the [ML Metrics Reference](/reference/ml-metrics-reference.md).
+{% endhint %}
+
+### Overview
+
+ML models are increasingly driven by complex feature pipelines and automated workflows that involve dynamic data. Data is transformed from source to model input which can result in data inconsistencies and errors.
+
+There are three types of violations that can occur at model inference: **missing values**, **type mismatches** (e.g. sending a float input for a categorical feature type) or **range violations** (e.g. sending an unknown US State for a State categorical feature).
+
+You can monitor all these violations with auto-generated Data Integrity charts and alerts, or create your own custom alerts and charts. The time series shown below tracks the violations of data integrity constraints set up for this model.
+
+### What Is Being Tracked?
+
+![Monitoring chart with missing values, type violations, and range violations](/files/s2zdIyyeETHvTyeTL35e)
+
+The time series chart above tracks the violations of data integrity constraints set up for this model. Note that both raw count and percentage are available for data integrity metrics.
+
+* **Any Violation Any Column** — The count of any type of data integrity violation over all features for a given period of time.
+* **% Any Violation Any Column** — The percentage of any type of data integrity violation over all features for a given period of time.
+* **NULL Count Any Column** — The count of missing value violations over all features for a given period of time.
+* **Range Violation Count Any Column** — The count of range violations over all features for a given period of time.
+* **Type Violation Count Any Column** — The count of data type violations over all features for a given period of time.
+
+### Why is it being tracked?
+
+Data integrity issues can cause incorrect data to flow into the model, leading to poor model performance and negatively impacting the business or end-user experience.
+
+### How does it work?
+
+Setting up constraints for individual features when they number in the tens or hundreds can be tedious. To avoid this, the schema of a model is used as a reference to detect when features in the incoming production logs deviate from expected patterns established during model training. For example, feature values may be out of range (numerical inputs) or contain unknown values (categorical inputs). The minimums, maximums, and distinct categorical values for a model's features are collected during initial model onboarding and stored in the Fiddler model's `ModelSchema`.
+
+![Monitoring chart with missing values, type violations, and range violations](/files/7qgwAWO6WbFH4ppd16Yq)
+
+Fiddler will automatically generate constraints based on the data distribution of the sample data used to generate the model schema during model onboarding.
+
+* **Type mismatch**: A data integrity violation will be triggered when the type of a feature value differs from what was specified for that feature in the model's schema.
+* **Range mismatch**:
+  * For categorical features, a data integrity violation will be triggered when it sees any value other than the ones specified in the model's schema.
+  * For continuous variables, the violation will be triggered if the values are outside the range specified in the model's schema.
+  * For [vector datatype](/observability/platform/vector-monitoring-platform.md), a range mismatch will be triggered when a dimension mismatch occurs compared to the expected dimension from the model's schema.
+
+
+---

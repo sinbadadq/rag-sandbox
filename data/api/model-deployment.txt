@@ -1,0 +1,54 @@
+# ModelDeployment
+
+Model deployment management for serving infrastructure.
+
+This class manages containerized model deployments including resource allocation, scaling, and activation status.
+
+## Examples
+
+Get and update deployment:
+
+```python
+# Get deployment
+deployment = ModelDeployment.of(model_id=model.id)
+
+# Update resources
+deployment.replicas = 3
+deployment.cpu = 1000
+deployment.memory = 2048
+job = deployment.update()
+job.wait()
+```
+
+Initialize ModelDeployment instance.
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description |
+| ---------- | ------ | -------- | ------- | ----------- |
+| `model_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## update()
+
+Update an existing model deployment.
+
+**Return type:** *Job*
+
+## *classmethod* of(model\_id)
+
+Get model deployment instance of the given model
+
+## Parameters
+
+| Parameter  | Type   | Required | Default | Description |
+| ---------- | ------ | -------- | ------- | ----------- |
+| `model_id` | \`UUID | str\`    | ✗       | `None`      |
+
+## Returns
+
+ModelDeployment instance
+
+**Return type:** [*ModelDeployment*](#modeldeployment)
+
+
+---

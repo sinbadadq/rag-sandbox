@@ -1,0 +1,102 @@
+# ML Observability
+
+[ML Observability](/welcome/readme.md) is the systematic practice of monitoring, analyzing, and troubleshooting machine learning models throughout their lifecycle to ensure reliability, performance, and alignment with business objectives. It involves continuously tracking inputs, outputs, and model behaviors to provide visibility into how models operate in production environments, detect performance degradation, identify data integrity issues, and maintain trust.
+
+Unlike traditional software monitoring, ML Observability addresses the unique challenges of machine learning systems, including data drift, concept drift, model decay, and the black-box nature of complex models. This comprehensive approach enables organizations to detect issues early, perform effective root cause analysis, maintain model quality, and ensure responsible AI deployment.
+
+## How Fiddler Provides ML Observability
+
+Fiddler's ML Observability platform provides a comprehensive approach to monitoring and improving machine learning models through five key metric types: data drift, performance, data integrity, traffic, and statistical properties. The platform helps ML teams detect issues early, diagnose root causes, and take corrective actions to maintain model quality and reliability.
+
+Fiddler acts as a unified management platform with centralized controls and actionable insights, enabling ML teams to monitor both traditional ML models and LLM applications. The platform's explainability capabilities help users understand model behavior and decisions, while its monitoring features track drift, data quality, and performance metrics to ensure models operate as expected in production.
+
+## Why ML Observability Is Important
+
+ML Observability is crucial for organizations deploying machine learning models in production environments. As ML systems increasingly drive critical business decisions and customer experiences, maintaining visibility, reliability, and trust becomes essential. Effective ML Observability enables teams to detect issues early, continuously improve model performance, ensure business value, maintain compliance with regulations, and provide governance for responsible AI.
+
+* **Data Drift Detection**: ML Observability continuously monitors for shifts in data distribution between training and production environments using metrics like Jensen-Shannon distance (JSD) and Population Stability Index (PSI), helping identify when models encounter data patterns they weren't trained on.
+* **Performance Monitoring**: By tracking key performance metrics (accuracy, precision, recall, F1 scores, etc.), ML Observability helps ensure models continue to meet expected quality standards in production and alerts teams when performance degrades.
+* **Data Integrity Validation**: ML Observability identifies data quality issues like missing values, type mismatches, and range violations that can arise from complex feature pipelines, preventing incorrect data from flowing into models and causing poor performance.
+* **Root Cause Analysis**: When issues arise, ML Observability provides tools to diagnose the underlying causes through feature impact analysis, drift contribution metrics, and data segment performance comparisons, enabling targeted improvements.
+* **Operational Efficiency**: ML Observability streamlines troubleshooting workflows, reduces time spent debugging issues, and helps ML teams focus on model development rather than reactive problem-solving, accelerating the ML lifecycle.
+* **Business Impact Alignment**: By connecting model performance to business KPIs, ML Observability helps quantify the value of ML investments, prioritize improvements based on business impact, and ensure models deliver on their intended business objectives.
+
+## Types of ML Observability
+
+* **Data Drift Monitoring**: Tracking changes in the statistical properties of model inputs and outputs over time, comparing production data distributions against baseline data (typically training data) to detect when the model may be receiving data it wasn't designed for.
+* **Performance Tracking**: Monitoring model accuracy, precision, recall, F1 scores, and other metrics specific to model tasks (classification, regression, ranking) to ensure performance remains within acceptable thresholds across different data segments.
+* **Data Integrity Validation**: Checking for issues in data quality, including missing values, type mismatches, and range violations that might indicate problems in data pipelines or transformations feeding into the model.
+* **Traffic Analysis**: Monitoring the volume and patterns of requests to ML models to detect anomalies like unexpected spikes or drops that might indicate system issues or potential security concerns.
+* **Segment-based Analysis**: Analyzing model performance and behavior across different cohorts, slices, or segments of data to identify issues that may affect specific user groups or business scenarios.
+* **Explainability Analysis**: Generating local and global explanations of model decisions to understand feature attributions, provide transparency, and diagnose why models make specific predictions.
+
+## Challenges
+
+Implementing effective ML Observability presents unique challenges due to the complex nature of machine learning systems and the dynamic environments in which they operate.
+
+* **Delayed Ground Truth**: In many ML applications, the actual outcomes or labels for predictions may only become available after a significant delay (such as loan defaults or customer churn), making it difficult to assess model performance in real-time.
+* **Feature Complexity**: Modern ML models often use hundreds or thousands of features with complex interdependencies, making it challenging to monitor and interpret all relevant input dimensions and their relationships to model outputs.
+* **Class Imbalance**: Models trained on imbalanced datasets (where some classes are much rarer than others) present special monitoring challenges, as traditional metrics might not detect performance degradation for minority classes.
+* **Data Pipeline Dependencies**: ML systems rely on complex data pipelines with multiple sources and transformations, creating numerous potential points of failure that need to be monitored for data integrity issues.
+* **Establishing Thresholds**: Determining appropriate alerting thresholds for drift metrics and performance degradation requires balancing sensitivity to real issues against avoiding false alarms that could lead to alert fatigue.
+* **Model Opacity**: The black-box nature of complex models like deep neural networks makes understanding the causes of performance issues challenging without specialized explainability techniques.
+* **Multiple Environments**: ML models often operate across development, staging, and production environments with different data characteristics, making it difficult to maintain consistent monitoring approaches.
+
+## ML Observability Implementation How-to Guide
+
+1. **Establish Baselines**
+   * Create a representative baseline dataset from model training data to serve as a reference point for drift detection.
+   * Define performance benchmarks and acceptable thresholds for key metrics based on business requirements.
+2. **Configure Core Monitoring**
+   * Set up data drift monitoring using appropriate distance metrics (JSD, PSI) for different feature types.
+   * Implement performance tracking with metrics specific to your model type (classification, regression, etc.).
+3. **Implement Data Integrity Checks**
+   * Configure validation for missing values, type mismatches, and range violations in model inputs.
+   * Establish alerts for data pipeline issues that could impact model performance.
+4. **Define Segments for Analysis**
+   * Create relevant data segments or cohorts based on business contexts to track performance across different user groups.
+   * Configure segment-specific monitoring to identify issues that might affect only certain data slices.
+5. **Set Up Alerting System**
+   * Establish appropriate thresholds for alerts based on the criticality of the model and business impact.
+   * Configure notification routing to ensure the right teams are informed of relevant issues.
+6. **Enable Root Cause Analysis**
+   * Implement explainability tools to understand model decisions and diagnose performance issues.
+   * Create dashboards that visualize feature impact, drift contributions, and other diagnostic metrics.
+
+## Frequently Asked Questions
+
+**Q: How is ML Observability different from traditional software monitoring?**
+
+ML Observability addresses unique challenges specific to machine learning systems, including data drift, concept drift, and model decay that aren't present in traditional software. While software monitoring focuses on system uptime and resource utilization, ML Observability tracks statistical properties of data, model performance metrics, and the business impact of predictions.
+
+**Q: What metrics should I prioritize for my ML models?**
+
+Priority metrics depend on your use case, but generally include performance metrics (accuracy, precision, recall for classification; MSE, MAE for regression), data drift metrics to detect distribution shifts, data integrity metrics to ensure quality inputs, and business KPIs that connect model outputs to business outcomes.
+
+**Q: How often should I retrain my models based on observability data?**
+
+Retraining frequency should be determined by monitoring data rather than fixed schedules. Models should be retrained when significant drift is detected, when performance metrics drop below acceptable thresholds, or when business requirements change. For some applications, this might be weekly or monthly, while others might maintain performance for longer periods.
+
+**Q: How can I determine appropriate thresholds for drift alerts?**
+
+Start with conservative thresholds based on statistical significance (e.g., drift scores above 0.2 for PSI or JSD metrics) and refine them based on observed correlations between drift metrics and performance degradation in your specific models. Monitor false positives and adjust thresholds to balance sensitivity with alert fatigue.
+
+## Related Terms
+
+* [Data Drift](/reference/glossary/data-drift.md)
+* [Model Performance](/reference/glossary/model-performance.md)
+* [Model Drift](/reference/glossary/model-drift.md)
+* [Metrics](/reference/glossary/metric.md)
+* [Baselines](/reference/glossary/baseline.md)
+
+## Related Resources
+
+* [ML Monitoring Platform Overview](/welcome/readme.md)
+* [Data Drift Monitoring](/observability/platform/data-drift-platform.md)
+* [Performance Tracking](/observability/platform/performance-tracking-platform.md)
+* [Ensuring Data Integrity](/observability/platform/data-integrity-platform.md)
+* [Model Segments](/observability/platform/segments.md)
+* [The Leader in ML Observability for MLOps](https://www.fiddler.ai/mlops)
+
+
+---

@@ -1,0 +1,633 @@
+# OpenTelemetry Quick Start
+
+Monitor custom AI agents and multi-framework agentic applications with Fiddler using OpenTelemetry's native instrumentation.
+
+## What You'll Learn
+
+In this guide, you'll learn how to:
+
+* Set up OpenTelemetry tracing for custom agent frameworks
+* Configure Fiddler as your OTLP endpoint with proper authentication
+* Map agent attributes to Fiddler's semantic conventions
+* Create instrumented LLM and tool spans with required attributes
+* Verify traces in the Fiddler dashboard
+
+**Time to complete**: \~10-15 minutes
+
+{% hint style="info" %}
+**When to Use Raw OpenTelemetry**
+
+This guide is for advanced scenarios requiring full manual OTLP control:
+
+* **Multi-framework environments** requiring unified observability across different agent frameworks
+* **Existing OpenTelemetry infrastructure** where you want to route Fiddler traces through your own OTel pipeline
+* **Advanced control** over trace sampling, batch processing, and attribute mapping
+
+**When to Use Fiddler SDKs Instead (recommended for most users):**
+
+* **Custom Python agents** → Use [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) (`@trace` decorator, typed span wrappers, zero OTLP setup)
+* **LangChain V1 agents** → Use [Fiddler LangChain SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md) (one `instrument()` call)
+* **LangGraph agents/workflows** → Use F[iddler LangGraph SDK](/developers/agentic-ai-monitoring/langgraph-sdk-quick-start.md) (auto-instrumentation)
+* **Strands Agents** → Use [Strands Agents SDK](/developers/agentic-ai-monitoring/strands-agent-quick-start.md) (native integration)
+
+SDKs provide automatic instrumentation and require significantly less code. Use raw OpenTelemetry only when SDKs don't fit your use case.
+{% endhint %}
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+* **Fiddler Account**: An active account with a GenAI application created
+* **Python 3.10+**
+* **OpenTelemetry Packages**:
+  * `pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http`
+* **LLM Provider** (for examples): OpenAI API key or similar
+* **Fiddler Access Token**: Get your token from [Settings > Credentials](/reference/settings.md#creating-personal-access-tokens)
+
+{% hint style="info" %}
+For a complete working example with advanced patterns, download the [Advanced OpenTelemetry Notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb) from GitHub or open it in [Google Colab](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb).
+{% endhint %}
+
+{% stepper %}
+{% step %}
+**Create Fiddler Application**
+
+1. **Log in to your Fiddler instance** and navigate to **GenAI Applications**
+2. **Select "Add Application"** to create a new application
+3. **Copy your Application ID** - This must be a valid UUID4 format (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+4. **Get your Access Token** from **Settings** > **Credentials**
+
+{% hint style="warning" %}
+**Important:** Keep your Application ID and Access Token secure. You'll need both for the next steps.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Configure Environment Variables**
+
+Set up your environment to connect to Fiddler's OTLP endpoint:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://your-instance.fiddler.ai"
+export OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer <YOUR_ACCESS_TOKEN>,fiddler-application-id=<YOUR_APPLICATION_UUID>"
+export OTEL_RESOURCE_ATTRIBUTES="application.id=<YOUR_APPLICATION_UUID>"
+```
+
+**Environment Variable Breakdown:**
+
+| Variable                      | Description                           | Example                                                          |
+| ----------------------------- | ------------------------------------- | ---------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Your Fiddler instance URL             | `https://org.fiddler.ai`                                         |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | Authentication and app ID headers     | `authorization=Bearer sk-...,fiddler-application-id=550e8400...` |
+| `OTEL_RESOURCE_ATTRIBUTES`    | Resource-level application identifier | `application.id=550e8400-e29b-41d4-a716-446655440000`            |
+
+**Python Configuration** (alternative to environment variables):
+
+```python
+import os
+
+os.environ['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'https://your-instance.fiddler.ai'
+os.environ['OTEL_EXPORTER_OTLP_HEADERS'] = 'authorization=Bearer <TOKEN>,fiddler-application-id=<UUID>'
+os.environ['OTEL_RESOURCE_ATTRIBUTES'] = 'application.id=<UUID>'
+```
+
+{% hint style="success" %}
+**Tip:** Store credentials in a `.env` file and use `python-dotenv` for local development:
+
+```python
+from dotenv import load_dotenv
+load_dotenv()  # Loads variables from .env file
+```
+
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Initialize OpenTelemetry**
+
+Set up OpenTelemetry with Fiddler's OTLP exporter:
+
+```python
+import os
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# Initialize tracer provider
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+
+# Configure OTLP exporter for Fiddler
+otlp_endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT') + '/v1/traces'
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+
+# Add batch span processor
+otlp_processor = BatchSpanProcessor(otlp_exporter)
+trace.get_tracer_provider().add_span_processor(otlp_processor)
+
+print(f"✅ OpenTelemetry configured with endpoint: {otlp_endpoint}")
+```
+
+**What This Does:**
+
+* **TracerProvider**: Manages trace generation
+* **OTLPSpanExporter**: Exports spans to Fiddler via OTLP protocol
+* **BatchSpanProcessor**: Batches spans for efficient network transmission
+
+{% hint style="info" %}
+**Local Debugging:** Add a console exporter to see traces locally while developing:
+
+```python
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
+console_exporter = ConsoleSpanExporter()
+console_processor = BatchSpanProcessor(console_exporter)
+trace.get_tracer_provider().add_span_processor(console_processor)
+```
+
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Instrument Your Agent**
+
+Create instrumented spans for your agent's operations. Fiddler requires specific attributes to properly categorize and visualize your agent traces.
+
+**Required Fiddler Attributes**
+
+**Resource Level** (set via environment variable):
+
+* `application.id` - UUID4 of your Fiddler application
+
+**Span Level** (required for each span):
+
+* `fiddler.span.type` - Type of operation: `"chain"`, `"tool"`, `"llm"`, or `"agent"`
+
+**Example: Simplified Travel Agent**
+
+```python
+import json
+from openai import OpenAI
+
+client = OpenAI()
+
+AGENT_NAME = "travel_agent"
+AGENT_ID = "travel_agent_v1"
+
+# Define tools
+def book_hotel_tool(city: str, date: str):
+    """Book a hotel in the specified city."""
+    with tracer.start_as_current_span("book_hotel") as span:
+        span.set_attribute("fiddler.span.type", "tool")
+        span.set_attribute("gen_ai.agent.name", AGENT_NAME)  # optional
+        span.set_attribute("gen_ai.agent.id", AGENT_ID)      # optional
+
+        # Tool-specific attributes
+        span.set_attribute("gen_ai.tool.name", "book_hotel")
+        tool_input = {"city": city, "date": date}
+        span.set_attribute("gen_ai.tool.input", json.dumps(tool_input))
+
+        # Execute tool
+        result = {"status": "confirmed", "hotel": f"Grand Hotel {city}", "confirmation": "HTL123"}
+        span.set_attribute("gen_ai.tool.output", json.dumps(result))
+
+        return result
+
+def book_flight_tool(source: str, destination: str, date: str):
+    """Book a flight between two cities."""
+    with tracer.start_as_current_span("book_flight") as span:
+        span.set_attribute("fiddler.span.type", "tool")
+        span.set_attribute("gen_ai.agent.name", AGENT_NAME)  # optional
+        span.set_attribute("gen_ai.agent.id", AGENT_ID)      # optional
+
+        # Tool-specific attributes
+        span.set_attribute("gen_ai.tool.name", "book_flight")
+        tool_input = {"source": source, "destination": destination, "date": date}
+        span.set_attribute("gen_ai.tool.input", json.dumps(tool_input))
+
+        # Execute tool
+        result = {"status": "confirmed", "flight": "FL456", "departure": "10:00 AM"}
+        span.set_attribute("gen_ai.tool.output", json.dumps(result))
+
+        return result
+
+# Agent implementation
+def travel_agent(user_request: str):
+    """Main travel agent function."""
+    with tracer.start_as_current_span("travel_agent_chain") as root_span:
+        root_span.set_attribute("fiddler.span.type", "chain")
+        root_span.set_attribute("gen_ai.agent.name", AGENT_NAME)  # optional
+        root_span.set_attribute("gen_ai.agent.id", AGENT_ID)      # optional
+
+        # Call LLM to understand request
+        with tracer.start_as_current_span("llm_call") as llm_span:
+            llm_span.set_attribute("fiddler.span.type", "llm")
+            llm_span.set_attribute("gen_ai.agent.name", AGENT_NAME)  # optional
+            llm_span.set_attribute("gen_ai.agent.id", AGENT_ID)      # optional
+
+            # LLM-specific attributes
+            llm_span.set_attribute("gen_ai.request.model", "gpt-4o-mini")
+            llm_span.set_attribute("gen_ai.system", "openai")
+            llm_span.set_attribute("gen_ai.llm.input.user", user_request)
+            llm_span.set_attribute(
+                "gen_ai.llm.input.system",
+                "You are a travel agent. Parse user requests and call appropriate tools."
+            )
+
+            # Call OpenAI
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a travel agent. Parse user requests and call appropriate tools."},
+                    {"role": "user", "content": user_request}
+                ],
+                tools=[
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "book_hotel",
+                            "description": "Book a hotel in a city for a specific date",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "city": {"type": "string"},
+                                    "date": {"type": "string"}
+                                },
+                                "required": ["city", "date"]
+                            }
+                        }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "book_flight",
+                            "description": "Book a flight between two cities",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "source": {"type": "string"},
+                                    "destination": {"type": "string"},
+                                    "date": {"type": "string"}
+                                },
+                                "required": ["source", "destination", "date"]
+                            }
+                        }
+                    }
+                ]
+            )
+
+            # Set token usage
+            llm_span.set_attribute("gen_ai.usage.input_tokens", response.usage.prompt_tokens)
+            llm_span.set_attribute("gen_ai.usage.output_tokens", response.usage.completion_tokens)
+            llm_span.set_attribute("gen_ai.usage.total_tokens", response.usage.total_tokens)
+
+            # Process tool calls
+            tool_results = []
+            if response.choices[0].message.tool_calls:
+                for tool_call in response.choices[0].message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments)
+
+                    if tool_name == "book_hotel":
+                        result = book_hotel_tool(**tool_args)
+                        tool_results.append(result)
+                    elif tool_name == "book_flight":
+                        result = book_flight_tool(**tool_args)
+                        tool_results.append(result)
+
+            llm_span.set_attribute("gen_ai.llm.output",
+                                 f"Called tools and received: {tool_results}")
+
+        return {"status": "success", "bookings": tool_results}
+
+# Run the agent
+result = travel_agent("Book a hotel in Paris for tomorrow and a flight from London to Paris")
+print(f"Agent result: {result}")
+```
+
+**Key Implementation Details:**
+
+* **Chain Spans**: Use `fiddler.span.type = "chain"` for high-level workflows
+* **LLM Spans**: Include model, system prompt, user input, output, and token usage
+* **Tool Spans**: Include tool name, input JSON, and output JSON
+* **Nested Spans**: Create parent-child relationships to show execution flow
+
+{% hint style="success" %}
+**Simpler alternative:** Install `fiddler-otel` to skip all the manual OTLP configuration and attribute boilerplate. The SDK's `start_as_current_span()` method handles span type enforcement and attribute propagation automatically — no need to set `fiddler.span.type`, `gen_ai.agent.name`, or `gen_ai.agent.id` on every span manually. Typed span wrappers like `FiddlerGeneration` and `FiddlerTool` provide helper methods such as `set_model()` and `set_tool_name()` instead of raw `set_attribute()` calls. See [Manual Instrumentation](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/fiddler-otel-sdk.md#manual-instrumentation) in the integration guide.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Verify Monitoring**
+
+1. **Run your instrumented code** using the example above
+2. **Wait 1-2 minutes** for traces to appear in Fiddler
+3. **Navigate to GenAI Applications** in your Fiddler instance
+4. **Verify application status** changes to **Active**
+5. **View traces** to see your agent spans, hierarchy, and attributes
+
+**Success Criteria:**
+
+✅ Application shows as **Active** in GenAI Applications ✅ Traces appear in the trace explorer ✅ Span hierarchy shows chain → LLM → tools relationship ✅ `fiddler.span.type` is set on every span ✅ LLM token usage is tracked ✅ Tool inputs and outputs are captured
+
+{% hint style="success" %}
+**Verification Tip:** Check the trace timeline view to see the execution flow of your agent, including which tools were called and how long each operation took.
+{% endhint %}
+{% endstep %}
+{% endstepper %}
+
+## Attribute Reference
+
+### Required Attributes
+
+**Resource Level:**
+
+| Attribute        | Type   | Description                       | Example                                  |
+| ---------------- | ------ | --------------------------------- | ---------------------------------------- |
+| `application.id` | string | UUID4 of your Fiddler application | `"550e8400-e29b-41d4-a716-446655440000"` |
+
+**Span Level:**
+
+| Attribute           | Type   | Description       | Valid Values                            |
+| ------------------- | ------ | ----------------- | --------------------------------------- |
+| `fiddler.span.type` | string | Type of operation | `"chain"`, `"tool"`, `"llm"`, `"agent"` |
+
+### Optional Attributes
+
+**Agent Identification:**
+
+| Attribute           | Type   | Description                     | Example             |
+| ------------------- | ------ | ------------------------------- | ------------------- |
+| `gen_ai.agent.name` | string | Name of the AI agent            | `"travel_agent"`    |
+| `gen_ai.agent.id`   | string | Unique identifier for the agent | `"travel_agent_v1"` |
+
+{% hint style="info" %}
+**Set agent attributes on every span.** `gen_ai.agent.name` and `gen_ai.agent.id` are optional, but if you include them, set both on **every span within the trace**. Fiddler uses these attributes to attribute spans to the correct agent — spans missing these fields will be unattributed even if other spans in the same trace carry them.
+{% endhint %}
+
+**Conversation Tracking:**
+
+| Attribute                | Type   | Description                     | Example      |
+| ------------------------ | ------ | ------------------------------- | ------------ |
+| `gen_ai.conversation.id` | string | Session/conversation identifier | `"conv_123"` |
+
+**LLM Span Attributes:**
+
+| Attribute                    | Type                | Description                    | Example                                    |
+| ---------------------------- | ------------------- | ------------------------------ | ------------------------------------------ |
+| `gen_ai.request.model`       | string              | Model name                     | `"gpt-4o-mini"`, `"claude-3-opus"`         |
+| `gen_ai.system`              | string              | LLM provider                   | `"openai"`, `"anthropic"`                  |
+| `gen_ai.llm.input.system`    | string              | System prompt                  | `"You are a helpful assistant"`            |
+| `gen_ai.llm.input.user`      | string              | User input                     | `"What's the weather?"`                    |
+| `gen_ai.llm.output`          | string              | LLM response                   | `"The weather is sunny"`                   |
+| `gen_ai.usage.input_tokens`  | int                 | Input tokens used              | `42`                                       |
+| `gen_ai.usage.output_tokens` | int                 | Output tokens used             | `28`                                       |
+| `gen_ai.usage.total_tokens`  | int                 | Total tokens used              | `70`                                       |
+| `gen_ai.input.messages`      | string (JSON array) | Chat history provided to model | `[{"role": "user", "content": "Hello"}]`   |
+| `gen_ai.output.messages`     | string (JSON array) | Messages returned by model     | `[{"role": "assistant", "content": "Hi"}]` |
+
+**Tool Span Attributes:**
+
+| Attribute            | Type   | Description        | Example                     |
+| -------------------- | ------ | ------------------ | --------------------------- |
+| `gen_ai.tool.name`   | string | Tool/function name | `"search_database"`         |
+| `gen_ai.tool.input`  | string | Tool input (JSON)  | `"{\"query\": \"hotels\"}"` |
+| `gen_ai.tool.output` | string | Tool output (JSON) | `"{\"results\": [...]}"`    |
+
+**Custom User-Defined Attributes:**
+
+| Pattern                      | Level             | Example                                    |
+| ---------------------------- | ----------------- | ------------------------------------------ |
+| `fiddler.session.user.{key}` | Trace (all spans) | `fiddler.session.user.user_id = "usr_123"` |
+| `fiddler.span.user.{key}`    | Span (individual) | `fiddler.span.user.department = "sales"`   |
+
+## Troubleshooting
+
+### Common Issues
+
+**Problem:** Application not showing as "Active"
+
+**Solutions:**
+
+1. Verify environment variables are set correctly
+2. Check that `OTEL_EXPORTER_OTLP_ENDPOINT` includes your Fiddler instance URL
+3. Ensure `OTEL_EXPORTER_OTLP_HEADERS` contains valid authorization token and application ID
+4. Add console exporter to verify spans are being generated locally
+5. Check network connectivity: `curl -I https://your-instance.fiddler.ai`
+
+**Problem:** `ModuleNotFoundError` for OpenTelemetry packages
+
+**Solutions:**
+
+```bash
+# Install all required packages
+pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+
+# Verify installation
+pip list | grep opentelemetry
+```
+
+**Problem:** Spans not appearing in Fiddler
+
+**Solutions:**
+
+1. **Verify required attributes are set:**
+
+   ```python
+   # Every span MUST have this
+   span.set_attribute("fiddler.span.type", "llm")  # or "tool", "chain", "agent"
+   # Optional but recommended
+   span.set_attribute("gen_ai.agent.name", "your_agent")
+   span.set_attribute("gen_ai.agent.id", "agent_id")
+   ```
+2. **Check resource attributes:**
+
+   ```python
+   # Verify application.id is set
+   print(os.getenv('OTEL_RESOURCE_ATTRIBUTES'))
+   ```
+3. **Enable console exporter for debugging:**
+
+   ```python
+   from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+   console_exporter = ConsoleSpanExporter()
+   console_processor = BatchSpanProcessor(console_exporter)
+   trace.get_tracer_provider().add_span_processor(console_processor)
+   ```
+
+**Problem:** Authentication errors (401 Unauthorized)
+
+**Solutions:**
+
+1. Regenerate your access token from Fiddler Settings > Credentials
+2. Verify header format: `authorization=Bearer <token>,fiddler-application-id=<uuid>`
+3. Ensure no extra spaces in header values
+4. Check token hasn't expired
+
+**Problem:** Invalid Application ID error
+
+**Solutions:**
+
+1. Copy Application ID directly from Fiddler UI
+2. Verify UUID4 format: `550e8400-e29b-41d4-a716-446655440000`
+3. Ensure no extra quotes or whitespace
+
+## Configuration Options
+
+### Basic Configuration
+
+```python
+import os
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# Set environment variables
+os.environ['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'https://your-instance.fiddler.ai'
+os.environ['OTEL_EXPORTER_OTLP_HEADERS'] = 'authorization=Bearer <TOKEN>,fiddler-application-id=<UUID>'
+os.environ['OTEL_RESOURCE_ATTRIBUTES'] = 'application.id=<UUID>'
+
+# Initialize tracing
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+
+# Configure OTLP exporter
+otlp_endpoint = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT') + '/v1/traces'
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+otlp_processor = BatchSpanProcessor(otlp_exporter)
+trace.get_tracer_provider().add_span_processor(otlp_processor)
+```
+
+### Advanced Configuration
+
+**High-Volume Applications (Batch Processing Tuning):**
+
+```python
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+# Customize batch processor settings
+custom_processor = BatchSpanProcessor(
+    otlp_exporter,
+    max_queue_size=500,           # Default: 2048
+    schedule_delay_millis=500,    # Default: 5000
+    max_export_batch_size=50,     # Default: 512
+    export_timeout_millis=10000   # Default: 30000
+)
+
+trace.get_tracer_provider().add_span_processor(custom_processor)
+```
+
+**Environment Variable Configuration:**
+
+```bash
+# Batch processor environment variables
+export OTEL_BSP_MAX_QUEUE_SIZE=500
+export OTEL_BSP_SCHEDULE_DELAY_MILLIS=500
+export OTEL_BSP_MAX_EXPORT_BATCH_SIZE=50
+export OTEL_BSP_EXPORT_TIMEOUT=10000
+```
+
+**Sampling for Production (Reduce Volume):**
+
+```python
+from opentelemetry.sdk.trace import sampling
+
+# Sample 10% of traces
+sampler = sampling.TraceIdRatioBased(0.1)
+
+# Create provider with sampler
+provider = TracerProvider(sampler=sampler)
+trace.set_tracer_provider(provider)
+```
+
+**Compression (Reduce Network Usage):**
+
+```python
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+
+# Enable gzip compression
+otlp_exporter = OTLPSpanExporter(
+    endpoint=otlp_endpoint,
+    compression=Compression.Gzip
+)
+```
+
+**Using FiddlerClient Alternative (Simplified Setup):**
+
+{% hint style="warning" %}
+**Deprecation notice:** Importing `FiddlerClient` and other core symbols (`trace`, `get_current_span`, `FiddlerSpan`, `FiddlerGeneration`, `FiddlerChain`, `FiddlerTool`, `get_client`, `set_conversation_id`) directly from `fiddler_langgraph` is deprecated and will be removed in a future release. Import from `fiddler_otel` instead: `from fiddler_otel import FiddlerClient`.
+{% endhint %}
+
+{% hint style="info" %}
+If you have `fiddler-otel` installed, you can use `FiddlerClient` for simplified setup — it handles OTLP configuration automatically. There are two levels of abstraction:
+
+**Option 1: Get a pre-configured tracer** (use raw OTel spans, but skip OTLP configuration):
+
+```python
+from fiddler_otel import FiddlerClient
+
+client = FiddlerClient(
+    application_id='<FIDDLER_APPLICATION_ID>',
+    api_key='<FIDDLER_API_TOKEN>',
+    url='<FIDDLER_URL>'
+)
+
+tracer = client.get_tracer()
+
+with tracer.start_as_current_span("my_operation") as span:
+    span.set_attribute("fiddler.span.type", "chain")
+    # ... rest of your code
+```
+
+**Option 2: Use SDK span wrappers** (typed helper methods, automatic attribute propagation):
+
+```python
+from fiddler_otel import FiddlerClient
+
+client = FiddlerClient(
+    application_id='<FIDDLER_APPLICATION_ID>',
+    api_key='<FIDDLER_API_TOKEN>',
+    url='<FIDDLER_URL>'
+)
+
+# Span type and agent attributes are set automatically
+with client.start_as_current_span("llm_call", as_type="generation") as gen:
+    gen.set_model("gpt-4o")
+    gen.set_user_prompt(user_input)
+    response = call_llm(user_input)
+    gen.set_completion(response.content)
+    gen.set_usage(response.usage.prompt_tokens, response.usage.completion_tokens)
+```
+
+Both approaches handle OTLP configuration automatically. For graceful exit (e.g. servers or short scripts), call `client.shutdown()` (or `await client.ashutdown()` in async) so buffered spans are sent before the process exits. See [Manual Instrumentation](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/integrations/agentic-ai/fiddler-otel-sdk.md#manual-instrumentation) for complete span wrapper documentation.
+{% endhint %}
+
+## Next Steps
+
+Now that you have OpenTelemetry integration working:
+
+* **Advanced Patterns:** Download the [Advanced OpenTelemetry Notebook](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_OpenTelemetry_Advanced.ipynb) for:
+  * Multi-agent configurations
+  * Conversation tracking across sessions
+  * Custom user-defined attributes
+  * Production-ready error handling
+  * Comprehensive debugging techniques
+* **Consider SDKs for Common Frameworks:**
+  * [Fiddler OTel SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) - `@trace` decorator for custom Python agents (no raw OTel boilerplate)
+  * [Fiddler LangChain SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md) - Auto-instrumentation for LangChain V1 agents
+  * [Fiddler LangGraph SDK](/developers/agentic-ai-monitoring/langgraph-sdk-quick-start.md) - Auto-instrumentation for LangGraph/LangChain
+  * [Strands Agents SDK](/developers/agentic-ai-monitoring/strands-agent-quick-start.md) - Native Strands agent integration
+* **Explore Fiddler Capabilities:**
+  * [Getting Started: Agentic Observability](/getting-started/agentic-monitoring.md)
+  * [OpenTelemetry Integration Overview](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/opentelemetry-integration.md)
+  * [Fiddler Python Client SDK](/api/fiddler-python-client-sdk/python-client.md)
+* **Production Deployment:**
+  * Review sampling strategies for cost optimization
+  * Implement error handling and retry logic
+  * Set up monitoring alerts
+  * Configure custom attributes for your business context
+
+
+---

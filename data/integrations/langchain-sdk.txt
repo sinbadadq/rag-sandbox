@@ -1,0 +1,570 @@
+# Fiddler LangChain SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-langchain)](https://pypi.org/project/fiddler-langchain/)
+
+Instrument your LangChain V1 agents built with `langchain.agents.create_agent` for comprehensive agentic observability. The Fiddler LangChain SDK produces a clean, flat trace hierarchy — agent → LLM calls → tool calls — with no noisy Chain wrappers. One call to `FiddlerLangChainInstrumentor.instrument()` auto-traces every agent in your application.
+
+{% hint style="info" %}
+**Using LangChain prior to v1?** The `fiddler-langchain` SDK requires LangChain v1 (`langchain.agents.create_agent` API). For applications using earlier LangChain versions or LangGraph workflows, use the [Fiddler LangGraph SDK](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) instead — it covers both LangGraph and earlier LangChain-based agents.
+{% endhint %}
+
+## What you'll need
+
+* Fiddler account (cloud or on-premises)
+* Python 3.10, 3.11, 3.12, or 3.13
+* LangChain V1 application using `langchain.agents.create_agent`
+* Fiddler API key and application ID
+
+## Quick start
+
+Get monitoring in 4 steps:
+
+```bash
+# Step 1: Install
+pip install fiddler-langchain
+```
+
+```python
+# Step 2: Initialize the Fiddler client
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(
+    application_id='your-app-id',  # Must be valid UUID4
+    api_key='your-api-key',
+    url='https://your-instance.fiddler.ai'
+)
+
+# Step 3: Instrument (patches create_agent globally)
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+# Step 4: Create your agent — Fiddler middleware is injected automatically
+agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[...],
+    name='my_agent',  # Optional — label this agent in traces
+)
+
+result = agent.invoke({'messages': [{'role': 'user', 'content': 'Hello!'}]})
+```
+
+That's it! Your agent traces are now flowing to Fiddler.
+
+{% hint style="warning" %}
+**Important:** Use `langchain.agents.create_agent` (the module attribute), not `from langchain.agents import create_agent`. Call `instrument()` before importing `create_agent` if you use the `from ... import` style so the local name is bound to the patched version.
+{% endhint %}
+
+## What gets monitored
+
+### Trace hierarchy
+
+Each agent invocation produces a clean, flat trace with no noisy Chain wrappers:
+
+```
+[Span] my_agent           (Agent root - TYPE=agent)
+  └── [Span] gpt-4o-mini  (LLM call   - TYPE=llm)
+  └── [Span] search_docs  (Tool call  - TYPE=tool)
+  └── [Span] gpt-4o-mini  (LLM call   - TYPE=llm)
+```
+
+### Captured data
+
+**Agent root span:**
+
+* Agent name and agent ID
+* Conversation ID (if set via `set_conversation_id()`)
+
+**LLM spans (per model invocation):**
+
+* Model name and provider
+* System prompt and user prompt (last human message)
+* Full input message history (`gen_ai.input.messages`)
+* LLM completion and output messages (`gen_ai.output.messages`)
+* Token usage (input, output, total)
+* LLM context (if set via `set_llm_context()`)
+* Available tool definitions
+
+**Tool spans (per tool call):**
+
+* Tool name, input arguments, and output
+
+## Application setup
+
+Before instrumenting your application, you must create an application in Fiddler and obtain your Application ID.
+
+### 1. Create your application in Fiddler
+
+Log in to your Fiddler instance and navigate to **GenAI Applications**, then click **Add Application** and follow the onboarding wizard to create your application.
+
+### 2. Copy your Application ID
+
+After creating your application, copy the **Application ID** from the GenAI Applications page. This must be a valid UUID4 format (for example, `550e8400-e29b-41d4-a716-446655440000`). You'll need this for initialization.
+
+### 3. Get your API key
+
+Go to **Settings** > **Credentials** and copy your API key. You'll need this for initialization.
+
+## Detailed setup
+
+### Installation
+
+```bash
+pip install fiddler-langchain
+```
+
+**Framework Compatibility:**
+
+* **LangChain V1:** `>= 1.0.0` — agents built with `langchain.agents.create_agent`
+* **Python:** 3.10, 3.11, 3.12, or 3.13
+* **fiddler-otel:** `>= 0.1.0` (installed automatically)
+* **OpenTelemetry:** API and SDK `>= 1.27.0` (installed automatically)
+
+### Configuration
+
+#### Direct initialization (Recommended)
+
+```python
+import langchain.agents
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(
+    application_id='your-app-id',         # Required (UUID4 format)
+    api_key='your-api-key',               # Required when otlp_enabled=True (default)
+    url='https://your-instance.fiddler.ai'  # Required when otlp_enabled=True (default)
+)
+
+instrumentor = FiddlerLangChainInstrumentor(client=client)
+instrumentor.instrument()
+```
+
+#### Using environment variables
+
+```python
+import os
+import langchain.agents
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(
+    application_id=os.getenv('FIDDLER_APPLICATION_ID'),
+    api_key=os.getenv('FIDDLER_API_KEY'),
+    url=os.getenv('FIDDLER_URL')
+)
+
+FiddlerLangChainInstrumentor(client=client).instrument()
+```
+
+**Environment Variables Reference:**
+
+| Variable                 | Description               | Example                                |
+| ------------------------ | ------------------------- | -------------------------------------- |
+| `FIDDLER_API_KEY`        | Your Fiddler API key      | `fid_...`                              |
+| `FIDDLER_APPLICATION_ID` | Your application UUID4    | `550e8400-e29b-41d4-a716-446655440000` |
+| `FIDDLER_URL`            | Your Fiddler instance URL | `https://your-instance.fiddler.ai`     |
+
+## Instrumentation methods
+
+The Fiddler LangChain SDK provides two instrumentation approaches:
+
+| Approach                                      | Best For                     | Key API                        |
+| --------------------------------------------- | ---------------------------- | ------------------------------ |
+| [Auto-Instrumentation](#auto-instrumentation) | All agents in an application | `FiddlerLangChainInstrumentor` |
+| [Manual Middleware](#manual-middleware)       | Per-agent control            | `FiddlerAgentMiddleware`       |
+
+### Auto-instrumentation
+
+`FiddlerLangChainInstrumentor.instrument()` monkey-patches `langchain.agents.create_agent` once. Every subsequent call to `create_agent()` automatically receives a `FiddlerAgentMiddleware`. No changes to individual agent creation calls are needed.
+
+```python
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+
+# Instrument once at startup
+instrumentor = FiddlerLangChainInstrumentor(client=client)
+instrumentor.instrument()
+
+# All agents created after this point are automatically traced
+agent1 = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[search_tool],
+    name='search_agent',
+)
+agent2 = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[booking_tool],
+    name='booking_agent',
+)
+```
+
+**Key behaviors:**
+
+* **Idempotent:** Calling `instrument()` multiple times is safe — it will not create duplicate middleware.
+* **Agent naming:** If `name='...'` is passed to `create_agent()`, that name is used for the agent in traces. If omitted, no agent name is set and the agent appears without a label in the UI.
+* **Existing middleware preserved:** If you pass a `FiddlerAgentMiddleware` instance manually in `middleware=[...]`, the instrumentor skips injection for that call so your manual configuration is preserved.
+
+**Uninstrumenting:**
+
+```python
+# Restore original create_agent (agents already created keep their middleware)
+instrumentor.uninstrument()
+```
+
+### Manual middleware
+
+For per-agent control, pass `FiddlerAgentMiddleware` directly to `create_agent()` without using the instrumentor:
+
+```python
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerAgentMiddleware
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+
+agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[search_tool],
+    name='my_agent',
+    middleware=[FiddlerAgentMiddleware(client=client, agent_name='my_agent')],
+)
+```
+
+Use manual middleware when you want to trace only specific agents, or when you need different configurations per agent.
+
+## Advanced usage
+
+### Multi-turn conversations
+
+Use `set_conversation_id()` to link multiple agent invocations into a single conversation in the Fiddler UI. All agents in the application that share the same `conversation_id` appear together in conversation-level views.
+
+```python
+from fiddler_langchain import set_conversation_id
+import uuid
+
+# Call once per conversation
+set_conversation_id(str(uuid.uuid4()))
+
+# All agent invocations after this carry the same conversation_id
+result1 = agent.invoke({'messages': [{'role': 'user', 'content': 'Find hotels in Tokyo.'}]})
+result2 = agent.invoke({'messages': [{'role': 'user', 'content': 'Book the cheapest one.'}]})
+```
+
+### LLM context
+
+Attach contextual metadata to LLM spans by calling `set_llm_context()` before the agent runs. The instrumentation reads this value from the model's metadata at invocation time and records it as `gen_ai.llm.context` on every LLM span for that model.
+
+```python
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor, set_llm_context
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+model = ChatOpenAI(model='gpt-4o-mini')
+set_llm_context(model, 'User profile: enterprise customer, prefers concise answers')
+
+agent = langchain.agents.create_agent(model=model, tools=[...], name='my_agent')
+```
+
+`set_llm_context()` accepts both plain model instances (`BaseLanguageModel`) and `RunnableBinding` instances (for example, models wrapped with `.with_config()` or `.bind_tools()`).
+
+### Span-level attributes
+
+Use `add_span_attributes()` to attach custom metadata to a specific LangChain component (model, tool, or retriever). The middleware reads these attributes when creating the span for that component and records them as `fiddler.span.user.{key}`.
+
+```python
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor, add_span_attributes
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+# Add attributes to a specific model — appear only on that model's LLM spans
+model = ChatOpenAI(model='gpt-4o-mini')
+add_span_attributes(model, model_version='v2', cost_center='cc-123')
+
+# Add attributes to a specific tool — appear only on that tool's spans
+@tool
+def search_hotels(query: str) -> str:
+    """Search for hotels."""
+    return f'Hotels for: {query}'
+
+add_span_attributes(search_hotels, category='travel', region='apac')
+
+agent = langchain.agents.create_agent(model=model, tools=[search_hotels], name='my_agent')
+```
+
+Unlike `add_session_attributes` (which applies to every span in the context), `add_span_attributes` is scoped to a single component.
+
+### Session attributes
+
+Use `add_session_attributes()` to attach metadata that appears on **every span** created in the current thread or async coroutine. Use this for user-level or environment-level metadata that applies to the whole session.
+
+```python
+import langchain.agents
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor, add_session_attributes
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+# Set once — applies to all spans in this context (emitted as fiddler.session.user.{key})
+add_session_attributes('user_id', 'user_12345')
+add_session_attributes('environment', 'production')
+add_session_attributes('tier', 'premium')
+
+agent = langchain.agents.create_agent(model=ChatOpenAI(model='gpt-4o-mini'), tools=[...], name='my_agent')
+agent.invoke({'messages': [{'role': 'user', 'content': 'Hello!'}]})
+```
+
+### Retriever instrumentation
+
+The LangChain V1 middleware does not expose a dedicated retriever hook. Following the same convention used in `fiddler-langgraph`, **retrievers are treated as tools**.
+
+Wrap your retriever with `@tool` (or use `create_retriever_tool`) and pass it to `create_agent`. The middleware's tool hook captures the retriever call automatically as a `TYPE=tool` span — with the query as `tool_input` and the retrieved documents as `tool_output`.
+
+```python
+import langchain.agents
+from langchain_core.tools import tool
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+retriever = vector_store.as_retriever()
+
+@tool
+def search_docs(query: str) -> str:
+    """Search company documents for relevant information."""
+    return str(retriever.invoke(query))
+
+agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[search_docs],
+    name='rag_agent',
+)
+```
+
+The resulting trace:
+
+```
+[Span] rag_agent           (Agent root - TYPE=agent)
+  └── [Span] gpt-4o-mini   (LLM call  - TYPE=llm)
+  └── [Span] search_docs   (Retriever as Tool - TYPE=tool)
+  └── [Span] gpt-4o-mini   (LLM call  - TYPE=llm)
+```
+
+### Multi-agent setup
+
+With the instrumentor, a single `instrument()` call patches `create_agent` so every agent is traced. Pass `name='...'` to each `create_agent()` to label agents in traces.
+
+When a sub-agent is invoked from within a delegation tool, its root Agent span is automatically created as a **child of the tool span** — the entire multi-agent flow appears in a **single trace**. No manual linking is needed: `wrap_tool_call` attaches the active tool span into the OTel context before invoking the handler, and `before_agent` detects that active span and nests under it.
+
+```python
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+# Sub-agents
+flight_agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[book_flight],
+    name='flight_assistant',
+)
+hotel_agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[search_hotel, book_hotel],
+    name='hotel_assistant',
+)
+
+# Delegation tools — the tool span becomes the parent of the sub-agent span automatically
+@tool
+def delegate_to_flight_assistant(task: str) -> str:
+    """Delegate a flight booking task to the flight assistant."""
+    result = flight_agent.invoke({'messages': [{'role': 'user', 'content': task}]})
+    return result['messages'][-1].content
+
+@tool
+def delegate_to_hotel_assistant(task: str) -> str:
+    """Delegate a hotel search and booking task to the hotel assistant."""
+    result = hotel_agent.invoke({'messages': [{'role': 'user', 'content': task}]})
+    return result['messages'][-1].content
+
+# Supervisor — invoking this produces one trace containing all agents
+supervisor = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[delegate_to_flight_assistant, delegate_to_hotel_assistant],
+    name='supervisor',
+)
+
+supervisor.invoke({'messages': [{'role': 'user', 'content': 'Book a flight and a hotel in Tokyo.'}]})
+```
+
+Trace output (all agents appear in a **single trace**):
+
+```
+[Span] supervisor                              (root  - TYPE=agent)
+  └── [Span] gpt-4o-mini                       (LLM   - TYPE=llm)
+  └── [Span] delegate_to_flight_assistant       (Tool  - TYPE=tool)
+       └── [Span] flight_assistant              (Agent - TYPE=agent)
+            └── [Span] gpt-4o-mini             (LLM   - TYPE=llm)
+            └── [Span] book_flight             (Tool  - TYPE=tool)
+  └── [Span] delegate_to_hotel_assistant        (Tool  - TYPE=tool)
+       └── [Span] hotel_assistant              (Agent - TYPE=agent)
+            └── [Span] gpt-4o-mini             (LLM   - TYPE=llm)
+            └── [Span] search_hotel            (Tool  - TYPE=tool)
+            └── [Span] book_hotel              (Tool  - TYPE=tool)
+```
+
+{% hint style="info" %}
+`set_conversation_id()` is useful for linking **multiple top-level invocations** (e.g., multi-turn conversations) — not for joining sub-agents within a single invocation, since they already share the same trace automatically.
+{% endhint %}
+
+### Async agents
+
+The instrumentation fully supports async agents via the `awrap_model_call` and `awrap_tool_call` hooks. Use `agent.ainvoke()` — no additional configuration needed:
+
+```python
+import asyncio
+import langchain.agents
+from langchain_openai import ChatOpenAI
+from fiddler_otel import FiddlerClient
+from fiddler_langchain import FiddlerLangChainInstrumentor
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+FiddlerLangChainInstrumentor(client=client).instrument()
+
+agent = langchain.agents.create_agent(
+    model=ChatOpenAI(model='gpt-4o-mini'),
+    tools=[...],
+    name='my_agent',
+)
+
+async def main():
+    result = await agent.ainvoke({'messages': [{'role': 'user', 'content': 'Hello!'}]})
+    print(result['messages'][-1].content)
+
+asyncio.run(main())
+```
+
+The instrumentation automatically uses the async lifecycle hooks when the agent is invoked asynchronously, producing the same span hierarchy as the sync path.
+
+### Error handling
+
+If an LLM call or tool call raises an exception, the instrumentation:
+
+1. Catches the exception and marks the failing span with `StatusCode.ERROR`
+2. Re-raises the exception so normal error handling in your application is unaffected
+3. Cleanly closes the root agent span — no dangling open spans
+
+```python
+try:
+    result = agent.invoke({'messages': [{'role': 'user', 'content': 'Hello!'}]})
+except Exception as e:
+    # The failing LLM or tool span is already marked ERROR in Fiddler
+    # The root agent span is closed — all spans are recorded
+    raise
+```
+
+This means partial traces are never lost — all spans up to the point of failure are recorded and visible in Fiddler.
+
+### Flush and shutdown
+
+```python
+# Sync
+client.force_flush()
+client.shutdown()
+
+# Async
+await client.aflush()
+await client.ashutdown()
+
+# Context manager (calls shutdown() on exit)
+with FiddlerClient(application_id='...', api_key='...', url='...') as client:
+    FiddlerLangChainInstrumentor(client=client).instrument()
+    result = agent.invoke({'messages': [...]})
+```
+
+### Local debugging
+
+**JSONL file capture (save a local copy of spans in addition to Fiddler export):**
+
+`jsonl_capture_enabled=True` is **additive** — spans are saved to a local JSONL file **and** continue to be exported to Fiddler via OTLP. Setting this to `True` does **not** suppress or disable the OTLP export to Fiddler.
+
+```python
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    jsonl_capture_enabled=True,       # Saves spans locally; OTLP export to Fiddler still active
+    jsonl_file_path='trace_data.jsonl',
+)
+```
+
+Override the output file path via environment variable:
+
+```bash
+FIDDLER_JSONL_FILE=trace_data.jsonl python my_agent.py
+```
+
+Each line in the output file is a JSON object. Fields:
+
+| Field                    | Description                         |
+| ------------------------ | ----------------------------------- |
+| `trace_id`               | Trace identifier                    |
+| `span_id`                | Span identifier                     |
+| `parent_span_id`         | Parent span identifier              |
+| `span_type`              | Span type (`agent`, `llm`, `tool`)  |
+| `agent_name`             | Name of the agent                   |
+| `conversation_id`        | Conversation identifier             |
+| `model_name`             | LLM model name                      |
+| `model_provider`         | LLM provider                        |
+| `llm_input_system`       | System prompt                       |
+| `llm_input_user`         | User prompt                         |
+| `llm_output`             | LLM completion text                 |
+| `llm_context`            | Context set via `set_llm_context()` |
+| `llm_token_count_input`  | Input token count                   |
+| `llm_token_count_output` | Output token count                  |
+| `llm_token_count_total`  | Total token count                   |
+| `gen_ai_input_messages`  | Full input message history (JSON)   |
+| `gen_ai_output_messages` | Output messages (JSON)              |
+| `tool_name`              | Tool/function name                  |
+| `tool_input`             | Tool input arguments                |
+| `tool_output`            | Tool result                         |
+| `tool_definitions`       | Available tool schemas (JSON)       |
+
+## Relationship to fiddler-langgraph
+
+| Package             | Framework                          | Instrumentation Approach                                                    |
+| ------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
+| `fiddler-langchain` | LangChain V1 (`create_agent`)      | `FiddlerLangChainInstrumentor` auto-patches `langchain.agents.create_agent` |
+| `fiddler-langgraph` | LangGraph (`StateGraph.compile()`) | `LangGraphInstrumentor` callback handler                                    |
+
+Both packages depend on `fiddler-otel` for the core `FiddlerClient` and span wrappers.
+
+## What's next?
+
+* [**Fiddler OTel SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/fiddler-otel-sdk.md) — For decorator-based instrumentation of custom Python functions
+* [**LangGraph SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) — If your application uses LangGraph
+* [**Agentic Observability Concepts**](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/documentation/getting-started/agentic-monitoring.md) — Understand the agent lifecycle and monitoring approach
+
+
+---

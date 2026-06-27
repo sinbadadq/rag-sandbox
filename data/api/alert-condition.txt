@@ -1,0 +1,36 @@
+# AlertCondition
+
+Alert trigger conditions for metric comparisons.
+
+Defines the comparison operator used to evaluate whether an alert should trigger based on the metric value and threshold.
+
+## GREATER
+
+Trigger when metric value > threshold. Common for drift detection, error rates, latency spikes.
+
+## LESSER
+
+Trigger when metric value < threshold. Common for accuracy drops, traffic decreases, availability issues.
+
+## Example
+
+```python
+# Alert when data drift exceeds 5%
+drift_alert = AlertRule(
+        condition=AlertCondition.GREATER,
+        threshold=0.05
+    )
+
+    # Alert when model accuracy drops below 90%
+    accuracy_alert = AlertRule(
+            condition=AlertCondition.LESSER,
+            threshold=0.90
+        )
+```
+
+## GREATER *= 'greater'*
+
+## LESSER *= 'lesser'*
+
+
+---

@@ -1,0 +1,226 @@
+# ModelTask
+
+Machine learning task types supported by Fiddler.
+
+This enum defines the different types of ML tasks that Fiddler can monitor. The task type determines which metrics are calculated, how performance is measured, and what monitoring capabilities are available.
+
+Task-Specific Features:
+
+* **Classification**: Accuracy, precision, recall, F1, AUC, confusion matrix
+* **Regression**: MAE, MSE, RMSE, R², residual analysis
+* **Ranking**: NDCG, MAP, precision\@k, ranking-specific metrics
+* **LLM**: Token-based metrics, response quality, safety metrics
+
+## Examples
+
+Configuring models for different tasks:
+
+```python
+# Binary classification (fraud detection)
+fraud_model = fdl.Model.from_data(
+    name='fraud_detector',
+    source=fraud_data,
+    spec=model_spec,
+    task=fdl.ModelTask.BINARY_CLASSIFICATION,
+    task_params=fdl.ModelTaskParams(
+        binary_classification_threshold=0.5
+    )
+)
+
+# Multiclass classification (sentiment analysis)
+sentiment_model = fdl.Model.from_data(
+    name='sentiment_analyzer',
+    source=sentiment_data,
+    spec=model_spec,
+    task=fdl.ModelTask.MULTICLASS_CLASSIFICATION,
+    task_params=fdl.ModelTaskParams(
+        target_class_order=['negative', 'neutral', 'positive']
+    )
+)
+
+# Regression (price prediction)
+price_model = fdl.Model.from_data(
+    name='price_predictor',
+    source=price_data,
+    spec=model_spec,
+    task=fdl.ModelTask.REGRESSION
+)
+
+# Ranking (recommendation system)
+ranking_model = fdl.Model.from_data(
+    name='recommender',
+    source=ranking_data,
+    spec=model_spec,
+    task=fdl.ModelTask.RANKING,
+    task_params=fdl.ModelTaskParams(
+        group_by='user_id',
+        top_k=10
+    )
+)
+
+# LLM (language model)
+llm_model = fdl.Model.from_data(
+    name='chatbot',
+    source=conversation_data,
+    spec=model_spec,
+    task=fdl.ModelTask.LLM
+)
+```
+
+{% hint style="info" %}
+Task type cannot be changed after model creation. Choose carefully based on your model's primary objective and output format.
+{% endhint %}
+
+## BINARY\_CLASSIFICATION *= 'binary\_classification'*
+
+Two-class classification tasks.
+
+Used for models that predict one of two possible outcomes or classes. Enables binary classification metrics and threshold-based analysis.
+
+Available metrics:
+
+* Accuracy, Precision, Recall, F1-score
+* AUC-ROC, AUC-PR curves
+* Confusion matrix analysis
+* Threshold optimization tools
+
+Typical use cases:
+
+* Fraud detection (fraud/legitimate)
+* Email spam filtering (spam/ham)
+* Medical diagnosis (positive/negative)
+* Credit approval (approve/deny)
+* Churn prediction (churn/retain)
+
+Required outputs: Single probability score or binary prediction Task parameters: binary\_classification\_threshold
+
+## MULTICLASS\_CLASSIFICATION *= 'multiclass\_classification'*
+
+Multi-class classification tasks.
+
+Used for models that predict one of multiple possible classes or categories. Supports comprehensive multiclass performance analysis and class-specific metrics.
+
+Available metrics:
+
+* Per-class precision, recall, F1-score
+* Macro and micro-averaged metrics
+* Confusion matrix with multiple classes
+* Class distribution analysis
+
+Typical use cases:
+
+* Document categorization (multiple topics)
+* Image classification (multiple objects)
+* Sentiment analysis (positive/neutral/negative)
+* Product categorization
+* Intent classification in chatbots
+
+Required outputs: Class probabilities or single class prediction Task parameters: target\_class\_order, class\_weights
+
+## REGRESSION *= 'regression'*
+
+Continuous value prediction tasks.
+
+Used for models that predict numerical values on a continuous scale. Enables regression-specific metrics and residual analysis.
+
+Available metrics:
+
+* Mean Absolute Error (MAE)
+* Mean Squared Error (MSE)
+* Root Mean Squared Error (RMSE)
+* R-squared (coefficient of determination)
+* Residual distribution analysis
+
+Typical use cases:
+
+* Price prediction
+* Sales forecasting
+* Risk scoring (continuous scores)
+* Demand forecasting
+* Performance rating prediction
+
+Required outputs: Single continuous numerical value Task parameters: None (uses standard regression metrics)
+
+## RANKING *= 'ranking'*
+
+Ranking and recommendation tasks.
+
+Used for models that rank items or provide ordered recommendations. Supports ranking-specific metrics and list-wise evaluation.
+
+Available metrics:
+
+* Normalized Discounted Cumulative Gain (NDCG)
+* Mean Average Precision (MAP)
+* Precision\@K, Recall\@K
+* Mean Reciprocal Rank (MRR)
+* Hit Rate analysis
+
+Typical use cases:
+
+* Search result ranking
+* Product recommendations
+* Content recommendation systems
+* Information retrieval
+* Personalized ranking
+
+Required outputs: Ranked list of items with scores Task parameters: group\_by (session/user ID), top\_k Special data format: Grouped by query/session identifier
+
+## LLM *= 'llm'*
+
+Large language model and generative AI tasks.
+
+Used for language models, chatbots, and generative AI applications. Enables LLM-specific monitoring including safety, quality, and performance metrics.
+
+Available metrics:
+
+* Response quality metrics
+* Safety and toxicity detection
+* Hallucination detection
+* Token-based analysis
+* Latency and throughput metrics
+
+Typical use cases:
+
+* Chatbots and conversational AI
+* Text generation models
+* Question-answering systems
+* Code generation models
+* Content creation assistants
+
+Special features:
+
+* Guardrails integration
+* Safety monitoring
+* Prompt and response analysis
+* Token usage tracking
+
+## NOT\_SET *= 'not\_set'*
+
+Placeholder for undefined or unspecified tasks.
+
+Used as a default value when the model task has not been explicitly defined. Should be replaced with an appropriate task type during model configuration.
+
+This value should not be used for production models as it limits available monitoring capabilities and metrics.
+
+## is\_classification()
+
+Check if the task is a classification type.
+
+## Returns
+
+True if task is binary or multiclass classification
+
+**Return type:** bool
+
+## is\_regression()
+
+Check if the task is regression.
+
+## Returns
+
+True if task is regression
+
+**Return type:** bool
+
+
+---

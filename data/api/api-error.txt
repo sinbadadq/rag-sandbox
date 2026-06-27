@@ -1,0 +1,48 @@
+# ApiError
+
+Raised when the Fiddler API returns an HTTP error response.
+
+This exception represents errors returned by the Fiddler platform API, including both client errors (4xx status codes) and server errors (5xx status codes). It contains detailed information about the error including the HTTP status code, error message, and any additional error details provided by the API.
+
+ApiError serves as the base class for more specific API errors like NotFound and Conflict, but can also be raised directly for other HTTP error status codes.
+
+## Examples
+
+Handling general API errors:
+
+```python
+try:
+    model = client.get_model("nonexistent-model")
+
+except ApiError as e:
+    print(f"API Error {e.code}: {e.message}")
+    if e.errors:
+
+        print(f"Details: {e.errors}")
+```
+
+Handling specific status codes:
+
+```python
+try:
+    # API operation
+    pass
+
+except ApiError as e:
+    if e.code == 429:  # Rate limit
+    print("Rate limited, retrying later...")
+    time.sleep(60)
+
+elif e.code >= 500:  # Server error
+print("Server error, contact support")
+
+else:
+    print(f"Client error: {e.message}")
+```
+
+## reason *: str* *= 'ApiError'*
+
+## code *: int* *= 500*
+
+
+---

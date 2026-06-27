@@ -1,0 +1,723 @@
+# Fiddler OTel SDK
+
+[![PyPI](https://img.shields.io/pypi/v/fiddler-otel)](https://pypi.org/project/fiddler-otel/)
+
+Instrument any Python AI agent or LLM application with OpenTelemetry-based tracing for comprehensive agentic observability. The Fiddler OTel SDK is the foundation package used by all Fiddler framework integrations (`fiddler-langgraph`, `fiddler-langchain`). Use it directly when you have no LangGraph or LangChain dependency, or when you want lightweight decorator-based instrumentation for custom Python agents.
+
+{% hint style="info" %}
+**Migrating from `fiddler-langgraph`?** The core instrumentation functionality (`FiddlerClient`, `@trace`, span wrappers, etc.) has been extracted from `fiddler-langgraph` into this standalone `fiddler-otel` package. If you previously imported these symbols from `fiddler_langgraph`, update your imports to use `fiddler_otel` — the classes and behaviour are identical. See the [deprecation notice](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/changelog/langgraph-sdk.md) in the LangGraph SDK changelog for details.
+{% endhint %}
+
+## What you'll need
+
+* Fiddler account (cloud or on-premises)
+* Python 3.10, 3.11, 3.12, or 3.13
+* Fiddler API key and application ID
+
+## Quick start
+
+Get monitoring in 3 steps:
+
+```bash
+# Step 1: Install
+pip install fiddler-otel
+```
+
+```python
+# Step 2: Initialize the Fiddler client
+from fiddler_otel import FiddlerClient, trace
+
+client = FiddlerClient(
+    application_id='your-app-id',  # Must be valid UUID4
+    api_key='your-api-key',
+    url='https://your-instance.fiddler.ai'
+)
+
+# Step 3: Decorate your functions
+@trace(as_type='generation')
+def call_llm(prompt: str) -> str:
+    # Your LLM call here
+    ...
+```
+
+That's it! Your agent traces are now flowing to Fiddler.
+
+{% hint style="info" %}
+This Quick Start uses the `@trace` decorator. For context manager and manual instrumentation approaches, see [Instrumentation Methods](#instrumentation-methods) below.
+{% endhint %}
+
+## What gets monitored
+
+The Fiddler OTel SDK captures:
+
+### Trace hierarchy
+
+Spans are automatically nested into parent-child relationships based on the call stack:
+
+```
+[Span] supervisor_agent     (agent - TYPE=agent)
+  └── [Span] call_llm       (LLM   - TYPE=llm)
+  └── [Span] search_hotels  (Tool  - TYPE=tool)
+  └── [Span] call_llm       (LLM   - TYPE=llm)
+```
+
+### Captured data
+
+* Function inputs and return values (auto-serialized to JSON)
+* LLM prompts, completions, and token usage
+* Tool names, inputs, and outputs
+* Agent name, agent ID, and conversation ID
+* Execution times and error traces
+
+## Application setup
+
+Before instrumenting your application, you must create an application in Fiddler and obtain your Application ID.
+
+{% stepper %}
+{% step %}
+
+#### Create your application in Fiddler
+
+Log in to your Fiddler instance and navigate to **GenAI Applications**, then click **Add Application** and follow the onboarding wizard to create your application.
+{% endstep %}
+
+{% step %}
+
+#### Copy your Application ID
+
+After creating your application, copy the **Application ID** from the GenAI Applications page. This must be a valid UUID4 format (for example, `550e8400-e29b-41d4-a716-446655440000`). You'll need this for initialization.
+{% endstep %}
+
+{% step %}
+
+#### Get your API key
+
+Go to **Settings** > **Credentials** and copy your API key. You'll need this for initialization.
+{% endstep %}
+{% endstepper %}
+
+## Detailed setup
+
+### Installation
+
+```bash
+pip install fiddler-otel
+```
+
+**Requirements:**
+
+* **Python:** 3.10, 3.11, 3.12, or 3.13
+* **OpenTelemetry:** API, SDK, and OTLP exporter `>= 1.27.0` (installed automatically)
+* **pydantic:** `>= 2.0` (installed automatically)
+
+### Configuration
+
+#### Direct initialization (Recommended)
+
+```python
+from fiddler_otel import FiddlerClient
+
+client = FiddlerClient(
+    application_id='your-app-id',     # Required (UUID4 format)
+    api_key='your-api-key',           # Required when otlp_enabled=True (default)
+    url='https://your-instance.fiddler.ai'  # Required when otlp_enabled=True (default)
+)
+```
+
+#### Using environment variables
+
+```python
+import os
+from fiddler_otel import FiddlerClient
+
+client = FiddlerClient(
+    application_id=os.getenv('FIDDLER_APPLICATION_ID'),
+    api_key=os.getenv('FIDDLER_API_KEY'),
+    url=os.getenv('FIDDLER_URL')
+)
+```
+
+**Environment Variables Reference:**
+
+| Variable                 | Description               | Example                                |
+| ------------------------ | ------------------------- | -------------------------------------- |
+| `FIDDLER_API_KEY`        | Your Fiddler API key      | `fid_...`                              |
+| `FIDDLER_APPLICATION_ID` | Your application UUID4    | `550e8400-e29b-41d4-a716-446655440000` |
+| `FIDDLER_URL`            | Your Fiddler instance URL | `https://your-instance.fiddler.ai`     |
+
+## Instrumentation methods
+
+The Fiddler OTel SDK provides two instrumentation approaches. Choose the one that fits your application:
+
+| Approach                                            | Best For                                     | Key API                                   |
+| --------------------------------------------------- | -------------------------------------------- | ----------------------------------------- |
+| [Decorator-Based](#decorator-based-instrumentation) | Custom Python functions, minimal boilerplate | `@trace()`, `get_current_span()`          |
+| [Manual](#manual-instrumentation)                   | Fine-grained span lifecycle control          | `start_as_current_span()`, `start_span()` |
+
+{% hint style="info" %}
+You can combine both approaches in the same application. For example, use the decorator for most functions and manual spans where you need fine-grained lifecycle control.
+{% endhint %}
+
+### Decorator-based instrumentation
+
+Use the `@trace()` decorator to instrument individual Python functions. Works with both synchronous and asynchronous functions.
+
+```python
+from openai import OpenAI
+from fiddler_otel import FiddlerClient, trace, get_current_span, set_conversation_id
+import uuid
+
+client = FiddlerClient(
+    application_id='your-app-id',
+    api_key='your-api-key',
+    url='https://your-instance.fiddler.ai'
+)
+openai_client = OpenAI()
+
+@trace(
+    as_type='generation',
+    capture_input=False,   # Disable auto-capture to set attributes manually
+    capture_output=False,
+    model='gpt-4o-mini',   # Sets gen_ai.request.model on the span
+    system='openai',       # Sets gen_ai.system on the span
+)
+def call_llm(prompt: str) -> str:
+    span = get_current_span(as_type='generation')
+    if span:
+        span.set_user_prompt(prompt)
+
+    response = openai_client.chat.completions.create(
+        model='gpt-4o-mini',
+        messages=[{'role': 'user', 'content': prompt}]
+    )
+    result = response.choices[0].message.content
+
+    if span:
+        span.set_completion(result)
+        span.set_usage(
+            input_tokens=response.usage.prompt_tokens,
+            output_tokens=response.usage.completion_tokens,
+        )
+    return result
+
+
+@trace(as_type='tool')
+def search_hotels(query: str) -> str:
+    span = get_current_span(as_type='tool')
+    if span:
+        span.set_tool_name('search_hotels')
+        span.set_tool_input({'query': query})
+
+    result = f'Found: Grand Hotel for query "{query}"'
+
+    if span:
+        span.set_tool_output(result)
+    return result
+
+
+@trace(as_type='chain')
+def run_agent(user_message: str) -> str:
+    span = get_current_span(as_type='chain')
+    if span:
+        span.set_agent_name('travel_agent')
+        span.set_input(user_message)
+
+    response = call_llm(user_message)
+    hotels = search_hotels(user_message)
+    result = f'{response}\n\n{hotels}'
+
+    if span:
+        span.set_output(result)
+    return result
+
+
+# Set conversation ID to link multiple turns
+set_conversation_id(str(uuid.uuid4()))
+run_agent('Find me a hotel in Tokyo')
+```
+
+**`@trace` decorator parameters:**
+
+| Parameter        | Type                                          | Default       | Description                                               |
+| ---------------- | --------------------------------------------- | ------------- | --------------------------------------------------------- |
+| `as_type`        | `'span'`, `'generation'`, `'chain'`, `'tool'` | `'span'`      | Span type for Fiddler categorization                      |
+| `name`           | `str \| None`                                 | function name | Custom span name                                          |
+| `capture_input`  | `bool`                                        | `True`        | Auto-serialize function arguments as span input           |
+| `capture_output` | `bool`                                        | `True`        | Auto-serialize return value as span output                |
+| `model`          | `str \| None`                                 | `None`        | Sets `gen_ai.request.model`                               |
+| `system`         | `str \| None`                                 | `None`        | Sets `gen_ai.system` (LLM provider)                       |
+| `user_id`        | `str \| None`                                 | `None`        | Sets `user.id`                                            |
+| `version`        | `str \| None`                                 | `None`        | Sets `service.version`                                    |
+| `client`         | `FiddlerClient \| None`                       | `None`        | Override the client to use (defaults to global singleton) |
+
+**Using `get_current_span()` inside a decorated function:**
+
+Call `get_current_span()` inside any `@trace`-decorated function to access the active span and set additional attributes. Pass `as_type` matching the decorator to get a typed wrapper with semantic helpers:
+
+```python
+@trace(as_type='generation')
+def my_llm_call(prompt: str) -> str:
+    span = get_current_span(as_type='generation')
+    if span:
+        span.set_model('gpt-4o-mini')
+        span.set_user_prompt(prompt)
+        span.set_system_prompt('You are a helpful assistant.')
+    ...
+```
+
+**When to use `capture_input=False`:**
+
+Set `capture_input=False` when you want to control exactly what gets recorded on the span (for example, to set `set_user_prompt()` instead of the default raw argument dict). This avoids double-recording the same data.
+
+### Manual instrumentation
+
+Use context managers for explicit span lifecycle control. This gives you full control over when spans start and end.
+
+```python
+from openai import OpenAI
+from fiddler_otel import FiddlerClient
+
+client = FiddlerClient(
+    application_id='your-app-id',
+    api_key='your-api-key',
+    url='https://your-instance.fiddler.ai'
+)
+openai_client = OpenAI()
+user_message = 'Find me a hotel in Tokyo'
+
+# Context manager (automatic lifecycle)
+with client.start_as_current_span('travel_agent', as_type='chain') as chain:
+    chain.set_agent_name('travel_agent')
+    chain.set_input(user_message)
+
+    with client.start_as_current_span('gpt-4o-mini', as_type='generation') as gen:
+        gen.set_model('gpt-4o-mini')
+        gen.set_system('openai')
+        gen.set_user_prompt(user_message)
+
+        response = openai_client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[{'role': 'user', 'content': user_message}]
+        )
+        result = response.choices[0].message.content
+        gen.set_completion(result)
+        gen.set_usage(
+            input_tokens=response.usage.prompt_tokens,
+            output_tokens=response.usage.completion_tokens,
+        )
+
+    with client.start_as_current_span('search_hotels', as_type='tool') as tool:
+        tool.set_tool_name('search_hotels')
+        tool.set_tool_input({'query': user_message})
+        tool_result = search_hotels(user_message)
+        tool.set_tool_output(tool_result)
+
+    chain.set_output(result)
+```
+
+**Manual lifecycle (explicit `end()`):**
+
+Use `start_span()` when you need to manage the span lifecycle manually, for example across asynchronous callbacks:
+
+```python
+prompt = 'Find me a hotel in Tokyo'
+
+span = client.start_span('my_operation', as_type='generation')
+try:
+    span.set_user_prompt(prompt)
+    result = call_llm(prompt)  # your LLM call
+    span.set_completion(result)
+except Exception as exc:
+    span.record_exception(exc)
+    raise
+finally:
+    span.end()
+```
+
+## Span types and wrappers
+
+The SDK provides four span types, each with semantic convention helpers:
+
+### `FiddlerSpan` — base (any `as_type='span'`)
+
+| Method                      | OTel Attribute           | Description                                                |
+| --------------------------- | ------------------------ | ---------------------------------------------------------- |
+| `set_input(data)`           | `gen_ai.llm.input.user`  | Auto-serializes dicts/lists to JSON                        |
+| `set_output(data)`          | `gen_ai.llm.output`      | Auto-serializes dicts/lists to JSON                        |
+| `set_attribute(key, value)` | custom                   | Set any custom attribute                                   |
+| `update(**kwargs)`          | —                        | Bulk-set `input`, `output`, and any attributes in one call |
+| `set_agent_name(name)`      | `gen_ai.agent.name`      | Agent label in Fiddler UI                                  |
+| `set_agent_id(id)`          | `gen_ai.agent.id`        | Agent identifier                                           |
+| `set_conversation_id(id)`   | `gen_ai.conversation.id` | Links spans to a conversation                              |
+| `record_exception(exc)`     | —                        | Records exception and marks span ERROR                     |
+| `end()`                     | —                        | End span (for manual lifecycle only)                       |
+
+### `FiddlerGeneration` — LLM spans (`as_type='generation'`)
+
+Extends `FiddlerSpan` with:
+
+| Method                                                      | OTel Attribute            | Description                           |
+| ----------------------------------------------------------- | ------------------------- | ------------------------------------- |
+| `set_model(name)`                                           | `gen_ai.request.model`    | LLM model name                        |
+| `set_system(provider)`                                      | `gen_ai.system`           | LLM provider (e.g. `'openai'`)        |
+| `set_system_prompt(text)`                                   | `gen_ai.llm.input.system` | System prompt text                    |
+| `set_user_prompt(text)`                                     | `gen_ai.llm.input.user`   | User prompt (last human message)      |
+| `set_completion(text)`                                      | `gen_ai.llm.output`       | LLM completion text                   |
+| `set_usage(input_tokens, output_tokens, total_tokens=None)` | `gen_ai.usage.*`          | Token counts                          |
+| `set_context(text)`                                         | `gen_ai.llm.context`      | Additional context                    |
+| `set_messages(messages)`                                    | `gen_ai.input.messages`   | Full chat history (JSON)              |
+| `set_output_messages(messages)`                             | `gen_ai.output.messages`  | Output messages (JSON)                |
+| `set_tool_definitions(defs)`                                | `gen_ai.tool.definitions` | Available tools (JSON, OpenAI format) |
+
+`set_messages()` and `set_output_messages()` accept simple OpenAI format and auto-convert to OTel parts format:
+
+```python
+gen.set_messages([
+    {'role': 'system', 'content': 'You are a travel agent.'},
+    {'role': 'user', 'content': 'Book a flight to Tokyo.'}
+])
+```
+
+### `FiddlerTool` — tool spans (`as_type='tool'`)
+
+Extends `FiddlerSpan` with:
+
+| Method                       | OTel Attribute            | Description                           |
+| ---------------------------- | ------------------------- | ------------------------------------- |
+| `set_tool_name(name)`        | `gen_ai.tool.name`        | Tool/function name                    |
+| `set_tool_input(data)`       | `gen_ai.tool.input`       | Tool input (auto-serialized to JSON)  |
+| `set_tool_output(data)`      | `gen_ai.tool.output`      | Tool result (auto-serialized to JSON) |
+| `set_tool_definitions(defs)` | `gen_ai.tool.definitions` | Available tools                       |
+
+### `FiddlerChain` — pipeline spans (`as_type='chain'`)
+
+Extends `FiddlerSpan` with no additional methods. Use for high-level orchestration spans that group multiple LLM calls and tool calls together.
+
+## Advanced usage
+
+### Multi-turn conversation tracking
+
+Use `set_conversation_id()` to link multiple agent invocations into a single conversation in the Fiddler UI. Set a new UUID at the start of each conversation; all spans created in the current thread or async coroutine after this call will carry the same conversation ID.
+
+```python
+from fiddler_otel import set_conversation_id
+import uuid
+
+# Call once per conversation — persists for the current thread/async task
+set_conversation_id(str(uuid.uuid4()))
+
+result1 = run_agent('What flights go to Tokyo?')
+result2 = run_agent('Book the cheapest one.')  # Same conversation_id
+```
+
+### Async agents
+
+The `@trace` decorator automatically detects async functions and wraps them correctly. Use the same patterns as sync functions:
+
+```python
+import asyncio
+from openai import AsyncOpenAI
+from fiddler_otel import FiddlerClient, trace, get_current_span
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+async_openai_client = AsyncOpenAI()
+
+@trace(as_type='generation', model='gpt-4o-mini')
+async def call_llm_async(prompt: str) -> str:
+    span = get_current_span(as_type='generation')
+    if span:
+        span.set_user_prompt(prompt)
+    response = await async_openai_client.chat.completions.create(
+        model='gpt-4o-mini',
+        messages=[{'role': 'user', 'content': prompt}]
+    )
+    result = response.choices[0].message.content
+    if span:
+        span.set_completion(result)
+        span.set_usage(
+            input_tokens=response.usage.prompt_tokens,
+            output_tokens=response.usage.completion_tokens,
+        )
+    return result
+
+@trace(as_type='chain')
+async def run_agent_async(message: str) -> str:
+    result = await call_llm_async(message)
+    return result
+
+asyncio.run(run_agent_async('Hello'))
+```
+
+### Context isolation
+
+`fiddler-otel` uses its own isolated OpenTelemetry context that does not interfere with any existing global tracer in your application. If you already use OpenTelemetry for infrastructure tracing, Fiddler spans will not appear in your infrastructure traces and vice versa.
+
+This means you can safely add `fiddler-otel` to an application that already has OpenTelemetry instrumentation without any conflict.
+
+### Global client singleton
+
+The first `FiddlerClient` created in a process becomes the global singleton, accessible via `get_client()`. The `@trace` decorator uses this singleton automatically when `client=` is not passed:
+
+```python
+from fiddler_otel import FiddlerClient, get_client, trace
+
+# Created once at startup
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+
+# Anywhere in your code — no need to pass client=
+@trace(as_type='generation')
+def call_llm(prompt: str) -> str:
+    ...
+
+# Or retrieve the singleton explicitly
+fdl = get_client()
+```
+
+### Session attributes
+
+Use `add_session_attributes()` to attach key-value metadata that is automatically applied to **all spans** created in the current thread or async coroutine. Use this for user-level or environment-level metadata that applies across an entire session — such as `user_id`, `environment`, or feature flags.
+
+Attributes are emitted as `fiddler.session.user.{key}` on every span and propagated from parent to child spans automatically.
+
+```python
+from fiddler_otel import FiddlerClient, trace, add_session_attributes
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+
+# Set once per session — applies to all spans that follow in this context
+add_session_attributes(key='user_id', value='user_12345')
+add_session_attributes(key='environment', value='production')
+add_session_attributes(key='tier', value='premium')
+add_session_attributes(key='request_count', value=42)        # int (since 1.1.1)
+add_session_attributes(key='confidence_score', value=0.87)   # float (since 1.1.1)
+
+@trace(as_type='chain')
+def run_agent(message: str) -> str:
+    # All spans inside this call carry user_id, environment, tier
+    ...
+```
+
+Unlike `set_conversation_id()` (which links invocations into a conversation), `add_session_attributes` is for descriptive metadata. Both can be used together.
+
+### Custom span attributes
+
+Set any custom attribute on an individual span to add business context for that specific operation:
+
+```python
+@trace(as_type='tool')
+def search_hotels(query: str) -> str:
+    span = get_current_span(as_type='tool')
+    if span:
+        span.set_attribute('fiddler.span.user.department', 'travel')
+        span.set_attribute('fiddler.span.user.region', 'apac')
+        span.set_attribute('fiddler.span.user.reward_points', 5.0)
+    ...
+```
+
+### Production configuration
+
+**Sampling (reduce volume):**
+
+```python
+from opentelemetry.sdk.trace import sampling
+
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    sampler=sampling.TraceIdRatioBased(0.1),  # Sample 10% of traces
+)
+```
+
+**Span limits (large prompts):**
+
+```python
+from opentelemetry.sdk.trace import SpanLimits
+
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    span_limits=SpanLimits(
+        max_span_attribute_length=8192,   # Allow up to 8 KB per attribute
+    ),
+)
+```
+
+**Resource attributes (environment metadata):**
+
+```python
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+client.update_resource({'service.version': '2.1.0', 'deployment.environment': 'production'})
+# Must be called before get_tracer() is invoked (before the first @trace call)
+```
+
+### Flush and shutdown
+
+`FiddlerClient` registers an `atexit` handler to flush and shut down automatically. For short scripts or critical workloads, call `force_flush()` explicitly to ensure all buffered spans are exported before the process exits:
+
+```python
+# Sync
+client.force_flush()
+client.shutdown()
+
+# Async
+await client.aflush()
+await client.ashutdown()
+
+# Context manager (calls shutdown() on exit)
+with FiddlerClient(application_id='...', api_key='...', url='...') as client:
+    run_agent('Hello')
+```
+
+### Local debugging
+
+**Console output (print spans to stdout in addition to Fiddler export):**
+
+`console_tracer=True` is **additive** — span data is printed to stdout **and** continues to be exported to Fiddler via OTLP. Setting this to `True` does **not** suppress or disable the OTLP export to Fiddler. Use it to visually confirm spans are being created during development.
+
+```python
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    console_tracer=True,  # Prints spans to stdout; OTLP export to Fiddler still active
+)
+```
+
+**JSONL file capture (save a local copy of spans in addition to Fiddler export):**
+
+`jsonl_capture_enabled=True` is **additive** — spans are saved to a local JSONL file **and** continue to be exported to Fiddler via OTLP. Setting this to `True` does **not** suppress or disable the OTLP export to Fiddler. The JSONL format written here is a custom Fiddler format and is **not** compatible with the Fiddler S3 connector. To write S3-compatible files, use `otlp_json_capture_enabled=True` instead (see [Offline / S3 Routing Mode](#offline--s3-routing-mode) below).
+
+```python
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    jsonl_capture_enabled=True,       # Saves spans to local file; OTLP export still active
+    jsonl_file_path='trace_data.jsonl',
+)
+```
+
+Override the output file path via environment variable:
+
+```bash
+FIDDLER_JSONL_FILE=trace_data.jsonl python my_agent.py
+```
+
+### Offline / S3 Routing Mode
+
+Use this mode when traces must be routed through an intermediate store (such as Amazon S3) before reaching Fiddler, rather than being sent directly. This is the correct approach when your security or network policies require all data to pass through a controlled intermediary.
+
+* **`otlp_enabled=False`** — disables all direct OTLP export to Fiddler. `api_key` and `url` are not required in this mode.
+* **`otlp_json_capture_enabled=True`** — writes traces to local `.json` files in standard OTLP JSON format (`ExportTraceServiceRequest` envelope). These files are directly consumable by the Fiddler S3 connector.
+* **`application_id` is still required** — even though no data is sent to Fiddler directly, the S3 connector uses the `application_id` embedded in the trace files to route ingested traces to the correct application in Fiddler.
+
+```python
+from fiddler_otel import FiddlerClient
+
+# No api_key or url needed — traces go to local files only
+client = FiddlerClient(
+    application_id='YOUR_APPLICATION_ID',   # UUID4 — required for S3 connector routing
+    otlp_enabled=False,                     # Disables direct export to Fiddler
+    otlp_json_capture_enabled=True,         # Writes OTLP JSON files locally
+    otlp_json_output_dir='./fiddler_traces',  # Directory for output files (default: 'fiddler_traces')
+)
+```
+
+After running your application, upload the generated `.json` files from `otlp_json_output_dir` to your S3 bucket. The Fiddler S3 connector reads them directly.
+
+{% hint style="info" %}
+Each batch of spans is written to a separate timestamped `.json` file in the output directory. The directory is created automatically if it does not exist.
+{% endhint %}
+
+## Relationship to other Fiddler SDKs
+
+`fiddler-otel` is the foundation package that all Fiddler SDK integrations build on:
+
+| Package             | Framework                          | Instrumentation Approach                                     |
+| ------------------- | ---------------------------------- | ------------------------------------------------------------ |
+| `fiddler-otel`      | Any Python application             | `@trace` decorator, context managers                         |
+| `fiddler-langchain` | LangChain V1 (`create_agent`)      | `FiddlerLangChainInstrumentor` (auto-patches `create_agent`) |
+| `fiddler-langgraph` | LangGraph (`StateGraph.compile()`) | `LangGraphInstrumentor` (callback handler)                   |
+
+Both `fiddler-langchain` and `fiddler-langgraph` depend on `fiddler-otel` and re-export its core symbols (`FiddlerClient`, `trace`, `get_current_span`, `set_conversation_id`). If your application uses LangChain V1 (`create_agent` API) or LangGraph, install the framework-specific package — it includes `fiddler-otel` automatically.
+
+## API reference
+
+The `fiddler-otel` SDK provides the same core classes as `fiddler-langgraph` — the codebase is shared, and `fiddler-langgraph` re-exports all `fiddler-otel` symbols unchanged. Until a dedicated `fiddler-otel` API reference is autogenerated, the detailed reference pages are co-located in the [shared SDK API reference](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/README.md). The classes, parameters, and behaviour are identical regardless of which package you import from — use `fiddler_otel` as the import source when using the core SDK standalone.
+
+| Class / Function                                                                                                                       | Import                                            | Description                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| [FiddlerClient](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-client.md)                    | `from fiddler_otel import FiddlerClient`          | Configure the OTel tracer and manage the connection to Fiddler           |
+| [get\_client](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/get-client.md)                          | `from fiddler_otel import get_client`             | Retrieve the active `FiddlerClient` instance                             |
+| [trace](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/trace.md)                                     | `from fiddler_otel import trace`                  | Decorator for automatic function instrumentation                         |
+| [get\_current\_span](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/get-current-span.md)             | `from fiddler_otel import get_current_span`       | Access the active Fiddler span within a traced function                  |
+| [FiddlerSpan](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-span.md)                        | `from fiddler_otel import FiddlerSpan`            | Base span wrapper                                                        |
+| [FiddlerGeneration](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-generation.md)            | `from fiddler_otel import FiddlerGeneration`      | Span wrapper for LLM calls                                               |
+| [FiddlerChain](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-chain.md)                      | `from fiddler_otel import FiddlerChain`           | Span wrapper for agent/chain workflows                                   |
+| [FiddlerTool](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/fiddler-tool.md)                        | `from fiddler_otel import FiddlerTool`            | Span wrapper for tool calls                                              |
+| [add\_session\_attributes](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/add-session-attributes.md) | `from fiddler_otel import add_session_attributes` | Add session-level attributes applied to all spans in the current context |
+| [set\_conversation\_id](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/sdk-api/langgraph/set-conversation-id.md)       | `from fiddler_otel import set_conversation_id`    | Link spans into a single conversation                                    |
+
+## Troubleshooting
+
+### No spans appearing in Fiddler
+
+1. **Check your credentials** — verify `api_key`, `application_id` (must be a valid UUID4), and `url` are correct. These are only required when `otlp_enabled=True` (the default).
+2. **Force flush before exit** — for short scripts, the `BatchSpanProcessor` may not flush before the process exits. Call `client.force_flush()` or use the context manager (`with FiddlerClient(...) as client:`).
+3. **Enable console tracing** — set `console_tracer=True` to also print spans to stdout and confirm they are being created. This is additive; OTLP export to Fiddler continues alongside console output:
+
+```python
+client = FiddlerClient(
+    application_id='...',
+    api_key='...',
+    url='...',
+    console_tracer=True,  # Adds console output; does NOT disable OTLP export
+)
+```
+
+4. **Check the application ID** — the `application_id` must match an existing application in your Fiddler instance and must be a valid UUID4. `FiddlerClient` raises `ValueError` on initialization if the format is invalid.
+
+### `RuntimeError: No FiddlerClient initialized`
+
+`get_current_span()` or `get_client()` was called before a `FiddlerClient` was created. Create the client before decorating or calling any instrumented functions:
+
+```python
+from fiddler_otel import FiddlerClient, trace
+
+client = FiddlerClient(application_id='...', api_key='...', url='...')
+
+@trace(as_type='generation')
+def call_llm(prompt: str) -> str:
+    ...
+```
+
+### `ValueError: application_id must be a valid UUID4`
+
+The `application_id` passed to `FiddlerClient` is not a valid UUID version 4. Copy the Application ID directly from the **GenAI Applications** page in the Fiddler UI — it should look like `550e8400-e29b-41d4-a716-446655440000`.
+
+### Spans missing from async code
+
+Context variables propagate correctly across `await` in the same async task. If you are spawning new tasks with `asyncio.create_task()`, call `set_conversation_id()` and `add_session_attributes()` inside the task so the context is re-established. Use `client.ashutdown()` instead of `client.shutdown()` to avoid blocking the event loop during teardown.
+
+### Spans interfering with another OpenTelemetry tracer
+
+`FiddlerClient` uses an isolated `Context` that is separate from the global OTel context. Spans created via `@trace` or `start_as_current_span()` will not appear in any other tracer, and spans from other tracers will not appear in Fiddler. This isolation is intentional and requires no configuration.
+
+### Local JSONL file is empty
+
+Ensure `jsonl_capture_enabled=True` is set on `FiddlerClient` and that the process has executed instrumented code. The JSONL file is written synchronously, so spans appear immediately after each span ends. Check the path: the default is `fiddler_trace_data.jsonl` in the current working directory; override with `jsonl_file_path` or the `FIDDLER_JSONL_FILE` environment variable.
+
+**Note:** `jsonl_capture_enabled=True` is additive — it saves a local copy of spans while OTLP export to Fiddler continues. If your goal is to write files for S3 upload and stop sending directly to Fiddler, use `otlp_enabled=False` combined with `otlp_json_capture_enabled=True` instead. See [Offline / S3 Routing Mode](#offline--s3-routing-mode).
+
+***
+
+## What's next?
+
+* [**LangChain SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langchain-sdk.md) — If your application uses LangChain V1 `create_agent`
+* [**LangGraph SDK**](/integrations/agentic-ai-and-llm-frameworks/agentic-ai/langgraph-sdk.md) — If your application uses LangGraph
+* [**Agentic Observability Concepts**](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/documentation/getting-started/agentic-monitoring.md) — Understand the agent lifecycle and monitoring approach
+
+
+---

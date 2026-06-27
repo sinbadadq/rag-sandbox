@@ -1,0 +1,348 @@
+# Running RAG Experiments at Scale
+
+Move beyond ad-hoc evaluation to structured experiments that track results, validate against golden labels, and enable side-by-side comparison of RAG pipeline configurations.
+
+**Use this cookbook when:** You want to compare different retrieval strategies, LLM models, or prompt configurations across a standardized test set.
+
+**Time to complete**: \~25 minutes
+
+```mermaid
+graph TD
+    A["Project"] --> B["Application"]
+    B --> C["Dataset"]
+    C --> D["Experiment v1"]
+    C --> E["Experiment v2"]
+    D --> F["Compare Results"]
+    E --> F
+
+    subgraph Evaluators
+        G["Context Relevance"]
+        H["RAG Faithfulness"]
+        I["Answer Relevance"]
+    end
+
+    D -.-> Evaluators
+    E -.-> Evaluators
+```
+
+{% hint style="info" %}
+**Prerequisites**
+
+* Fiddler account with API access
+* LLM credential configured in **Settings > LLM Gateway**
+* `pip install fiddler-evals pandas`
+* Familiarity with [RAG Evaluation Fundamentals](/developers/cookbooks/rag-evaluation-fundamentals.md) recommended
+  {% endhint %}
+
+***
+
+{% stepper %}
+{% step %}
+**Set Up the Experiment Infrastructure**
+
+Experiments are organized as: **Project > Application > Dataset > Experiment**
+
+{% hint style="info" %}
+Replace `URL`, `TOKEN`, and credential names with your Fiddler account details. Find your credentials in **Settings > Access Tokens** and **Settings > LLM Gateway**.
+{% endhint %}
+
+```python
+import pandas as pd
+from fiddler_evals import Application, Dataset, Project, evaluate, init
+from fiddler_evals.evaluators import AnswerRelevance, ContextRelevance, RAGFaithfulness
+
+URL = 'https://your-org.fiddler.ai'
+TOKEN = 'your-access-token'
+LLM_CREDENTIAL_NAME = 'your-llm-credential'
+LLM_MODEL_NAME = 'openai/gpt-4o'
+
+init(url=URL, token=TOKEN)
+
+project = Project.get_or_create(name='rag_experiments')
+application = Application.get_or_create(
+    name='rag-pipeline-comparison',
+    project_id=project.id,
+)
+dataset = Dataset.get_or_create(
+    name='rag-test-cases',
+    application_id=application.id,
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Create Test Cases with Golden Labels**
+
+Include `expected_quality` labels so you can validate whether evaluators correctly identify good and bad responses:
+
+```python
+rag_data = pd.DataFrame(
+    [
+        {
+            'scenario': 'Perfect Match',
+            'expected_quality': 'good',
+            'user_query': 'What is the capital of France?',
+            'retrieved_documents': [
+                'Paris is the capital and largest city of France.',
+                'France is located in Western Europe.',
+            ],
+            'rag_response': 'The capital of France is Paris.',
+        },
+        {
+            'scenario': 'Irrelevant Context',
+            'expected_quality': 'bad',
+            'user_query': 'How do I reset my password?',
+            'retrieved_documents': [
+                'To make pasta, boil water and add salt.',
+                'Italian cuisine features many pasta dishes.',
+            ],
+            'rag_response': 'To reset your password, go to the login page '
+                'and click Forgot Password.',
+        },
+        {
+            'scenario': 'Hallucination',
+            'expected_quality': 'bad',
+            'user_query': 'What are the business hours?',
+            'retrieved_documents': [
+                'Our office is located at 123 Main Street.',
+                'We are closed on federal holidays.',
+            ],
+            'rag_response': 'Our business hours are Monday through Friday, '
+                '9 AM to 5 PM.',
+        },
+        {
+            'scenario': 'Irrelevant Answer',
+            'expected_quality': 'bad',
+            'user_query': 'What is your return policy?',
+            'retrieved_documents': [
+                'Returns are accepted within 30 days of purchase.',
+                'Items must be unused and in original packaging.',
+            ],
+            'rag_response': 'We offer free shipping on orders over $50. '
+                'Delivery takes 3-5 business days.',
+        },
+    ]
+)
+```
+
+{% endstep %}
+
+{% step %}
+**Insert Data into the Dataset**
+
+```python
+if not list(dataset.get_items()):
+    dataset.insert_from_pandas(
+        df=rag_data,
+        input_columns=['user_query', 'retrieved_documents', 'rag_response'],
+        expected_output_columns=['expected_quality'],
+        metadata_columns=['scenario'],
+    )
+    print(f'Inserted {len(rag_data)} test cases')
+else:
+    print('Dataset already has items, skipping insert')
+```
+
+**Expected output:**
+
+```
+Inserted 4 test cases
+```
+
+{% hint style="info" %}
+The idempotency check (`if not list(dataset.get_items())`) prevents duplicate inserts if you re-run the notebook. Remove this check if you want to refresh the dataset.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+**Run the Experiment**
+
+Define a task function that returns the RAG response, then run the experiment with all three RAG Health evaluators:
+
+```python
+def rag_task(inputs: dict, extras: dict, metadata: dict) -> dict:
+    """Return pre-recorded RAG response.
+    Replace with your actual RAG pipeline in production.
+    """
+    return {'rag_response': inputs['rag_response']}
+
+
+evaluators = [
+    ContextRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+    RAGFaithfulness(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+    AnswerRelevance(model=LLM_MODEL_NAME, credential=LLM_CREDENTIAL_NAME),
+]
+
+result = evaluate(
+    dataset=dataset,
+    task=rag_task,
+    evaluators=evaluators,
+    score_fn_kwargs_mapping={
+        'user_query': lambda x: x['inputs']['user_query'],
+        'retrieved_documents': lambda x: x['inputs']['retrieved_documents'],
+        'rag_response': 'rag_response',
+    },
+)
+
+print(f'Experiment: {result.experiment.name}')
+print(f'Evaluated {len(result.results)} test cases')
+```
+
+{% hint style="info" %}
+**Understanding `score_fn_kwargs_mapping`:** This dict maps evaluator parameter names to data sources. Use a **lambda** to extract values from dataset inputs (`x['inputs']['...']`), or a **string** to reference a key from the task function's return dict.
+{% endhint %}
+
+**Expected output:**
+
+```
+Experiment: rag-test-cases-2026-02-07-001
+Evaluated 4 test cases
+```
+
+{% endstep %}
+
+{% step %}
+**Validate Against Golden Labels**
+
+Check whether the evaluators correctly identified quality issues by comparing their scores against your expected labels:
+
+```python
+from fiddler_evals.pydantic_models.experiment import ExperimentItemResult
+from fiddler_evals.pydantic_models.score import Score
+
+validation_results = []
+correct = 0
+
+for r in result.results:
+    expected = r.dataset_item.expected_outputs.get('expected_quality')
+    has_problem = any(s.value < 0.5 for s in r.scores)
+    predicted = 'bad' if has_problem else 'good'
+
+    if expected == predicted:
+        correct += 1
+
+    validation_results.append(
+        ExperimentItemResult(
+            experiment_item=r.experiment_item,
+            dataset_item=r.dataset_item,
+            scores=[
+                Score(
+                    name='predicted_quality',
+                    evaluator_name='OverallQuality',
+                    value=1.0 if predicted == 'good' else 0.0,
+                    label=predicted,
+                    reasoning=f'Expected: {expected}',
+                )
+            ],
+        )
+    )
+
+result.experiment.add_results(validation_results)
+print(
+    f'Evaluator Accuracy: {correct}/{len(result.results)} '
+    f'({100 * correct / len(result.results):.0f}%)'
+)
+```
+
+**Expected output:**
+
+```
+Evaluator Accuracy: 4/4 (100%)
+```
+
+{% endstep %}
+
+{% step %}
+**View Results**
+
+```python
+print(f'View in Fiddler: {URL}/evals/experiments/{result.experiment.id}')
+
+# Build results DataFrame
+rows = []
+for r, v in zip(result.results, validation_results):
+    row = {
+        'scenario': r.dataset_item.metadata.get('scenario'),
+        'expected': r.dataset_item.expected_outputs.get('expected_quality'),
+        'predicted': v.scores[0].label,
+    }
+    row.update({s.evaluator_name: s.value for s in r.scores})
+    rows.append(row)
+
+pd.DataFrame(rows)
+```
+
+**Expected output:**
+
+| scenario           | expected | predicted | ContextRelevance | RAGFaithfulness | AnswerRelevance |
+| ------------------ | -------- | --------- | ---------------- | --------------- | --------------- |
+| Perfect Match      | good     | good      | 1.0              | 1.0             | 1.0             |
+| Irrelevant Context | bad      | bad       | 0.0              | 0.0             | 0.5             |
+| Hallucination      | bad      | bad       | 0.5              | 0.0             | 1.0             |
+| Irrelevant Answer  | bad      | bad       | 1.0              | 0.0             | 0.0             |
+| {% endstep %}      |          |           |                  |                 |                 |
+| {% endstepper %}   |          |           |                  |                 |                 |
+
+***
+
+## Comparing Pipeline Configurations
+
+To compare different RAG configurations, run multiple experiments against the same dataset:
+
+{% hint style="warning" %}
+Replace `rag_pipeline_v1` and `rag_pipeline_v2` with your actual RAG pipeline functions. Each function must accept `(inputs, extras, metadata)` and return a dict containing `rag_response`.
+{% endhint %}
+
+```python
+# Experiment 1: Default retrieval
+result_v1 = evaluate(
+    dataset=dataset,
+    task=rag_pipeline_v1,
+    evaluators=evaluators,
+    score_fn_kwargs_mapping={
+        'user_query': lambda x: x['inputs']['user_query'],
+        'retrieved_documents': lambda x: x['inputs']['retrieved_documents'],
+        'rag_response': 'rag_response',
+    },
+)
+
+# Experiment 2: Improved retrieval with re-ranking
+result_v2 = evaluate(
+    dataset=dataset,
+    task=rag_pipeline_v2,
+    evaluators=evaluators,
+    score_fn_kwargs_mapping={
+        'user_query': lambda x: x['inputs']['user_query'],
+        'retrieved_documents': lambda x: x['inputs']['retrieved_documents'],
+        'rag_response': 'rag_response',
+    },
+)
+
+# Compare results side-by-side in the Fiddler UI
+print(f'V1: {URL}/evals/experiments/{result_v1.experiment.id}')
+print(f'V2: {URL}/evals/experiments/{result_v2.experiment.id}')
+```
+
+Both experiments appear in the Fiddler UI under the same Application, enabling side-by-side comparison of scores across all test cases.
+
+***
+
+## Next Steps
+
+* [RAG Evaluation Fundamentals](/developers/cookbooks/rag-evaluation-fundamentals.md) — Direct `.score()` API for quick iteration
+* [Building Custom Judge Evaluators](/developers/cookbooks/custom-judge-evaluators.md) — Add domain-specific evaluation criteria
+* [RAG Health Metrics Tutorial](/developers/tutorials/experiments/rag-health-metrics-tutorial.md) — Step-by-step tutorial
+
+***
+
+**Source notebook**: [Fiddler Cookbook: RAG Experiments at Scale](https://github.com/fiddler-labs/fiddler-examples/blob/main/cookbooks/Fiddler_Cookbook_RAG_Experiments_at_Scale.ipynb)
+
+***
+
+:question: Questions? [Talk](https://www.fiddler.ai/contact-sales) to a product expert or [request](https://www.fiddler.ai/demo) a demo.
+
+:bulb: Need help? Contact us at <support@fiddler.ai>.
+
+
+---

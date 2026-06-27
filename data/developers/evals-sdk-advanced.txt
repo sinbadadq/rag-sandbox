@@ -1,0 +1,243 @@
+# Evals SDK Advanced Guide
+
+## What You'll Learn
+
+This interactive notebook demonstrates advanced evaluation patterns for production LLM applications through comprehensive testing with the TruthfulQA benchmark dataset.
+
+**Key Topics Covered:**
+
+* Advanced data import with CSV/JSONL and complex column mapping
+* Real LLM integration with production-ready task functions
+* Context-aware evaluators for RAG and knowledge-grounded applications
+* Multi-score evaluators and advanced evaluation patterns
+* Complex parameter mapping with lambda functions
+* Production experiments with 11+ evaluators and complete analysis
+
+## Interactive Tutorial
+
+The notebook guides you through building a comprehensive experiment pipeline for any LLM application, from single-turn Q\&A to multi-turn conversations, RAG systems, and agentic workflows.
+
+[**Open the Advanced Evaluations Notebook in Google Colab →**](https://colab.research.google.com/github/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Advanced_Evaluations_SDK.ipynb)
+
+[**Or download the notebook directly from GitHub →**](https://github.com/fiddler-labs/fiddler-examples/blob/main/quickstart/latest/Fiddler_Quickstart_Advanced_Evaluations_SDK.ipynb)
+
+### Prerequisites
+
+* Fiddler account with API credentials
+* Basic familiarity with the [Evals SDK Quick Start](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start)
+* Optional: OpenAI API key for real LLM examples (mock responses available)
+
+### Time Required
+
+* **Complete tutorial**: 45-60 minutes
+* **Quick overview**: 15-20 minutes
+
+## Tutorial Highlights
+
+## Key Takeaways from the Advanced Tutorial
+
+Even if you prefer to run the notebook, here are the critical patterns you'll learn:
+
+### 1. Complex Data Import Strategies
+
+**CSV Import with Column Mapping**:
+
+```python
+dataset.insert_from_csv_file(
+    file_path='truthfulqa.csv',
+    input_columns=['question', 'category'],
+    expected_output_columns=['best_answer'],
+    extras_columns=['context'],  # Separate context for RAG evaluation
+    metadata_columns=['type', 'difficulty']
+)
+```
+
+**Why This Matters**: Production datasets rarely have perfect column names. Column mapping lets you use any data source without reformatting files.
+
+### 2. Context-Aware Evaluation for RAG Systems
+
+**Faithfulness Checking**:
+
+Fiddler provides two faithfulness evaluators: `RAGFaithfulness` (LLM-as-a-Judge, part of the RAG Health Metrics triad) for comprehensive diagnostics, and `FTLResponseFaithfulness` (Fast Trust Model) for low-latency guardrails.
+
+```python
+from fiddler_evals.evaluators import RAGFaithfulness, FTLResponseFaithfulness
+
+# RAG Faithfulness — LLM-as-a-Judge for RAG pipeline diagnostics
+rag_faithfulness = RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential")
+# Requires user_query, rag_response, and retrieved_documents
+
+# FTL Faithfulness — Fast Trust Model for low-latency guardrails
+ftl_faithfulness = FTLResponseFaithfulness()
+# Requires context and response only
+```
+
+**Why This Matters**: RAG systems must be evaluated differently than simple Q\&A. Use `RAGFaithfulness` with the full RAG Health Metrics triad (Answer Relevance, Context Relevance) for root cause diagnosis. Use `FTLResponseFaithfulness` for real-time guardrails where latency matters.
+
+### 3. Multi-Score Evaluators
+
+**Sentiment with Probability Scores**:
+
+```python
+from fiddler_evals.evaluators import Sentiment
+
+# Returns multiple scores: sentiment (categorical) and probability (float)
+sentiment = Sentiment()  # Fiddler Trust Model — no model/credential needed
+
+# Returns multiple scores: sentiment label and probability
+# - score.label: "positive" | "neutral" | "negative"
+# - score.value: confidence score 0.0-1.0
+```
+
+**Why This Matters**: Some quality dimensions have multiple facets. Multi-score evaluators capture nuanced assessments in a single pass.
+
+### 4. Production Experiment Patterns
+
+**Multiple Evaluators in One Experiment**:
+
+```python
+evaluators = [
+    # RAG Health Metrics (diagnostic triad)
+    AnswerRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+    ContextRelevance(model="openai/gpt-4o", credential="your-llm-credential"),
+    RAGFaithfulness(model="openai/gpt-4o", credential="your-llm-credential"),
+
+    # Quality metrics
+    Coherence(model="openai/gpt-4o", credential="your-llm-credential"),
+    Conciseness(model="openai/gpt-4o", credential="your-llm-credential"),
+
+    # Safety metrics
+    FTLPromptSafety(),
+    FTLResponseFaithfulness(),
+
+    # Domain-specific (Trust Model — no model/credential needed)
+    Sentiment(),
+    RegexSearch(pattern=r'\b[A-Z][a-z]+\s[A-Z][a-z]+\b'),  # Proper nouns
+    CustomDomainEvaluator(),
+]
+
+results = evaluate(
+    dataset=large_dataset,
+    task=production_task,
+    evaluators=evaluators,
+    max_workers=10,  # Parallel processing
+    metadata={"version": "v2.1", "environment": "staging"}
+)
+```
+
+**Why This Matters**: Production systems need comprehensive evaluation across multiple dimensions. This pattern shows how to run extensive experiment suites efficiently.
+
+### 5. Advanced Parameter Mapping
+
+**Complex Data Structures**:
+
+```python
+score_fn_kwargs_mapping={
+    # Simple mappings
+    "response": "answer",
+
+    # Extract from nested dicts
+    "prompt": lambda x: x["inputs"]["question"],
+    "context": lambda x: x["extras"]["retrieved_docs"],
+
+    # Compute values
+    "output_length": lambda x: len(x["outputs"]["answer"]),
+
+    # Combine values
+    "full_conversation": lambda x: x["inputs"]["history"] + [x["outputs"]["answer"]],
+}
+```
+
+**Why This Matters**: Real applications have complex data structures. Lambda-based mapping gives you the flexibility to extract any value an evaluator needs.
+
+***
+
+### Advanced Data Import
+
+Learn how to import complex experiment datasets with:
+
+* CSV and JSONL file support with column mapping
+* Separation of inputs, extras, expected outputs, and metadata
+* Source tracking for test case provenance
+* Support for RAG context and conversation history
+
+### Production Evaluator Suite
+
+Build a comprehensive evaluation with:
+
+* **Context-aware evaluators**: Faithfulness checking for RAG systems
+* **Safety evaluators**: Prompt safety and faithfulness detection
+* **Quality evaluators**: Relevance, coherence, and conciseness
+* **Custom evaluators**: Domain-specific metrics for complete customization
+* **Multi-score evaluators**: Sentiment and topic classification
+
+### Complex Parameter Mapping
+
+Master advanced mapping techniques:
+
+* Lambda-based parameter transformation
+* Access to inputs, extras, outputs, and metadata
+* Flexible mapping for any evaluator signature
+* Production-ready patterns for all LLM use cases
+
+### Comprehensive Analysis
+
+Extract insights from experiment results:
+
+* Aggregate statistics by evaluator
+* Performance breakdown by category
+* DataFrame export for further analysis
+* A/B testing and regression detection patterns
+
+## Who Should Use This
+
+* **AI engineers** building production LLM applications
+* **ML engineers** implementing systematic experiment pipelines
+* **Data scientists** analyzing LLM performance and quality
+* **QA engineers** setting up regression testing for AI systems
+
+## Use Case Flexibility
+
+The patterns demonstrated work for all LLM application types:
+
+* **Single-turn Q\&A**: Direct question-answering without context
+* **RAG applications**: Context-grounded responses with faithfulness checking
+* **Multi-turn conversations**: Dialogue systems with conversation history
+* **Agentic workflows**: Tool-using agents with intermediate outputs
+* **Multi-task models**: Systems handling diverse request types
+
+## Trust Service Integration
+
+All evaluators in the advanced tutorial run on [Fiddler Trust Models](https://www.fiddler.ai/trust-service), which means:
+
+### Cost Efficiency at Scale
+
+Running multiple evaluators on 817 test cases (TruthfulQA dataset) would typically cost:
+
+* **External LLM API**: $50-100+ in API calls (0.01¢ per evaluation × 9,000 evaluations)
+* **Fiddler Trust Service**: $0 (no per-request charges)
+
+### Performance at Scale
+
+* **Parallel execution**: 10 workers process 817 items in \~5 minutes
+* **Fast evaluators**: <100ms per evaluation enables real-time feedback
+* **No rate limits**: No API quota concerns for extensive batch experiments
+
+### Security
+
+* **Data locality**: All evaluations run within your Fiddler environment
+* **No external calls**: Your prompts and responses never leave your infrastructure
+* **Audit trail**: Complete traceability for compliance
+
+This makes Fiddler Experiments ideal for enterprise-scale experiment pipelines.
+
+## Next Steps
+
+After completing the tutorial:
+
+* **Technical Reference**: [Fiddler Evals SDK Documentation](/api/fiddler-evals-sdk/evals.md)
+* **Basic Tutorial**: [Evals SDK Quick Start](https://app.gitbook.com/s/82RHcnYWV62fvrxMeeBB/evaluate-test/evals-sdk-quick-start) for fundamentals
+* **Getting Started Guide**: [Getting Started with Fiddler Experiments](/getting-started/experiments.md) for UI overview
+
+
+---

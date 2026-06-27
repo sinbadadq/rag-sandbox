@@ -1,0 +1,102 @@
+# Deleting Events
+
+Fiddler enables you to delete previously published production inference data using either unique identifiers or event timestamps using our Events [REST API](/api/rest-api/rest-api.md).
+
+> **Note:**
+>
+> Event deletion is only offered using the REST API and is not currently supported in the Fiddler Python client.
+
+Common reasons for deletion include:
+
+* Complying with data privacy regulations ([GDPR](https://commission.europa.eu/law/law-topic/data-protection/legal-framework-eu-data-protection_en), [CCPA](https://www.oag.ca.gov/privacy/ccpa), etc.)
+* Removing erroneously published data
+* Correcting data inaccuracies
+
+## Impact on Monitoring Metrics
+
+When deleting inference data with the time range filter you can control how it affects your monitoring metrics using the `update_metrics` parameter in the Events Delete REST API:
+
+* Preserve existing aggregated metrics: `update_metrics=False`
+* Recalculate metrics to reflect the data removal (default): `update_metrics=True`
+
+## Important Considerations
+
+* Deletions are permanent and cannot be undone
+* Pre-production (baseline) datasets do not support row-level deletion
+* Large-scale deletions may temporarily impact data ingestion performance.
+* By default, the event deletion API allows up to 30 requests per day.
+* If the rate limit is exceeded, the API will return a `429 Too Many Requests` response, along with rate limiting headers:
+  * `X-RateLimit-Limit` – The maximum number of allowed requests in the current window.
+  * `X-RateLimit-Remaining` – The number of remaining requests in the current window.
+  * `Retry-After` – The number of seconds to wait before retrying, or the HTTP date when the rate limit resets.
+  * `X-RateLimit-Reset` – The UTC epoch time (seconds) when the current rate limiting window resets.
+
+## Deletion Methods
+
+Fiddler supports two filtering methods for deletion (only one method can be used per API call):
+
+### Delete by Event ID
+
+Delete specific inference events by providing their unique identifiers. The event ID corresponds to the `event_id_col` specified during [Model](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/developers/api-methods-30.md#model) onboarding.
+
+> **Note:** Event IDs are designed to be unique. If duplicate `event_id` values have been published, deleting by event ID will remove all events matching those IDs from the raw events table. If `update_metrics=True` is set, aggregated metrics may not be fully updated if duplicate events exist and [deduplication](/developers/client-library-reference/publishing-production-data.md#publish-production-data) was not enabled. You can delete up to 10,000 events per API call. If you need to delete more events in one request, please contact Fiddler support.
+
+### Delete by Timestamp Range
+
+Delete events that fall within a designated time range by specifying start and end timestamps. The filtering is based on the timestamp column (`event_ts_col`) defined during [Model](https://github.com/fiddler-labs/fiddler/blob/release/26.9/docs/developers/api-methods-30.md#model) onboarding. Deletions are processed in batches (default batch size: 100K events) to ensure efficiency and resilience.
+
+> **Note:** Ensure that the `max_memory_usage` setting in ClickHouse is configured to handle the number of events specified by the batch size (controlled by the `EVENT_DELETION_BATCH_SIZE` environment variable). You can delete up to 100 million events per day using this endpoint. If you require a higher daily deletion limit, please contact Fiddler support.
+
+**Usage params**
+
+| Parameter       | Type            | Default | Description                                                                                                                                                                                                                                                                                         |
+| --------------- | --------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| model\_id       | UUID            | -       | Unique identifier for the model from which production events are deleted.                                                                                                                                                                                                                           |
+| time\_range     | Optional\[dict] | -       | Dictionary with `start_time` (inclusive) and `end_time` (exclusive) in UTC, both aligned to the hour (format: `'YYYY-MM-DD HH:00:00'`). Specify timestamps so that the entire range covers complete hours—do not use minutes or seconds. The range filter applies as `start_time` ≤ t < `end_time`. |
+| event\_ids      | Optional\[list] | -       | List of event\_ids to be deleted.                                                                                                                                                                                                                                                                   |
+| update\_metrics | Optional\[bool] | False   | Determines if the monitoring metrics are recalculated to reflect the changes                                                                                                                                                                                                                        |
+
+***
+
+## Example: Deleting Inference Events by Timestamp Range
+
+```python
+import requests
+headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+data = {'model_id': model.id,
+        'time_range':{
+            'start_time':'2024-09-27 17:00:00',
+            'end_time':'2024-09-27 18:00:00',
+            },
+        'update_metrics':True,
+        }
+response = requests.delete(
+    url=f'{url}/v3/events',
+    headers=headers,
+    json=data,
+)
+
+```
+
+## Example: Deleting Inference Events by Event IDs
+
+```python
+import requests
+headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+data = {
+         'model_id': model.id,
+         'event_ids': ['event_id1', 'event_id2'],
+         'update_metrics':False,
+      }
+response = requests.delete(
+  url=f'{url}/v3/events',
+  headers=headers,
+  json=data,
+)
+
+```
+
+> 📘 Please delete events with caution when `update_metrics=True`. We recommend not deleting events while there is an ongoing publish or update operation within the same data range.
+
+
+---

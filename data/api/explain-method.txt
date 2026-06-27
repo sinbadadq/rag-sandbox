@@ -1,0 +1,167 @@
+# ExplainMethod
+
+Explanation methods for model interpretability and feature importance analysis.
+
+This enum defines the available algorithms for computing feature importance and generating explanations for model predictions. Different methods provide different perspectives on how features contribute to model decisions.
+
+Method Categories:
+
+* **SHAP-based**: Unified framework for feature importance (SHAP, FIDDLER\_SHAP)
+* **Gradient-based**: Uses model gradients for explanations (IG)
+* **Perturbation-based**: Feature permutation and baseline methods
+
+## Examples
+
+Using different explanation methods:
+
+```python
+# Standard SHAP explanations
+shap_explanations = model.explain(
+    data_source=fdl.RowDataSource(row=sample_data),
+    explain_method=fdl.ExplainMethod.SHAP
+)
+
+# Fiddler's optimized SHAP (recommended)
+fast_explanations = model.explain(
+    data_source=fdl.RowDataSource(row=sample_data),
+    explain_method=fdl.ExplainMethod.FIDDLER_SHAP
+)
+
+# Integrated Gradients for neural networks
+ig_explanations = model.explain(
+    data_source=fdl.RowDataSource(row=sample_data),
+    explain_method=fdl.ExplainMethod.IG
+)
+
+# Permutation importance
+perm_explanations = model.explain(
+    data_source=fdl.RowDataSource(row=sample_data),
+    explain_method=fdl.ExplainMethod.PERMUTE
+)
+```
+
+{% hint style="info" %}
+Method availability depends on model type and artifact configuration. FIDDLER\_SHAP is recommended for most use cases due to performance optimizations.
+{% endhint %}
+
+## SHAP *= 'SHAP'*
+
+Standard SHAP (SHapley Additive exPlanations) method.
+
+Implements the original SHAP algorithm for computing feature importance based on game theory. Provides globally consistent and locally accurate feature attributions that sum to the difference between model output and expected output.
+
+Characteristics:
+
+* Theoretically grounded in game theory
+* Satisfies efficiency, symmetry, dummy, and additivity axioms
+* Works with any machine learning model
+* Computationally intensive for complex models
+
+Best for:
+
+* Research and academic applications
+* When theoretical guarantees are important
+* Comparative analysis with other SHAP implementations
+
+## FIDDLER\_SHAP *= 'FIDDLER\_SHAP'*
+
+Fiddler's optimized SHAP implementation for improved performance.
+
+Fiddler's enhanced version of SHAP that provides the same theoretical guarantees as standard SHAP but with significant performance improvements and optimizations for production use cases.
+
+Characteristics:
+
+* Same theoretical properties as standard SHAP
+* Significant performance optimizations
+* Better suited for production environments
+* Optimized for Fiddler's infrastructure
+
+Best for:
+
+* Production explainability workflows
+* High-volume explanation generation
+* Real-time explanation requirements
+* Most general-purpose use cases (recommended)
+
+## IG *= 'IG'*
+
+Integrated Gradients method for gradient-based explanations.
+
+Computes feature importance by integrating gradients of the model output with respect to inputs along a straight path from a baseline to the input. Particularly effective for neural networks and differentiable models.
+
+Characteristics:
+
+* Uses model gradients for attribution
+* Satisfies implementation invariance and sensitivity axioms
+* Requires differentiable models
+* Effective for neural networks
+
+Best for:
+
+* Neural network models
+* Deep learning applications
+* When gradient information is available
+* Image and text models with embeddings
+
+## PERMUTE *= 'PERMUTE'*
+
+Permutation-based feature importance analysis.
+
+Computes feature importance by measuring the decrease in model performance when feature values are randomly permuted. Provides model-agnostic importance scores based on predictive contribution.
+
+Characteristics:
+
+* Model-agnostic approach
+* Based on predictive performance impact
+* Computationally straightforward
+* Provides global feature importance
+
+Best for:
+
+* Model-agnostic analysis
+* Understanding overall feature importance
+* Comparing feature relevance across models
+* When other methods are not applicable
+
+## ZERO\_RESET *= 'ZERO\_RESET'*
+
+Zero baseline reset method for feature ablation analysis.
+
+Computes feature importance by replacing feature values with zero and measuring the change in model output. Provides insights into how features contribute relative to a zero baseline.
+
+Characteristics:
+
+* Simple ablation-based approach
+* Uses zero as the baseline value
+* Fast computation
+* May not be suitable for all feature types
+
+Best for:
+
+* Quick feature importance analysis
+* Models where zero is a meaningful baseline
+* Sparse feature representations
+* Initial feature importance exploration
+
+## MEAN\_RESET *= 'MEAN\_RESET'*
+
+Mean baseline reset method for feature ablation analysis.
+
+Computes feature importance by replacing feature values with their population mean and measuring the change in model output. Uses the training data mean as a more representative baseline than zero.
+
+Characteristics:
+
+* Ablation-based with mean baseline
+* Uses training data statistics
+* More representative baseline than zero
+* Accounts for feature distributions
+
+Best for:
+
+* Models where mean is a natural baseline
+* Features with non-zero typical values
+* When training distribution is representative
+* Comparative analysis with zero baseline
+
+
+---

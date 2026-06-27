@@ -1,0 +1,48 @@
+# CompareTo
+
+Comparison baseline types for alert rule thresholds.
+
+Determines what the current metric value should be compared against when evaluating alert conditions.
+
+## TIME\_PERIOD
+
+Compare to a historical time period (relative comparison). Useful for detecting changes over time, seasonal patterns, etc. When using TIME\_PERIOD, the compare\_bin\_delta parameter specifies how many time periods back to compare against.
+
+## RAW\_VALUE
+
+Compare to an absolute threshold value (absolute comparison). Useful for hard limits and business rule enforcement. When using RAW\_VALUE, compare\_bin\_delta is ignored.
+
+{% hint style="warning" %}
+When using TIME\_PERIOD, the allowed compare\_bin\_delta values depend on bin\_size:
+{% endhint %}
+
+## Example
+
+```python
+# Compare current hourly drift to same hour yesterday (24 hours ago)
+alert_rule = AlertRule(
+        compare_to=CompareTo.TIME_PERIOD,
+        bin_size=BinSize.HOUR,
+        compare_bin_delta=24  # 24 hours ago
+    )
+
+    # Compare daily metrics to last week (7 days ago)
+    alert_rule = AlertRule(
+            compare_to=CompareTo.TIME_PERIOD,
+            bin_size=BinSize.DAY,
+            compare_bin_delta=7  # 7 days ago
+        )
+
+        # Compare current accuracy to absolute minimum (no time comparison)
+        alert_rule = AlertRule(
+                compare_to=CompareTo.RAW_VALUE,
+                threshold=0.85  # Must be above 85%
+            )
+```
+
+## TIME\_PERIOD *= 'time\_period'*
+
+## RAW\_VALUE *= 'raw\_value'*
+
+
+---

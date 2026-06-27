@@ -1,0 +1,57 @@
+# Custom Metric
+
+[Custom Metrics](/reference/glossary/custom-metrics.md) are user-defined monitoring measures created using [Fiddler Query Language](/observability/platform/fiddler-query-language.md) (FQL) within the AI/ML/GenAI observability platform. They allow data scientists and ML engineers to extend beyond built-in metrics by defining their own calculations and thresholds for monitoring model performance.
+
+## Additional Context
+
+Custom Metrics transform standard observability into a tailored monitoring solution by enabling teams to implement domain-specific KPIs that complement built-in metrics like data drift and data integrity. This flexibility allows organizations to focus on metrics that directly impact their business objectives rather than solely relying on standard technical indicators.
+
+## Why Custom Metrics Are Important
+
+The roles of Custom Metrics in machine learning and model monitoring include:
+
+* Addressing unique business requirements not covered by standard metrics
+* Creating composite metrics that combine multiple signals into actionable insights
+* Implementing domain-specific calculations that reflect business KPIs
+* Enabling proactive alerting on custom-defined thresholds
+
+## Custom Metric Use Cases
+
+* **Business-focused metrics**: Metrics that directly tie to business outcomes like conversion rates, revenue impact, or customer satisfaction
+* **Composite technical metrics**: Combined measures that blend multiple data signals for more holistic monitoring
+* **Data quality extensions**: Custom definitions of what constitutes data quality in specific domains
+* **Agentic/GenAI metrics**: Aggregate span attributes from your agentic application — such as token usage, quality scores from enrichments, cost per session, or safety pass rates — using the `attribute()` function
+
+## Custom Metrics How-to Guide
+
+1. **Identify the metric need**
+   * Determine what performance aspects aren't covered by built-in metrics
+2. **Design the FQL formula**
+   * Write the formula using Fiddler Query Language syntax using the UI or API
+3. **Test on historical data**
+   * Validate that your metric catches issues using past data
+4. **Iterate based on results**
+   * Refine the metric definition as you learn from real-world monitoring
+
+## Frequently Asked Questions
+
+**Q: How do Custom Metrics differ from built-in metrics?**
+
+Custom Metrics allow you to define domain-specific calculations using FQL that may not be available through pre-built metrics, giving you flexibility to monitor aspects of your AI systems most relevant to your business.
+
+**Q: Can Custom Metrics be used for alerting?**
+
+Yes, Custom Metrics integrates seamlessly with the platform's alerting system, allowing you to set thresholds and receive notifications when your user-defined metrics exceed acceptable ranges.
+
+**Q: What technical knowledge is required to create Custom Metrics?**
+
+Basic understanding of SQL-like query languages and knowledge of your data schema are sufficient for creating most Custom Metrics with FQL.
+
+## Related Resources
+
+* [Custom Metrics for ML Models](/observability/platform/custom-metrics.md)
+* [Custom Metrics for Agentic Applications](/observability/agentic/custom-metrics.md)
+* [Fiddler Query Language](/observability/platform/fiddler-query-language.md)
+
+
+---

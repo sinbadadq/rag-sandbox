@@ -1,0 +1,209 @@
+# Alerts with Fiddler Client
+
+The Fiddler API client provides programmatic control for alert management alongside the Fiddler UI, enabling these key workflows:
+
+* Create alert rules
+* Remove alert rules
+* Retrieve all configured alert rules
+* Access triggered alert history
+
+> 📘 Note: For UI-based alert configuration, refer to the [alert setup guide](/observability/platform/alerts-platform.md).
+
+## Creating Alert Rules
+
+The Fiddler client can be used to create a variety of alert rule types, including **Data Drift**, **Performance**, **Data Integrity**, **Service Metrics**, and **Custom Metrics**.
+
+The Fiddler client supports multiple alert rule types, including:
+
+* Data Drift
+* Performance
+* Data Integrity
+* Service Metrics
+* Custom Metrics
+
+### Understanding Alert Thresholds
+
+When configuring thresholds:
+
+* **Absolute thresholds** (`CompareTo.RAW_VALUE`): For percentage-based metrics like `null_violation_percentage`, express values as percentages (e.g., 10 for 10%).
+* **Relative thresholds** (`CompareTo.TIME_PERIOD`): Express values as decimal fractions regardless of metric type (e.g., 0.1 for 10%)
+
+## Example Implementations
+
+### Example 1: Data Integrity Alert with Static Threshold
+
+This example creates an alert that monitors for missing values in the `age` column. It triggers notifications when null values exceed 5% (warning) or 10% (critical) of daily values.
+
+```python
+MODEL_ID = '299c7b40-b87c-4dad-bb94-251dbcd3cbdf'
+
+alert_rule = AlertRule(
+    name='Bank Churn Missing Values Static Percent',
+    model_id=MODEL_ID,
+    metric_id='null_violation_percentage',
+    priority=Priority.HIGH,
+    compare_to=CompareTo.RAW_VALUE,
+    condition=AlertCondition.GREATER,
+    bin_size=BinSize.DAY,
+    critical_threshold=10,
+    warning_threshold=5,
+    columns=['age'],
+).create()
+
+notifications = alert_rule.set_notification_config(
+    emails=['your.email@example.com', 'alerts.group@example.com'],
+)
+```
+
+### Example 2: Data Integrity Alert with Historical Comparison
+
+This example creates an alert that compares today's missing values against yesterday's values. It triggers when null values increase by 5% (warning) or 10% (critical) compared to the previous day.
+
+```python
+MODEL_ID = '299c7b40-b87c-4dad-bb94-251dbcd3cbdf'
+
+alert_rule = AlertRule(
+    name='Bank Churn Missing Values Rolling Historical Percent',
+    model_id=MODEL_ID,
+    metric_id='null_violation_percentage',
+    priority=Priority.HIGH,
+    compare_to=CompareTo.TIME_PERIOD,
+    compare_bin_delta=1,
+    condition=AlertCondition.GREATER,
+    bin_size=BinSize.DAY,
+    critical_threshold=0.1,
+    warning_threshold=0.05,
+    columns=['age'],
+).create()
+
+notifications = alert_rule.set_notification_config(
+    emails=['your.email@example.com', 'alerts.group@example.com'],
+)
+```
+
+### Example 3: Performance Alert with Time-Based Comparison
+
+This example creates a performance alert that monitors for precision changes. It compares today's precision with yesterday's values and triggers when precision decreases by 5% (warning) or 10% (critical).
+
+```python
+MODEL_ID = '4531bfd9-2ca2-4a7b-bb5a-136c8da09ca2'
+
+alert_rule = AlertRule(
+    name='Bank Churn Precision Relative',
+    model_id=MODEL_ID,
+    metric_id='precision',
+    priority=Priority.HIGH,
+    compare_to=CompareTo.TIME_PERIOD,
+    compare_bin_delta=1,
+    condition=AlertCondition.LESSER,
+    bin_size=BinSize.DAY,
+    critical_threshold=0.1,
+    warning_threshold=0.05,
+).create()
+
+notifications = alert_rule.set_notification_config(
+    emails=['your.email@example.com', 'alerts.group@example.com'],
+)
+```
+
+> 🚧 Please note, the possible values for compare\_bin\_delta vs bin\_size are:
+
+| Bin Size      | Allowed Compare bin delta             |
+| ------------- | ------------------------------------- |
+| BinSize.Hour  | \[1, 24, 24 \* 7, 24 \* 30, 24 \* 90] |
+| BinSize.Day   | \[1, 7, 30, 90]                       |
+| BinSize.Week  | \[1]                                  |
+| BinSize.Month | \[1]                                  |
+
+### Retrieving Alert Rules
+
+The AlertRule.list() method retrieves alert rules that match your specified criteria. This method returns a Python iterator of matching rules.
+
+```python
+MODEL_ID = '4531bfd9-2ca2-4a7b-bb5a-136c8da09ca2'
+
+alert_rules = AlertRule.list(
+    model_id=MODEL_ID,  # Optional parameter
+    metric_id='jsd',  # Optional parameter
+    columns=['age'],  # Optional parameter
+    ordering=[
+        'critical_threshold'
+    ],  # Add **-** prefix for descending sort ['-critical_threshold']
+)
+```
+
+> **Tip**: All filter parameters are optional. Omit them to retrieve all alert rules.
+
+### Removing Alert Rules
+
+To delete an alert rule, call the delete() method on an AlertRule object. You can retrieve the rule object using either:
+
+* The list() method with filters
+* The get() method with the rule's unique identifier
+
+![Alert Rule list with Copy alert rule ID highlighted in an alert rule's context menu](/files/PxF568YfjL1FPI9d0xRA)
+
+```python
+# Delete from a list of alerts
+MODEL_ID = '4531bfd9-2ca2-4a7b-bb5a-136c8da09ca2'
+alert_rules = AlertRule.list(model_id=MODEL_ID)
+
+for alert_rule in alert_rules:
+    if alert_rule.name == 'Bank Churn Precision Relative':
+        alert_rule.delete()
+        break
+
+# Delete using the alert rule's unique identifier
+ALERT_RULE_ID = '6da9c3c0-a9fa-4ab6-8b64-8d07b0736e77'
+rule = AlertRule.get(id_=ALERT_RULE_ID)
+rule.delete()
+```
+
+> **Tip**: Find the alert rule ID in the Alert Rule tab of your Fiddler Alerts page.
+
+### Accessing Triggered Alerts
+
+Use the AlertRecord.list() method to retrieve alerts triggered by a specific rule:
+
+```python
+from datetime import datetime
+
+triggered_alerts = AlertRecord.list(
+    alert_rule_id=ALERT_RULE_ID,     # Required: ID of the alert rule
+    start_time=datetime(2024, 9, 1), # Optional: Start of time range
+    end_time=datetime(2024, 9, 24),  # Optional: End of time range
+    ordering=['alert_time_bucket'],  # Optional: Sort order
+                                     # Use '-alert_time_bucket' for descending
+)
+```
+
+### Configuring Notifications
+
+After creating an alert rule, configure how notifications are sent when the rule triggers. Fiddler supports these notification channels:
+
+* Email
+* PagerDuty
+* Slack webhooks
+* Custom webhooks
+
+You can specify multiple notification types, and each type can have multiple recipients.
+
+```python
+ALERT_RULE_ID = '72e8835b-cde2-4dd2-a435-a35d4b51196b'
+rule = AlertRule.get(id_=ALERT_RULE_ID)
+
+rule.set_notification_config(
+    emails=['your.email@example.com', 'alerts.group@example.com'],
+    webhooks=['8b403d99-530a-4c5a-a519-89688d65ddc1'],  # Webhook UUID
+    pagerduty_services=[
+        'pagerduty_service_1',
+        'pagerduty_service_2',
+    ],  # PagerDuty service names
+    pagerduty_severity='critical',  # Only applies to PagerDuty
+)
+```
+
+> **Important**: PagerDuty, Slack webhooks, and custom webhooks must be pre-configured by your Fiddler administrator.
+
+
+---

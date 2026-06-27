@@ -1,0 +1,103 @@
+# RAGFaithfulness
+
+Evaluator to assess if an LLM response is faithful to the provided context.
+
+The RAGFaithfulness evaluator measures whether a response is grounded in and consistent with the provided reference documents. This is crucial for RAG (Retrieval-Augmented Generation) pipelines to detect hallucinations and ensure responses don't include information not present in the context.
+
+Key Features:
+
+* **Faithfulness Assessment**: Determines if the response is supported by context
+* **Binary Scoring**: Returns 1.0 (faithful) or 0.0 (not faithful)
+* **Hallucination Detection**: Identifies when responses include unsupported claims
+* **Detailed Reasoning**: Provides explanation for the faithfulness assessment
+* **Fiddler API Integration**: Uses Fiddler's built-in faithfulness evaluation model
+
+Use Cases:
+
+* **RAG Systems**: Detecting hallucinations in generated responses
+* **Document Q\&A**: Ensuring answers are grounded in source documents
+* **Customer Support**: Verifying responses align with knowledge base
+* **Legal/Medical AI**: Critical applications requiring factual accuracy
+* **Content Generation**: Ensuring generated content matches source material
+
+Scoring Logic:
+
+* **1.0 (Faithful)**: Response is fully supported by the reference documents
+* **0.0 (Not Faithful)**: Response contains information not in the documents : or contradicts the documents
+
+## Parameters
+
+| Parameter             | Type        | Required | Default | Description                               |
+| --------------------- | ----------- | -------- | ------- | ----------------------------------------- |
+| `user_query`          | `str`       | ✗        | `None`  | The question or query being asked.        |
+| `rag_response`        | `str`       | ✗        | `None`  | The `LLM`'s response to evaluate.         |
+| `retrieved_documents` | `list[str]` | ✗        | `None`  | The reference documents to check against. |
+
+## Returns
+
+A Score object containing: : - value: 1.0 if faithful, 0.0 if not faithful
+
+* label: "yes" or "no"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+## Example
+
+```python
+from fiddler_evals.evaluators import RAGFaithfulness
+evaluator = RAGFaithfulness(model="openai/gpt-4o")
+
+# Faithful response
+score = evaluator.score(
+    user_query="What is the capital of France?",
+    rag_response="According to the document, Paris is the capital of France.",
+    retrieved_documents=[
+        "Paris is the capital and largest city of France.",
+        "France is located in Western Europe."
+    ]
+)
+print(f"Faithful: {score.label}")  # "yes"
+print(f"Score: {score.value}")     # 1.0
+
+# Unfaithful response (hallucination)
+score = evaluator.score(
+    user_query="What is the capital of France?",
+    rag_response="Paris is the capital of France with a population of 12 million.",
+    retrieved_documents=[
+        "Paris is the capital of France."
+        # Note: population is not mentioned in documents
+    ]
+)
+print(f"Faithful: {score.label}")  # "no"
+```
+
+{% hint style="info" %}
+This evaluator uses Fiddler's built-in faithfulness assessment model and requires an active connection to the Fiddler API. The evaluator checks if the response is supported by the documents, not whether the response correctly answers the question.
+{% endhint %}
+
+## name *= 'rag\_faithfulness'*
+
+## score()
+
+Score the faithfulness of a response to the provided context.
+
+## Parameters
+
+| Parameter             | Type        | Required | Default | Description                               |
+| --------------------- | ----------- | -------- | ------- | ----------------------------------------- |
+| `user_query`          | `str`       | ✗        | `None`  | The question or query being asked.        |
+| `rag_response`        | `str`       | ✗        | `None`  | The `LLM`'s response to evaluate.         |
+| `retrieved_documents` | `list[str]` | ✗        | `None`  | The reference documents to check against. |
+
+## Returns
+
+A Score object containing: : - value: 1.0 if faithful, 0.0 if not faithful
+
+* label: "yes" or "no"
+* reasoning: Detailed explanation of the assessment
+
+**Return type:** Score
+
+
+---

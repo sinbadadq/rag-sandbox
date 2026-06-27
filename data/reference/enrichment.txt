@@ -1,0 +1,200 @@
+# Enrichment
+
+[Enrichments](/observability/llm/enrichments.md), also known as Evaluations, are specialized computational processes that transform raw AI model inputs and outputs into structured metrics, insights, and derived features.
+
+{% hint style="info" %}
+**Terminology note:** In Agentic Monitoring and Experiments (v26.3+), enrichments are referred to as **evaluators**. The underlying concept is the same — automated metrics applied to AI model data — but the term "evaluators" better reflects the active assessment role these components play in evaluation workflows. The `Enrichment` API class name remains unchanged.
+{% endhint %}
+
+In the context of LLM monitoring and evaluation, enrichments serve as the bridge between unstructured model data and actionable intelligence, enabling organizations to measure, monitor, and improve their AI applications through quantitative analysis.
+
+When LLM applications publish inference data to monitoring platforms like Fiddler, enrichments automatically analyze this data to generate various metrics—from safety scores and hallucination detection to custom business logic evaluation. These computed enrichments become additional features in the monitoring dataset, providing dimensions that can be tracked over time, used in alerting rules, and analyzed for patterns or anomalies.
+
+Enrichments represent the operationalization of AI evaluation methodologies, transforming subjective quality assessments into measurable, scalable monitoring capabilities that enable reliable production deployment of generative AI systems.
+
+<figure><img src="/files/HToqfLYPHC87WV4ZeZDD" alt="Fiddler Enrichment Framework diagram displaying sample inputs and outputs flowing into the Fiddler enrichment pipeline."><figcaption><p>The Fiddler Enrichment Framework</p></figcaption></figure>
+
+## Core Terminology
+
+### Custom Features
+
+Derived data columns are created through enrichment processes that augment the original inference data. Custom features represent computed insights that don't exist in the raw model data but provide valuable monitoring and analysis dimensions.
+
+### Enrichment Pipeline
+
+The automated processing infrastructure that applies enrichment operations to incoming inference data. The pipeline manages the execution, dependency resolution, and result integration of multiple enrichments across different data streams.
+
+### Trust Scores
+
+[Trust Scores](/reference/glossary/trust-score.md) are metrics that are specialized enrichment outputs that evaluate the trustworthiness, safety, and quality of AI model outputs. Trust metrics include dimensions like toxicity, bias, faithfulness, and safety that are critical for responsible AI deployment.
+
+### Fast Trust Models
+
+[Fast Trust Models](/reference/glossary/trust-service.md) are purpose-built, optimized models developed by Fiddler specifically for efficient enrichment computation. These models provide comparable evaluation quality to general-purpose LLMs but with significantly lower latency and computational requirements.
+
+### Evaluation Framework
+
+The underlying methodology and infrastructure that defines how enrichments assess model outputs. Different evaluation frameworks may use rule-based systems, ML models, or LLM-as-a-Judge approaches depending on the specific enrichment type.
+
+## How Fiddler Uses Enrichments
+
+Fiddler's enrichment system operates as a comprehensive evaluation and monitoring layer that processes all inference data flowing through the platform. When LLM applications publish events containing prompts, responses, and contextual information, Fiddler's enrichment pipeline automatically applies configured enrichments to generate derived metrics.
+
+**Integration Process**: During model onboarding, users specify which enrichments should be enabled by including Enrichment objects in their ModelSpec configuration. This declarative approach allows teams to select the specific evaluation dimensions most relevant to their use case while avoiding unnecessary computational overhead.
+
+**Real-time Processing**: As inference events are published to Fiddler, the enrichment pipeline processes them through the configured enrichments, generating additional data columns that appear alongside the original inference data in monitoring dashboards and analytics interfaces.
+
+**Scalable Architecture**: Fiddler's enrichment infrastructure is designed for enterprise-scale deployment, supporting concurrent processing of multiple enrichment types while maintaining low latency. The system leverages purpose-built Fast Trust Models and optimized processing pipelines to deliver consistent performance even with high-volume data streams.
+
+**Monitoring Integration**: Enrichment outputs seamlessly integrate with Fiddler's monitoring capabilities, enabling users to create alerts, track trends, and perform root cause analysis based on derived metrics rather than just raw model performance indicators.
+
+<figure><img src="/files/yccVwKkcqB3jclMyTV8b" alt="Fiddler dashboard showing LLM application performance using enrichment metrics."><figcaption><p>Enrichment metrics in monitoring dashboards</p></figcaption></figure>
+
+## Why Enrichments Are Important
+
+Enrichments address a fundamental gap in AI monitoring: the ability to automatically assess qualitative aspects of model behavior at scale. While traditional monitoring focuses on quantitative metrics like latency and throughput, enrichments enable organizations to systematically evaluate the quality, safety, and appropriateness of AI-generated content.
+
+**Scalable Quality Assessment**: Manual evaluation of AI outputs doesn't scale to production volumes. Enrichments automate quality assessment, enabling continuous monitoring of millions of model interactions while maintaining consistent evaluation criteria.
+
+**Proactive Risk Management**: By continuously evaluating outputs for safety, bias, toxicity, and other risk factors, enrichments enable proactive identification and mitigation of potential issues before they impact users or business outcomes.
+
+**Regulatory Compliance**: Many industries require ongoing assessment of AI system behavior for compliance purposes. Enrichments provide auditable, quantitative evidence of responsible AI practices and systematic quality control.
+
+**Performance Optimization**: Enrichment data reveals patterns in model performance that guide optimization efforts. Understanding when and why models produce lower-quality outputs enables targeted improvements to prompts, training data, or model architecture.
+
+**Business Intelligence**: Custom enrichments can evaluate business-specific criteria, providing insights into how well AI systems achieve organizational objectives beyond generic quality metrics.
+
+## Types of Enrichments
+
+### Safety and Trust Enrichments
+
+**Fast Safety**: Comprehensive safety evaluation using Fiddler's optimized trust models to detect harmful, toxic, or inappropriate content across multiple safety dimensions including violence, hate speech, and explicit material.
+
+**Bias Detection**: Evaluation of potential biases in model outputs, including gender, racial, political, or other forms of bias that could impact fairness and inclusivity.
+
+### Quality and Accuracy Enrichments
+
+**Fast Faithfulness (FTL)**: Automated detection of hallucinations and factual inaccuracies using Fiddler's proprietary Fast Trust Model. Compares model outputs against provided context, returning a probability score (0.0–1.0). Available as a [Guardrail](/reference/glossary/guardrails.md) and as an enrichment in LLM Observability. Uses `context` and `response` as inputs. See also: RAG Faithfulness below.
+
+**RAG Faithfulness**: LLM-as-a-Judge evaluator that assesses whether a response is grounded in the retrieved documents. Returns a binary label (Yes/No) with detailed reasoning. Uses `user_query`, `rag_response`, and `retrieved_documents` as inputs. Available in Agentic Monitoring and Experiments. See [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) for how this evaluator fits into the RAG diagnostic triad.
+
+{% hint style="info" %}
+**FTL Faithfulness vs RAG Faithfulness:** These are separate evaluators with different architectures. FTL Faithfulness is a proprietary Fast Trust Model; RAG Faithfulness is an LLM-as-a-Judge evaluator. See the [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) guide for a detailed comparison.
+{% endhint %}
+
+**Answer Relevance**: Measurement of how well model responses address the specific query or prompt. In v26.3, Answer Relevance 2.0 provides ordinal scoring (High/Medium/Low = 1.0/0.5/0.0) with detailed reasoning, replacing the previous binary scoring. Available in Agentic Monitoring, Experiments, and LLM Observability.
+
+**Context Relevance**: Measures whether retrieved documents are relevant to the user's query, isolating retrieval quality from generation quality. Uses ordinal scoring (High/Medium/Low = 1.0/0.5/0.0) with reasoning. Available in Agentic Monitoring and Experiments only.
+
+**Coherence**: Assessment of logical flow, consistency, and overall readability of generated content to identify confusing or disjointed responses.
+
+### Custom and Business Logic Enrichments
+
+**LLM-as-a-Judge**: Configurable evaluation system using Prompt Specs or custom prompts to implement specialized business logic and quality criteria.
+
+**Sentiment Analysis**: Emotional tone detection and sentiment classification to understand the affective characteristics of model outputs.
+
+### Technical and Performance Enrichments
+
+**Embedding Generation**: Automatic creation of vector embeddings from text content to enable similarity analysis, clustering, and semantic drift detection.
+
+**Token Count**: Tracking of input and output token usage for cost analysis, performance optimization, and usage pattern understanding.
+
+**Response Time**: Measurement of model inference latency to identify performance bottlenecks and optimize system responsiveness.
+
+### Data Quality Enrichments
+
+**PII Detection**: Identification of personally identifiable information in model inputs and outputs to ensure privacy compliance and data protection.
+
+**Data Validation**: Verification of data format, completeness, and consistency to ensure reliable model operation and meaningful analysis.
+
+**Language Detection**: Automatic identification of content language to enable appropriate processing and evaluation in multilingual environments.
+
+## Challenges
+
+Implementing effective enrichment systems involves several technical and operational considerations that organizations must address to realize the full value of automated AI evaluation.
+
+**Computational Efficiency**: Running multiple enrichments on high-volume data streams requires careful optimization to avoid introducing significant latency or computational overhead that could impact application performance.
+
+**Evaluation Accuracy**: Ensuring that automated enrichments provide reliable assessments that align with human judgment requires ongoing validation and calibration, particularly as language usage and societal standards evolve.
+
+**Cost Management**: Large-scale enrichment processing can incur substantial computational costs, requiring organizations to balance evaluation comprehensiveness with budget constraints and performance requirements.
+
+**Configuration Complexity**: With dozens of available enrichments, selecting the optimal combination for specific use cases requires domain expertise and understanding of the trade-offs between different evaluation approaches.
+
+**Result Interpretation**: Translating enrichment scores into actionable insights requires clear guidelines and thresholds that may vary by organization, industry, or application context.
+
+**Data Privacy**: Some enrichments require processing of sensitive content, necessitating careful consideration of data privacy requirements and potential regulatory constraints.
+
+## Enrichments Implementation Guide
+
+1. **Assess Evaluation Requirements**
+   * Identify the specific quality, safety, and business criteria relevant to your AI application
+   * Prioritize evaluation dimensions based on risk assessment and regulatory requirements
+   * Consider the trade-offs between evaluation comprehensiveness and computational cost
+2. **Design Enrichment Strategy**
+   * Select appropriate enrichments based on your use case and data characteristics
+   * Plan for both generic quality metrics and domain-specific custom enrichments
+   * Consider dependency relationships between different enrichment types
+3. **Configure Model Specification**
+   * Include selected enrichments in your ModelSpec configuration during onboarding
+   * Define appropriate column mappings and enrichment-specific parameters
+   * Test enrichment configuration with representative sample data
+4. **Establish Monitoring Framework**
+   * Create dashboards that effectively visualize enrichment results alongside operational metrics
+   * Configure alert rules based on enrichment score thresholds and trend analysis
+   * Implement escalation procedures for different types of quality or safety issues
+5. **Validate and Calibrate**
+   * Compare enrichment results with human evaluation on representative samples
+   * Adjust thresholds and interpretation guidelines based on validation results
+   * Establish periodic review processes to ensure continued accuracy and relevance
+6. **Optimize and Scale**
+   * Monitor enrichment processing performance and optimize for efficiency
+   * Implement data retention and archival strategies for enrichment results
+   * Plan for scaling enrichment infrastructure with application growth
+
+## Frequently Asked Questions
+
+**Q: How do enrichments differ from traditional ML metrics?**
+
+Traditional ML metrics like accuracy and precision measure model performance against known ground truth labels. Enrichments evaluate qualitative aspects of model outputs—such as safety, coherence, and relevance—that don't have simple right/wrong answers but require nuanced assessment against multiple criteria.
+
+**Q: Can I create custom enrichments for my specific business needs?**
+
+Yes, Fiddler supports custom enrichments through multiple approaches: LLM-as-a-Judge with Prompt Specs for structured evaluation, and bring-your-own-prompt capabilities for maximum flexibility. These frameworks enable implementation of domain-specific evaluation logic.
+
+**Q: How do enrichments impact system performance and latency?**
+
+Fiddler's enrichments are designed for minimal performance impact through purpose-built Fast Trust Models and optimized processing pipelines. Most enrichments add only modest latency (typically under 100ms) and can be processed asynchronously to avoid blocking primary application flows.
+
+**Q: Are enrichment results consistent and reliable enough for compliance use?**
+
+Fiddler's enrichments undergo extensive validation against human evaluation to ensure reliability. While no automated system perfectly matches human judgment in all cases, enrichments provide consistent, auditable results that meet the standards required for most compliance and governance use cases.
+
+**Q: How do I choose which enrichments to enable for my application?**
+
+Start with core safety and quality enrichments (Fast Safety, Fast Faithfulness) that apply broadly, then add domain-specific enrichments based on your use case. Consider your risk profile, regulatory requirements, and the specific ways your AI application could fail or cause harm.
+
+**Q: Can enrichments be applied retroactively to historical data?**
+
+Yes, enrichments can be applied to previously collected inference data, enabling retrospective analysis and baseline establishment. This capability is particularly valuable when implementing new evaluation criteria or investigating historical issues.
+
+## Related Terms
+
+* [Trust Score](/reference/glossary/trust-score.md) - The quantitative outputs generated by enrichments
+* [Fiddler Trust Service](/reference/glossary/trust-service.md) - The infrastructure powering enrichment computation
+* [LLM Observability](/reference/glossary/llm-observability.md) - The broader monitoring practice enabled by enrichments
+* [Fiddler Guardrails](/reference/glossary/guardrails.md) - Real-time protection using enrichment evaluation
+* [Custom Metrics](/reference/glossary/custom-metrics.md) - User-defined metrics complementing enrichments
+
+## Related Resources
+
+* [LLM Observability Metrics Reference](/reference/llm-observability-metrics.md) — Complete list of all LLM enrichments with output columns and sub-metrics
+* [LLM Application Monitoring & Protection](/observability/llm.md)
+* [Selecting Enrichments Guide](/observability/llm/selecting-enrichments.md)
+* [Enrichments Documentation](/observability/llm/enrichments.md)
+* [Enrichment API Reference](/api/fiddler-python-client-sdk/schemas/enrichment.md)
+* [RAG Health Diagnostics](/concepts/rag-health-diagnostics.md) — Understanding the RAG diagnostic triad (Answer Relevance 2.0, Context Relevance, RAG Faithfulness)
+
+
+---
