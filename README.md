@@ -1,6 +1,6 @@
 # Fiddler Docs Assistant
 
-A retrieval-augmented generation (RAG) pipeline over [Fiddler AI's public documentation](https://docs.fiddler.ai), built as part of interview preparation for a data scientist role at Fiddler AI.
+A retrieval-augmented generation (RAG) pipeline over [Fiddler AI's public documentation](https://docs.fiddler.ai), built as part of interview preparation for a solutions architect role at Fiddler AI.
 
 The system scrapes Fiddler's docs, indexes them with [LlamaIndex](https://www.llamaindex.ai/) using local [HuggingFace embeddings](https://huggingface.co/BAAI/bge-small-en-v1.5) (no external embedding API cost), and answers natural language questions about Fiddler's ML observability platform using [Anthropic Claude](https://www.anthropic.com/) as the LLM.
 
